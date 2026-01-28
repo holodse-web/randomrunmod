@@ -111,7 +111,7 @@ afterEvaluate {
         doLast {
             delete "build/libs/${archivesBaseName}-${version}.jar"
             file("build/libs/${archivesBaseName}-${version}-obf.jar").renameTo(file("build/libs/${archivesBaseName}-${version}.jar"))
-            println "Защита успешно применена к основному файлу!"
+            println "Protection successfully applied to the main file!"
         }
     }
     

@@ -1,4 +1,11 @@
 {
+  "randomrun.seed_input.title": "Введіть сід",
+  "randomrun.seed_input.placeholder": "Залиште пустим для випадкового",
+  "randomrun.button.use_seed": "Використати сід",
+
+  "randomrun.time_selection.title_text": "Дізнатися час",
+  "randomrun.time_selection.time_text": "Ваш час",
+
   "randomrun.screen.main.title": "RandomRun",
   "randomrun.screen.speedrun.title": "Вибір предмета",
   "randomrun.screen.item_reveal.title": "Ваш предмет",
@@ -46,6 +53,7 @@
   "randomrun.settings.speedrun": "Налаштування спідрану",
   "randomrun.settings.interface": "Налаштування інтерфейсу",
   "randomrun.settings.sound": "Налаштування звуку",
+  "randomrun.settings.challenges": "Челенджі",
   "randomrun.settings.time_challenge": "Челендж на час",
 
   "randomrun.settings.unobtainable_items": "Нездобувані предмети: %s",
@@ -107,6 +115,7 @@
 
   "randomrun.victory.message": "§a§lПЕРЕМОГА! §fВи знайшли §6%s §fза §e%s§f!",
   "randomrun.victory.time": "Час: %s",
+  "randomrun.victory.warning": "Чорний екран при натисканні - це вихід зі світу",
 
   "randomrun.error.time_too_short": "Час занадто короткий (мін. 30 сек)",
   "randomrun.error.time_too_long": "Час занадто довгий (макс. 2 години)",
@@ -168,6 +177,10 @@
   "randomrun.defeat.time": "Час: %s",
   "randomrun.defeat.time_up": "Час вийшов!",
   "randomrun.defeat.opponent_won": "Суперник переміг!",
-  "randomrun.defeat.death": "Смерть",
-  "randomrun.defeat.gamemode_change": "Зміна режиму гри"
+  "randomrun.defeat.death": "Ви загинули!",
+  "randomrun.defeat.gamemode_change": "Зміна режиму гри",
+  "randomrun.screen.victory.title_label": "ПЕРЕМОГА!",
+  "randomrun.screen.defeat.title_label": "ПОРАЗКА",
+  "randomrun.victory.new_record": "§l★ НОВИЙ РЕКОРД! ★",
+  "randomrun.defeat.reason.opponent_won": "Суперник %s здобув предмет першим!"
 }

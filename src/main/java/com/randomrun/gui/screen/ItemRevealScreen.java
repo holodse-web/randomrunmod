@@ -54,7 +54,7 @@ public class ItemRevealScreen extends AbstractRandomRunScreen {
         openTime = System.currentTimeMillis();
         
         int centerX = width / 2;
-        int buttonY = height - 80;
+        int buttonY = height - 55;
         
         boolean timeChallengeEnabled = RandomRunMod.getInstance().getConfig().isTimeChallengeEnabled();
         boolean manualTimeEnabled = RandomRunMod.getInstance().getConfig().isManualTimeEnabled();
@@ -169,19 +169,19 @@ public class ItemRevealScreen extends AbstractRandomRunScreen {
             String difficultyText = difficulty.displayName;
             context.drawCenteredTextWithShadow(textRenderer, 
                 Text.translatable("randomrun.difficulty", difficultyText), 
-                width / 2, height / 2 + 55, difficulty.color);
+                width / 2, height / 2 + 65, difficulty.color);
             
            
             String timeRange = difficulty.getTimeRange();
             context.drawCenteredTextWithShadow(textRenderer, 
                 Text.translatable("randomrun.time_range", timeRange), 
-                width / 2, height / 2 + 70, 0xAAAAAA);
+                width / 2, height / 2 + 80, 0xAAAAAA);
         }
         
        
         context.drawCenteredTextWithShadow(textRenderer, 
             Text.translatable("randomrun.drag_to_rotate"), 
-            width / 2, height / 2 + 75, 0x666666); 
+            width / 2, height / 2 + 50, 0x666666); 
         
         super.render(context, mouseX, mouseY, delta);
     }

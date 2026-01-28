@@ -1,4 +1,11 @@
 {
+  "randomrun.seed_input.title": "Введите сид",
+  "randomrun.seed_input.placeholder": "Оставьте пустым для случайного",
+  "randomrun.button.use_seed": "Использовать сид",
+
+  "randomrun.time_selection.title_text": "Узнать время",
+  "randomrun.time_selection.time_text": "Ваше время",
+
   "randomrun.screen.main.title": "RandomRun",
   "randomrun.screen.speedrun.title": "Выбор предмета",
   "randomrun.screen.item_reveal.title": "Ваш предмет",
@@ -42,7 +49,12 @@
   "randomrun.difficulty": "Сложность: %s",
   "randomrun.time_range": "Время: %s",
   "randomrun.drag_to_rotate": "Перетащите для вращения",
-
+  "randomrun.victory.time": "Время: %s",
+  "randomrun.victory.warning": "Черный экран при нажатии - это выход из мира",
+  
+  "randomrun.defeat.time": "Время: %s",
+  "randomrun.defeat.death": "Вы погибли!",
+  
   "randomrun.slotmachine.spinning": "Выбираем...",
   "randomrun.slotmachine.click": "Нажмите для продолжения",
   "randomrun.click_to_start": "Нажмите для старта",
@@ -50,6 +62,7 @@
   "randomrun.settings.speedrun": "Настройки спидрана",
   "randomrun.settings.interface": "Настройки интерфейса",
   "randomrun.settings.sound": "Настройки звука",
+  "randomrun.settings.challenges": "Челленджи",
   "randomrun.settings.time_challenge": "Челлендж на время",
 
   "randomrun.settings.unobtainable_items": "Недобываемые предметы: %s",
@@ -73,6 +86,7 @@
 
   "randomrun.settings.time_challenge_enabled": "Челлендж на время: %s",
   "randomrun.settings.use_difficulty": "Использовать сложность: %s",
+  "randomrun.settings.ask_custom_seed": "Спрашивать сид: %s",
   "randomrun.settings.manual_time": "Время вручную: %s",
   "randomrun.settings.manual_time_input": "Ввести время вручную",
   "randomrun.settings.current_time_limit": "Текущий лимит: %s",
@@ -115,7 +129,25 @@
   "randomrun.time.second": "секунда",
   "randomrun.time.seconds": "секунд",
   
+  "randomrun.battle.title": "Режим Битвы",
+  "randomrun.battle.create": "Создать Битву",
+  "randomrun.battle.join": "Войти в Битву",
+  "randomrun.battle.public_queue": "Публичная очередь",
+  "randomrun.battle.private_match": "Приватный матч",
+  "randomrun.battle.waiting": "Ожидание противников...",
+  "randomrun.battle.code": "Код комнаты: %s",
+  "randomrun.battle.enter_code": "Введите код",
+  "randomrun.battle.start": "Старт",
+  "randomrun.battle.ready": "Готов",
+  "randomrun.battle.not_ready": "Не готов",
+  "randomrun.battle.winner": "Победитель: %s",
+  "randomrun.battle.draw": "Ничья",
+  "randomrun.battle.you_won": "Вы победили!",
+  "randomrun.battle.you_lost": "Вы проиграли",
+  
   "randomrun.screen.victory.title_label": "ПОБЕДА!",
+  "randomrun.screen.defeat.title_label": "ПОРАЖЕНИЕ",
+  "randomrun.victory.new_record": "§l★ НОВЫЙ РЕКОРД! ★",
   "randomrun.defeat.reason.opponent_won": "Противник %s добыл предмет первым!",
   "randomrun.defeat.reason.time": " (Время: %s)"
 }

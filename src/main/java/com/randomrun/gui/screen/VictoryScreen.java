@@ -2,7 +2,6 @@ package com.randomrun.gui.screen;
 
 import com.randomrun.RandomRunMod;
 import com.randomrun.data.RunDataManager;
-import com.randomrun.gui.widget.StyledButton2;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.TitleScreen;
@@ -33,14 +32,22 @@ public class VictoryScreen extends AbstractRandomRunScreen {
         super.init();
         openTime = System.currentTimeMillis();
         
+        // Setup green particle system
+        com.randomrun.gui.widget.GlobalParticleSystem particleSystem = com.randomrun.gui.widget.GlobalParticleSystem.getInstance();
+        particleSystem.clearParticles();
+        particleSystem.setGreenMode(true);
+        
         int centerX = width / 2;
         
         // Play again button (same item, different seed)
-        addDrawableChild(new StyledButton2(
+        addDrawableChild(new com.randomrun.gui.widget.GreenStyledButton(
             centerX - 100, height - 60,
             200, 20,
             Text.translatable("randomrun.button.play_again"),
             button -> {
+                com.randomrun.gui.widget.GlobalParticleSystem.getInstance().setGreenMode(false);
+                com.randomrun.gui.widget.GlobalParticleSystem.getInstance().clearParticles();
+                
                 MinecraftClient client = MinecraftClient.getInstance();
                 // Отменяем текущий ран
                 RandomRunMod.getInstance().getRunDataManager().cancelRun();
@@ -55,11 +62,14 @@ public class VictoryScreen extends AbstractRandomRunScreen {
         ));
         
         // Exit to mod menu button
-        addDrawableChild(new StyledButton2(
+        addDrawableChild(new com.randomrun.gui.widget.GreenStyledButton(
             centerX - 100, height - 30,
             200, 20,
             Text.translatable("randomrun.button.exit"),
             button -> {
+                com.randomrun.gui.widget.GlobalParticleSystem.getInstance().setGreenMode(false);
+                com.randomrun.gui.widget.GlobalParticleSystem.getInstance().clearParticles();
+                
                 MinecraftClient client = MinecraftClient.getInstance();
                 RandomRunMod.getInstance().getRunDataManager().cancelRun();
                 // Выходим из мира
@@ -70,6 +80,19 @@ public class VictoryScreen extends AbstractRandomRunScreen {
                 client.setScreen(new MainModScreen(new TitleScreen()));
             }
         ));
+    }
+    
+    @Override
+    protected void renderGradientBackground(DrawContext context) {
+       
+        int topColor = 0xFF000000;    
+        int middleColor = 0xFF145514;  // Dark green
+        int bottomColor = 0xFF0a2e0a;  // Darker green
+        
+        
+        context.fillGradient(0, 0, width, height / 2, topColor, middleColor);
+       
+        context.fillGradient(0, height / 2, width, height, middleColor, bottomColor);
     }
     
     @Override
@@ -95,7 +118,7 @@ public class VictoryScreen extends AbstractRandomRunScreen {
         
         // Item name
         String itemName = completedItem.getName().getString();
-        context.drawCenteredTextWithShadow(textRenderer, "§6" + itemName, width / 2, height / 2 + 50, 0xFFAA00);
+        context.drawCenteredTextWithShadow(textRenderer, "§6" + itemName, width / 2, height / 2 + 50, 0x006400);
         
         // Completion time
         String timeStr = RunDataManager.formatTime(completionTime);
@@ -111,13 +134,13 @@ public class VictoryScreen extends AbstractRandomRunScreen {
         
         if (result != null && result.bestTime == completionTime) {
             context.drawCenteredTextWithShadow(textRenderer, 
-                "§d§l★ NEW RECORD! ★", 
-                width / 2, height / 2 + 90, 0xFF55FF);
+                Text.translatable("randomrun.victory.new_record"), 
+                width / 2, height / 2 + 90, 0xA8FFB5);
         }
         
         // Предупреждение о черном экране
         context.drawCenteredTextWithShadow(textRenderer, 
-            "§7Черный экран при нажатии - это выход из мира", 
+            Text.translatable("randomrun.victory.warning"), 
             width / 2, height - 80, 0x888888);
         
         super.render(context, mouseX, mouseY, delta);
@@ -128,7 +151,7 @@ public class VictoryScreen extends AbstractRandomRunScreen {
         
         context.getMatrices().push();
         context.getMatrices().translate(x, y + levitationOffset, 100);
-        context.getMatrices().scale(64f, -64f, 64f);
+        context.getMatrices().scale(150f, -150f, 150f);
         
         context.getMatrices().multiply(new Quaternionf().rotateY((float) Math.toRadians(rotationY)));
         

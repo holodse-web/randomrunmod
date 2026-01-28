@@ -1,4 +1,11 @@
 {
+  "randomrun.seed_input.title": "Enter Seed",
+  "randomrun.seed_input.placeholder": "Leave empty for random",
+  "randomrun.button.use_seed": "Use Seed",
+
+  "randomrun.time_selection.title_text": "Reveal Time",
+  "randomrun.time_selection.time_text": "Your Time",
+
   "randomrun.screen.main.title": "RandomRun",
   "randomrun.screen.speedrun.title": "Item Selection",
   "randomrun.screen.item_reveal.title": "Your Item",
@@ -42,6 +49,40 @@
   "randomrun.difficulty": "Difficulty: %s",
   "randomrun.time_range": "Time: %s",
   "randomrun.drag_to_rotate": "Drag to rotate",
+  
+  "randomrun.battle.title": "Battle",
+  "randomrun.battle.create": "Create Battle",
+  "randomrun.battle.join": "Join Battle",
+  "randomrun.battle.public_queue": "Public Queue",
+  "randomrun.battle.private_match": "Private Match",
+  "randomrun.battle.waiting": "Waiting for opponents...",
+  "randomrun.battle.code": "Room Code: %s",
+  "randomrun.battle.enter_code": "Enter Code",
+  "randomrun.battle.start": "Start",
+  "randomrun.battle.ready": "Ready",
+  "randomrun.battle.match_ready": "Match Ready",
+  "randomrun.battle.item_selection": "Item Selection",
+  "randomrun.battle.selected": "Selected!",
+  "randomrun.battle.seed_generation": "Seed Generation",
+  "randomrun.battle.seed_generated": "Generated!",
+  "randomrun.battle.world_seed": "World Seed",
+  "randomrun.battle.click_ready": "Click 'Ready' to start",
+  "randomrun.battle.private_room": "Private Room",
+  "randomrun.battle.select_mode": "Select Mode:",
+  "randomrun.battle.create_room": "Create Room",
+  "randomrun.battle.join_room": "Join Room",
+  "randomrun.battle.send_code": "Send this code to a friend",
+  "randomrun.battle.waiting_player": "Waiting for second player...",
+  "randomrun.battle.player_joined": "Player joined!",
+  "randomrun.battle.start_game": "Start Game",
+  "randomrun.battle.waiting_host": "Waiting for host...",
+  "randomrun.battle.target": "Target: %s",
+  
+  "randomrun.victory.time": "Time: %s",
+  "randomrun.victory.warning": "Black screen on click exits the world",
+
+  "randomrun.defeat.time": "Time: %s",
+  "randomrun.defeat.death": "You died!",
 
   "randomrun.slotmachine.spinning": "Selecting...",
   "randomrun.slotmachine.click": "Click to continue",
@@ -50,6 +91,7 @@
   "randomrun.settings.speedrun": "Speedrun Settings",
   "randomrun.settings.interface": "Interface Settings",
   "randomrun.settings.sound": "Sound Settings",
+  "randomrun.settings.challenges": "Challenges",
   "randomrun.settings.time_challenge": "Time Challenge",
 
   "randomrun.settings.unobtainable_items": "Unobtainable Items: %s",
@@ -73,6 +115,8 @@
 
   "randomrun.settings.time_challenge_enabled": "Time Challenge: %s",
   "randomrun.settings.use_difficulty": "Use Difficulty: %s",
+  "randomrun.settings.ask_custom_seed": "Ask for Seed: %s",
+  "randomrun.settings.delete_worlds": "Auto-delete Worlds: %s",
   "randomrun.settings.manual_time": "Manual Time: %s",
   "randomrun.settings.manual_time_input": "Enter Time Manually",
   "randomrun.settings.current_time_limit": "Current Limit: %s",
@@ -115,7 +159,11 @@
   "randomrun.time.second": "second",
   "randomrun.time.seconds": "seconds",
   
+  "randomrun.battle.title": "Battle Mode",
+  
   "randomrun.screen.victory.title_label": "VICTORY!",
+  "randomrun.screen.defeat.title_label": "DEFEAT",
+  "randomrun.victory.new_record": "§l★ NEW RECORD! ★",
   "randomrun.defeat.reason.opponent_won": "Opponent %s obtained the item first!",
   "randomrun.defeat.reason.time": " (Time: %s)"
 }

@@ -16,7 +16,6 @@ public class BattleWaitingScreen extends AbstractRandomRunScreen {
     private final Screen parent;
     private final String roomCode;
     private final boolean isHost;
-    private boolean worldCreated = false;
     private boolean guestJoined = false;
     
     public BattleWaitingScreen(Screen parent, String roomCode, boolean isHost) {

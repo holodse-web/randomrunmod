@@ -48,21 +48,25 @@ public class VictoryHandler {
             client.player.playSound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, volume, 1.0f);
         }
         
-        // Show victory title
-        client.inGameHud.setTitle(Text.literal("§a§lVICTORY!"));
-        client.inGameHud.setSubtitle(Text.literal("§e" + RunDataManager.formatTime(elapsedTime)));
+        // Показываем экран победы в зависимости от настройки
+        ModConfig.VictoryScreenMode mode = config.getVictoryScreenMode();
         
-        // Send chat message
-        client.player.sendMessage(
-            Text.translatable("randomrun.victory.message", itemName, RunDataManager.formatTime(elapsedTime)),
-            false
-        );
+        // Only show title and chat message if NOT in "Show after 10 seconds" mode
+        // Or if in "Hide" mode (player stays in world, needs to know they won)
+        if (mode != ModConfig.VictoryScreenMode.SHOW_AFTER_10_SECONDS) {
+            // Show victory title
+            client.inGameHud.setTitle(Text.literal("§a§lVICTORY!"));
+            client.inGameHud.setSubtitle(Text.literal("§e" + RunDataManager.formatTime(elapsedTime)));
+            
+            // Send chat message
+            client.player.sendMessage(
+                Text.translatable("randomrun.victory.message", itemName, RunDataManager.formatTime(elapsedTime)),
+                false
+            );
+        }
         
         // Spawn fireworks (client-side particles)
         spawnVictoryParticles(client);
-        
-        // Показываем экран победы в зависимости от настройки
-        ModConfig.VictoryScreenMode mode = config.getVictoryScreenMode();
         
         switch (mode) {
             case SHOW -> {

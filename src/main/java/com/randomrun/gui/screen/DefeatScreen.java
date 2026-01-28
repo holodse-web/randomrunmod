@@ -2,7 +2,6 @@ package com.randomrun.gui.screen;
 
 import com.randomrun.RandomRunMod;
 import com.randomrun.data.RunDataManager;
-import com.randomrun.gui.widget.StyledButton;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.TitleScreen;
@@ -38,6 +37,11 @@ public class DefeatScreen extends AbstractRandomRunScreen {
     protected void init() {
         super.init();
         openTime = System.currentTimeMillis();
+        
+        // Play defeat sound
+        if (client.player != null) {
+            client.player.playSound(net.minecraft.sound.SoundEvents.ENTITY_WITHER_SPAWN, 1.0f, 1.0f);
+        }
         
         
         com.randomrun.gui.widget.GlobalParticleSystem particleSystem = com.randomrun.gui.widget.GlobalParticleSystem.getInstance();
@@ -115,7 +119,7 @@ public class DefeatScreen extends AbstractRandomRunScreen {
         context.getMatrices().push();
         context.getMatrices().translate(width / 2f, 40, 0);
         context.getMatrices().scale(scale * 2, scale * 2, 1);
-        context.drawCenteredTextWithShadow(textRenderer, "§c§lDEFEAT", 0, 0, 0xFF5555);
+        context.drawCenteredTextWithShadow(textRenderer, Text.translatable("randomrun.screen.defeat.title_label"), 0, 0, 0xFF5555);
         context.getMatrices().pop();
         
        
@@ -140,7 +144,7 @@ public class DefeatScreen extends AbstractRandomRunScreen {
         
         
         context.drawCenteredTextWithShadow(textRenderer, 
-            "§7Черный экран при нажатии - это выход из мира", 
+            Text.translatable("randomrun.victory.warning"), 
             width / 2, height - 80, 0x888888);
         
         super.render(context, mouseX, mouseY, delta);
@@ -151,7 +155,7 @@ public class DefeatScreen extends AbstractRandomRunScreen {
         
         context.getMatrices().push();
         context.getMatrices().translate(x, y + levitationOffset, 100);
-        context.getMatrices().scale(64f, -64f, 64f);
+        context.getMatrices().scale(150f, -150f, 150f);
         
         context.getMatrices().multiply(new Quaternionf().rotateY((float) Math.toRadians(rotationY)));
         

@@ -8,7 +8,6 @@ import com.randomrun.config.ModConfig;
 import com.randomrun.data.RunDataManager;
 import com.randomrun.data.ItemDifficulty;
 import com.randomrun.hud.HudRenderer;
-import com.randomrun.command.GoCommand;
 import com.randomrun.command.BattleGoCommand;
 import com.randomrun.util.TickHandler;
 import com.randomrun.util.BattleCleanupHandler;
@@ -46,12 +45,16 @@ public class RandomRunMod implements ClientModInitializer {
         // Initialize run data manager
         runDataManager = new RunDataManager();
         
+        // Apply saved language
+        if (config.getLanguage() != null && !config.getLanguage().isEmpty()) {
+            com.randomrun.util.LanguageManager.setLanguage(config.getLanguage());
+        }
+        
         // Initialize item difficulty system
         ItemDifficulty.initialize();
         
         // Register commands
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-            GoCommand.register(dispatcher);
             BattleGoCommand.register(dispatcher);
         });
         

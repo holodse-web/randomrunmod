@@ -7,7 +7,6 @@ import com.randomrun.RandomRunMod;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.item.Item;
 import net.minecraft.registry.Registries;
-import net.minecraft.text.Text;
 
 import java.io.*;
 import java.lang.reflect.Type;
@@ -46,6 +45,8 @@ public class RunDataManager {
         public int attempts;
         public long lastAttempt;
         public String hash;
+        
+        private RunResult() {}
         
         public RunResult(String itemId, long bestTime) {
             this.itemId = itemId;
@@ -217,12 +218,18 @@ public class RunDataManager {
                 if (loaded != null) {
                     
                     for (Map.Entry<String, RunResult> entry : loaded.entrySet()) {
+                        // Relaxed integrity check - if invalid, we still load but log warning
+                        // This prevents data loss if hash algo changes or on weird errors
                         if (entry.getValue().verifyIntegrity()) {
                             results.put(entry.getKey(), entry.getValue());
                         } else {
-                            RandomRunMod.LOGGER.warn("Invalid result detected for: " + entry.getKey());
+                            RandomRunMod.LOGGER.warn("Invalid result integrity for: " + entry.getKey() + " - loading anyway to prevent data loss");
+                            results.put(entry.getKey(), entry.getValue());
+                            // Fix hash
+                            entry.getValue().hash = RunResult.generateHash(entry.getValue().itemId, entry.getValue().bestTime);
                         }
                     }
+                    RandomRunMod.LOGGER.info("Loaded " + results.size() + " run results");
                 }
             } catch (Exception e) {
                 RandomRunMod.LOGGER.error("Failed to load run data", e);

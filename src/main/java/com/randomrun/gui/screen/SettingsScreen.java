@@ -50,12 +50,12 @@ public class SettingsScreen extends AbstractRandomRunScreen {
             2, 0.2f
         ));
         
-        // Time challenge settings
+        // Challenges settings (Moved Time Challenge here)
         addDrawableChild(new StyledButton(
             centerX - buttonWidth / 2, startY + spacing * 3,
             buttonWidth, buttonHeight,
-            Text.translatable("randomrun.settings.time_challenge"),
-            button -> MinecraftClient.getInstance().setScreen(new TimeChallengeSettingsScreen(this)),
+            Text.translatable("randomrun.settings.challenges"), // New key needed
+            button -> MinecraftClient.getInstance().setScreen(new ChallengesSettingsScreen(this)),
             3, 0.25f
         ));
         

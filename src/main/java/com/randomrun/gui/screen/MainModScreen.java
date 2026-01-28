@@ -3,7 +3,6 @@ package com.randomrun.gui.screen;
 import com.randomrun.RandomRunMod;
 import com.randomrun.gui.widget.GlobalParticleSystem;
 import com.randomrun.gui.widget.LanguageDropdownWidget;
-import com.randomrun.gui.widget.ParticleSystem;
 import com.randomrun.gui.widget.StyledButton;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -39,6 +38,9 @@ public class MainModScreen extends AbstractRandomRunScreen {
     
     @Override
     protected void init() {
+        // Ensure language is correct on screen init
+        com.randomrun.util.LanguageManager.ensureLanguage();
+        
         super.init();
         openTime = System.currentTimeMillis();
         fadeProgress = 0f;

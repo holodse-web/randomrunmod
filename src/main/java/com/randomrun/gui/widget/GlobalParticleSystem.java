@@ -12,6 +12,7 @@ public class GlobalParticleSystem {
     private int screenWidth;
     private int screenHeight;
     private boolean redMode = false;
+    private boolean greenMode = false;
     
     private static final int MAX_PARTICLES = 100;
     private static final int SPAWN_RATE = 2;
@@ -32,6 +33,12 @@ public class GlobalParticleSystem {
     
     public void setRedMode(boolean redMode) {
         this.redMode = redMode;
+        if (redMode) this.greenMode = false;
+    }
+
+    public void setGreenMode(boolean greenMode) {
+        this.greenMode = greenMode;
+        if (greenMode) this.redMode = false;
     }
     
     public void clearParticles() {
@@ -90,7 +97,8 @@ public class GlobalParticleSystem {
         void render(DrawContext context) {
             int alphaInt = (int) (alpha * 180);
             if (alphaInt > 0) {
-                int baseColor = GlobalParticleSystem.getInstance().redMode ? 0xFF5555 : 0x6930c3;
+                int baseColor = GlobalParticleSystem.getInstance().redMode ? 0xFF5555 : 
+                               (GlobalParticleSystem.getInstance().greenMode ? 0x55FF55 : 0x6930c3);
                 int color = (alphaInt << 24) | baseColor;
                 // Используем float позиции для плавного движения
                 int x1 = (int) Math.floor(x);

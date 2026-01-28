@@ -18,7 +18,6 @@ import java.util.Comparator;
 import java.util.List;
 
 public class ResultsScreen extends AbstractRandomRunScreen {
-    private final Screen parent;
     private TextFieldWidget searchField;
     private List<RunDataManager.RunResult> filteredResults = new ArrayList<>();
     private List<RunDataManager.RunResult> allResults = new ArrayList<>();
@@ -35,7 +34,6 @@ public class ResultsScreen extends AbstractRandomRunScreen {
     
     public ResultsScreen(Screen parent) {
         super(Text.translatable("randomrun.screen.results.title"));
-        this.parent = parent;
     }
     
     @Override

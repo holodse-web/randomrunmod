@@ -20,15 +20,7 @@ public class LanguageManager {
         
         int nextIndex = (currentIndex + 1) % LANGUAGES.length;
         String newLanguage = LANGUAGES[nextIndex];
-        RandomRunMod.getInstance().getConfig().setLanguage(newLanguage);
-        RandomRunMod.getInstance().saveConfig();
-        
-        // Apply language change to Minecraft
-        net.minecraft.client.MinecraftClient client = net.minecraft.client.MinecraftClient.getInstance();
-        if (client != null && client.getLanguageManager() != null) {
-            client.getLanguageManager().setLanguage(newLanguage);
-            client.reloadResources();
-        }
+        setLanguage(newLanguage);
     }
     
     public static void setLanguage(String newLanguage) {
@@ -40,6 +32,25 @@ public class LanguageManager {
         if (client != null && client.getLanguageManager() != null) {
             client.getLanguageManager().setLanguage(newLanguage);
             client.reloadResources();
+            
+            // Force save to options.txt
+            client.options.language = newLanguage;
+            client.options.write();
+        }
+    }
+    
+    public static void ensureLanguage() {
+        String configLang = RandomRunMod.getInstance().getConfig().getLanguage();
+        net.minecraft.client.MinecraftClient client = net.minecraft.client.MinecraftClient.getInstance();
+        
+        if (client != null && client.getLanguageManager() != null) {
+            String currentClientLang = client.getLanguageManager().getLanguage();
+            
+            // If config differs from actual client language, force update
+            if (!configLang.equals(currentClientLang)) {
+                RandomRunMod.LOGGER.info("Language mismatch detected (Config: " + configLang + ", Game: " + currentClientLang + "). Forcing update...");
+                setLanguage(configLang);
+            }
         }
     }
     

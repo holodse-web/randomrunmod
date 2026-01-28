@@ -42,6 +42,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
     private long lastTickTime = 0;
     private List<Item> slotMachineItems = new ArrayList<>();
     private static final long SLOT_MACHINE_DURATION = 2000; // 2 seconds (ускорено)
+    private long openTime;
     
     public SpeedrunScreen(Screen parent) {
         super(Text.translatable("randomrun.screen.speedrun.title"));
@@ -51,6 +52,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
     @Override
     protected void init() {
         super.init();
+        openTime = System.currentTimeMillis();
         boolean allowUnobtainable = RandomRunMod.getInstance().getConfig().isAllowUnobtainableItems();
         allItems = ItemDifficulty.getAllItems(allowUnobtainable);
         filteredItems = new ArrayList<>(allItems);
@@ -76,7 +78,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         
         // Battle button
         addDrawableChild(new StyledButton2(
-            width / 2 - 100, height - 65,
+            width / 2 - 100, height - 55,
             200, 20,
             Text.literal("§6" + Text.translatable("randomrun.battle.title").getString()),
             button -> MinecraftClient.getInstance().setScreen(new BattleMenuScreen(this)),
@@ -143,6 +145,12 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
     
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        // Calculate animation progress
+        long elapsed = System.currentTimeMillis() - openTime;
+        float animationProgress = Math.min(1f, elapsed / 400f);
+        float easedProgress = 1f - (float) Math.pow(1 - animationProgress, 3);
+        int slideOffset = (int) ((1f - easedProgress) * 30);
+        
         // Call parent render (handles fade automatically)
         super.render(context, mouseX, mouseY, delta);
         
@@ -154,23 +162,27 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
             renderSlotMachine(context);
             
             // Auto-proceed when slot machine finishes
-            long elapsed = System.currentTimeMillis() - slotMachineStartTime;
-            if (elapsed >= SLOT_MACHINE_DURATION && slotMachineResult != null) {
+            long elapsedSlot = System.currentTimeMillis() - slotMachineStartTime;
+            if (elapsedSlot >= SLOT_MACHINE_DURATION && slotMachineResult != null) {
                 MinecraftClient.getInstance().setScreen(new ItemRevealScreen(this, slotMachineResult));
             }
         } else {
-            renderItemGrid(context, mouseX, mouseY);
+            // Update search field position with animation
+            int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2;
+            searchField.setY(gridY - 30 + slideOffset);
+            
+            renderItemGrid(context, mouseX, mouseY, slideOffset);
         }
         
         // Render scroll indicator
         if (!slotMachineActive && filteredItems.size() > ITEMS_PER_ROW * VISIBLE_ROWS) {
-            renderScrollIndicator(context, mouseX, mouseY);
+            renderScrollIndicator(context, mouseX, mouseY, slideOffset);
         }
     }
     
-    private void renderItemGrid(DrawContext context, int mouseX, int mouseY) {
+    private void renderItemGrid(DrawContext context, int mouseX, int mouseY, int slideOffset) {
         int gridX = width / 2 - (ITEMS_PER_ROW * (ITEM_SIZE + GRID_PADDING)) / 2;
-        int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2;
+        int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2 + slideOffset;
         
         // Background for grid
         int gridWidth = ITEMS_PER_ROW * (ITEM_SIZE + GRID_PADDING);
@@ -301,12 +313,12 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         }
     }
     
-    private void renderScrollIndicator(DrawContext context, int mouseX, int mouseY) {
+    private void renderScrollIndicator(DrawContext context, int mouseX, int mouseY, int slideOffset) {
         int totalRows = (int) Math.ceil(filteredItems.size() / (float) ITEMS_PER_ROW);
         int maxScroll = Math.max(0, totalRows - VISIBLE_ROWS);
         
         if (maxScroll > 0) {
-            int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2;
+            int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2 + slideOffset;
             int gridHeight = VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING);
             int scrollBarHeight = gridHeight;
             int scrollBarX = width / 2 + (ITEMS_PER_ROW * (ITEM_SIZE + GRID_PADDING)) / 2 + 10;

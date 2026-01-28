@@ -51,7 +51,7 @@ public class TimeSelectionScreen extends AbstractRandomRunScreen {
         openTime = System.currentTimeMillis();
         
         int centerX = width / 2;
-        int buttonY = height - 60;
+        int buttonY = height - 55;
         
         // Всегда показываем кнопки в зависимости от состояния
         long elapsed = slotMachineActive ? System.currentTimeMillis() - slotMachineStartTime : SLOT_MACHINE_DURATION;
