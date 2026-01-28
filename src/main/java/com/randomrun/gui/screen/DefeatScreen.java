@@ -155,7 +155,7 @@ public class DefeatScreen extends AbstractRandomRunScreen {
         
         context.getMatrices().push();
         context.getMatrices().translate(x, y + levitationOffset, 100);
-        context.getMatrices().scale(150f, -150f, 150f);
+        context.getMatrices().scale(80f, -80f, 80f);
         
         context.getMatrices().multiply(new Quaternionf().rotateY((float) Math.toRadians(rotationY)));
         

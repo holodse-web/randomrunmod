@@ -25,25 +25,18 @@ public abstract class AbstractRandomRunScreen extends Screen {
     
     @Override
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+        context.fill(0, 0, this.width, this.height, 0xFF000000);
         
+        renderGradientBackground(context);
+        
+        GlobalParticleSystem.getInstance().update();
+        GlobalParticleSystem.getInstance().render(context);
     }
     
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        
-        context.fill(0, 0, this.width, this.height, 0xFF000000);
-        
-       
-        renderGradientBackground(context);
-        
-        
-        GlobalParticleSystem.getInstance().update();
-        GlobalParticleSystem.getInstance().render(context);
-        
-        
         super.render(context, mouseX, mouseY, delta);
         
-       
         if (modInfoWidget != null) {
             modInfoWidget.render(context, mouseX, mouseY, delta);
         }

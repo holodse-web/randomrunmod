@@ -7,6 +7,7 @@ package com.randomrun.gui.screen;
 import com.randomrun.RandomRunMod;
 import com.randomrun.data.ItemDifficulty;
 import com.randomrun.gui.widget.StyledButton2;
+import com.randomrun.gui.widget.StyledButton3;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -77,10 +78,10 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         ));
         
         // Battle button
-        addDrawableChild(new StyledButton2(
+        addDrawableChild(new StyledButton3(
             width / 2 - 100, height - 55,
             200, 20,
-            Text.literal("§6" + Text.translatable("randomrun.battle.title").getString()),
+            Text.translatable("randomrun.battle.title"),
             button -> MinecraftClient.getInstance().setScreen(new BattleMenuScreen(this)),
             1, 0.12f
         ));

@@ -82,7 +82,7 @@ public class MatchReadyScreen extends AbstractRandomRunScreen {
             
             context.getMatrices().push();
             context.getMatrices().translate(centerX, itemBoxY + itemBoxSize / 2, 0);
-            context.getMatrices().scale(3.0f, 3.0f, 1.0f);
+            context.getMatrices().scale(2.0f, 2.0f, 1.0f);
             context.drawItem(new ItemStack(targetItem), -8, -8);
             context.getMatrices().pop();
             

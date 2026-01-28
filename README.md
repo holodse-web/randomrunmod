@@ -45,5 +45,5 @@
 
 ---
 
-**Version:** 26.4.3 BETA
+**Version:** 26.5 BETA
 **Minecraft:** 1.20.4 (Fabric)

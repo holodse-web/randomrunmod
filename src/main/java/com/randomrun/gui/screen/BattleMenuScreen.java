@@ -8,10 +8,12 @@ import net.minecraft.text.Text;
 
 public class BattleMenuScreen extends AbstractRandomRunScreen {
     private final Screen parent;
+    private long startTime;
     
     public BattleMenuScreen(Screen parent) {
         super(Text.translatable("randomrun.battle.title"));
         this.parent = parent;
+        this.startTime = System.currentTimeMillis();
     }
     
     @Override
@@ -22,17 +24,17 @@ public class BattleMenuScreen extends AbstractRandomRunScreen {
         int centerY = height / 2;
         
         addDrawableChild(new StyledButton2(
-            centerX - 100, centerY - 30,
+            centerX - 100, centerY - 27,
             200, 20,
-            Text.literal("§a" + Text.translatable("randomrun.battle.private_room").getString()),
+            Text.translatable("randomrun.battle.private_room"),
             button -> MinecraftClient.getInstance().setScreen(new PrivateBattleMenuScreen(this)),
             0, 0.1f
         ));
         
         addDrawableChild(new StyledButton2(
-            centerX - 100, centerY + 5,
+            centerX - 100, centerY + 8,
             200, 20,
-            Text.literal("§b" + Text.translatable("randomrun.battle.public_queue").getString()),
+            Text.translatable("randomrun.battle.public_queue"),
             button -> MinecraftClient.getInstance().setScreen(new PublicQueueScreen(this)),
             1, 0.15f
         ));
@@ -47,17 +49,42 @@ public class BattleMenuScreen extends AbstractRandomRunScreen {
     }
     
     @Override
+    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+        super.renderBackground(context, mouseX, mouseY, delta);
+        
+        int centerX = width / 2;
+        int centerY = height / 2;
+        
+        int contentLeft = width / 2 - 120;
+        int contentTop = centerY - 60;
+        int contentRight = width / 2 + 120;
+        int contentBottom = centerY + 60;
+        
+        context.fill(contentLeft, contentTop, contentRight, contentBottom, 0xCC1a0b2e);
+        
+        // Border
+        com.randomrun.gui.screen.MainModScreen.renderAnimatedBorder(context, contentLeft, contentTop, contentRight, contentBottom, 2);
+        
+        // Separator
+        context.fill(centerX - 100, contentTop + 25, centerX + 100, contentTop + 26, 0xFFFFFFFF);
+    }
+    
+    @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
         
         int centerX = width / 2;
+        int centerY = height / 2;
+        int contentTop = centerY - 60;
         
+        // Анимированный радужный цвет
+        float time = (System.currentTimeMillis() - startTime) / 1000.0f;
+        float hue = (time * 0.5f) % 1.0f;
+        int rainbowColor = java.awt.Color.HSBtoRGB(hue, 0.8f, 1.0f);
+        
+        String title = Text.translatable("randomrun.battle.title").getString();
         context.drawCenteredTextWithShadow(textRenderer, 
-            Text.literal("§l§6" + Text.translatable("randomrun.battle.title").getString().toUpperCase()), 
-            centerX, 30, 0xFFFFFF);
-        
-        context.drawCenteredTextWithShadow(textRenderer,
-            Text.literal("§7" + Text.translatable("randomrun.battle.select_mode").getString()),
-            centerX, height / 2 - 60, 0xAAAAAA);
+            Text.literal(title), 
+            centerX, contentTop + 10, rainbowColor);
     }
 }

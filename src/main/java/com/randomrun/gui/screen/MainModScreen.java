@@ -206,30 +206,34 @@ public class MainModScreen extends AbstractRandomRunScreen {
         context.getMatrices().pop();
     }
     
-    private void renderAnimatedBorder(DrawContext context, int left, int top, int right, int bottom, int borderWidth) {
-        int perimeter = 2 * (right - left) + 2 * (bottom - top);
+    public static void renderAnimatedBorder(DrawContext context, int left, int top, int right, int bottom, int borderWidth) {
+        float time = (System.currentTimeMillis() % 2000) / 2000f;
         
-        for (int i = 0; i < perimeter; i += 2) {
-            float progress = (borderAnimation + (float) i / perimeter) % 1.0f;
-            int color = lerpBorderColor(progress);
-            
-            int x, y;
-            if (i < (right - left)) {
-                x = left + i;
-                y = top;
-            } else if (i < (right - left) + (bottom - top)) {
-                x = right;
-                y = top + (i - (right - left));
-            } else if (i < 2 * (right - left) + (bottom - top)) {
-                x = right - (i - (right - left) - (bottom - top));
-                y = bottom;
-            } else {
-                x = left;
-                y = bottom - (i - 2 * (right - left) - (bottom - top));
-            }
-            
-            context.fill(x, y, x + borderWidth, y + borderWidth, color);
-        }
+        // Draw 4 solid rectangles for the border
+        int color = getStaticBorderColor(time);
+        
+        // Top
+        context.fill(left, top, right, top + borderWidth, color);
+        // Bottom
+        context.fill(left, bottom - borderWidth, right, bottom, color);
+        // Left
+        context.fill(left, top, left + borderWidth, bottom, color);
+        // Right
+        context.fill(right - borderWidth, top, right, bottom, color);
+    }
+    
+    private static int getStaticBorderColor(float t) {
+        int alpha = 255 << 24;
+        float factor = (float) Math.sin(t * Math.PI * 2) * 0.5f + 0.5f;
+        int r = (int) MathHelper.lerp(factor, 105, 255);
+        int g = (int) MathHelper.lerp(factor, 48, 255);
+        int b = (int) MathHelper.lerp(factor, 195, 255);
+        return alpha | (r << 16) | (g << 8) | b;
+    }
+
+    private void renderAnimatedBorder(DrawContext context, int left, int top, int right, int bottom, int borderWidth, boolean instance) {
+         // Instance version redirect
+         renderAnimatedBorder(context, left, top, right, bottom, borderWidth);
     }
     
     private int lerpBorderColor(float t) {

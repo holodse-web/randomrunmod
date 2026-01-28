@@ -39,6 +39,7 @@
   "randomrun.button.quit": "Quit",
   "randomrun.button.exit": "Exit",
   "randomrun.button.try_again": "Try Again",
+  "randomrun.screen.in_development": "In Development",
 
   "randomrun.search": "Search",
   "randomrun.search.placeholder": "Enter item name...",
@@ -57,6 +58,7 @@
   "randomrun.battle.private_match": "Private Match",
   "randomrun.battle.waiting": "Waiting for opponents...",
   "randomrun.battle.code": "Room Code: %s",
+  "randomrun.battle.room_code": "Room Code: %s",
   "randomrun.battle.enter_code": "Enter Code",
   "randomrun.battle.start": "Start",
   "randomrun.battle.ready": "Ready",

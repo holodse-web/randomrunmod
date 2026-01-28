@@ -9,10 +9,10 @@ import net.minecraft.text.Text;
 
 public class PublicQueueScreen extends AbstractRandomRunScreen {
     private final Screen parent;
-    private boolean inQueue = false;
+    // private boolean inQueue = false;
     
     public PublicQueueScreen(Screen parent) {
-        super(Text.literal("Публичная очередь"));
+        super(Text.translatable("randomrun.battle.public_queue"));
         this.parent = parent;
     }
     
@@ -26,28 +26,33 @@ public class PublicQueueScreen extends AbstractRandomRunScreen {
         int centerX = width / 2;
         int centerY = height / 2;
         
+        /*
         addDrawableChild(new StyledButton2(
             centerX - 100, centerY - 10,
             200, 20,
-            Text.literal(inQueue ? "§c✗ Покинуть очередь" : "§a⚡ Найти противника"),
+            Text.literal(inQueue ? "§c Покинуть очередь" : "§a Найти противника"),
             button -> toggleQueue(),
             0, 0.1f
         ));
+        */
         
         addDrawableChild(new StyledButton2(
             centerX - 100, height - 30,
             200, 20,
             Text.translatable("randomrun.button.back"),
             button -> {
+                /*
                 if (inQueue) {
                     leaveQueue();
                 }
+                */
                 MinecraftClient.getInstance().setScreen(parent);
             },
             1, 0.15f
         ));
     }
     
+    /*
     private void toggleQueue() {
         if (inQueue) {
             leaveQueue();
@@ -89,21 +94,29 @@ public class PublicQueueScreen extends AbstractRandomRunScreen {
         inQueue = false;
         init();
     }
+    */
     
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        /*
         // Check if match was found - if so, screen was already changed, don't render
         BattleManager manager = BattleManager.getInstance();
         if (inQueue && manager.getCurrentRoom() != null) {
             // Match found, animation screen already opened, close this screen
             return;
         }
+        */
         
         super.render(context, mouseX, mouseY, delta);
         
         int centerX = width / 2;
         int centerY = height / 2;
         
+        context.drawCenteredTextWithShadow(textRenderer, 
+            Text.translatable("randomrun.screen.in_development"), 
+            centerX, centerY - 10, 0xFFFFFF);
+            
+        /*
         context.drawCenteredTextWithShadow(textRenderer, 
             Text.literal("§l§bПУБЛИЧНАЯ ОЧЕРЕДЬ"), 
             centerX, 30, 0xFFFFFF);
@@ -123,14 +136,17 @@ public class PublicQueueScreen extends AbstractRandomRunScreen {
                 Text.literal("§7Нажмите кнопку для поиска противника"),
                 centerX, centerY - 40, 0xAAAAAA);
         }
+        */
     }
     
     
     @Override
     public void close() {
+        /*
         if (inQueue) {
             leaveQueue();
         }
+        */
         super.close();
     }
 }

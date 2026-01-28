@@ -14,7 +14,7 @@ import java.util.concurrent.CompletableFuture;
 public class VersionChecker {
     private static VersionChecker instance;
     private static final String FIREBASE_URL = "https://rrmmod-f67df-default-rtdb.europe-west1.firebasedatabase.app";
-    private static final String CURRENT_VERSION = "26.4.3 BETA";
+    private static final String CURRENT_VERSION = "26.5 BETA";
     
     private final HttpClient httpClient;
     private String latestVersion = null;

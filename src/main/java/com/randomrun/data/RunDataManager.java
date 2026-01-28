@@ -178,19 +178,28 @@ public class RunDataManager {
     }
     
     private void saveResult() {
-        if (targetItem == null) return;
+        if (targetItem == null) {
+            RandomRunMod.LOGGER.warn("Attempted to save result but targetItem is null!");
+            return;
+        }
         
         String itemId = Registries.ITEM.getId(targetItem).toString();
         RunResult existing = results.get(itemId);
         
+        RandomRunMod.LOGGER.info("Saving result for " + itemId + ". Time: " + elapsedTime + "ms");
+        
         if (existing == null) {
             results.put(itemId, new RunResult(itemId, elapsedTime));
+            RandomRunMod.LOGGER.info("New PB (first run)!");
         } else {
             existing.attempts++;
             existing.lastAttempt = System.currentTimeMillis();
             if (elapsedTime < existing.bestTime) {
+                RandomRunMod.LOGGER.info("New PB! Old: " + existing.bestTime + ", New: " + elapsedTime);
                 existing.bestTime = elapsedTime;
                 existing.hash = RunResult.generateHash(itemId, elapsedTime);
+            } else {
+                RandomRunMod.LOGGER.info("Not a PB. Best: " + existing.bestTime);
             }
         }
         

@@ -28,16 +28,18 @@ public class BattleFreezeMixin {
                 frozenX = player.getX();
                 frozenY = player.getY();
                 frozenZ = player.getZ();
-                frozenYaw = player.getYaw();
-                frozenPitch = player.getPitch();
+                // Don't save rotation - allow looking around
                 wasFrozen = true;
             }
             
-            // Lock position and rotation completely using ticks only (no effects)
+            // Lock position only (allow camera rotation)
             player.setVelocity(0, 0, 0);
             player.setPos(frozenX, frozenY, frozenZ);
-            player.setYaw(frozenYaw);
-            player.setPitch(frozenPitch);
+            
+            // Allow looking around by NOT resetting yaw/pitch
+            // player.setYaw(frozenYaw);
+            // player.setPitch(frozenPitch);
+            
             player.prevX = frozenX;
             player.prevY = frozenY;
             player.prevZ = frozenZ;

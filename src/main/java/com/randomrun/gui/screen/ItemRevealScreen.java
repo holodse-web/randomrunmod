@@ -191,18 +191,10 @@ public class ItemRevealScreen extends AbstractRandomRunScreen {
         
         
         long elapsed = System.currentTimeMillis() - openTime;
-        float shadowPulse = (float) Math.sin(elapsed / 800.0) * 0.15f + 0.85f; // 0.7 - 1.0
-        
-       
-        renderPurpleGlow(context, x, (int)(y + levitationOffset));
-        
-    
-        renderShadow(context, x, (int)(y + levitationOffset + 60), shadowPulse);
         
         context.getMatrices().push();
         context.getMatrices().translate(x, y + levitationOffset, 100);
         context.getMatrices().scale(96f, -96f, 96f);
-        
         
         context.getMatrices().multiply(new Quaternionf().rotateX((float) Math.toRadians(dragRotationX)));
         context.getMatrices().multiply(new Quaternionf().rotateY((float) Math.toRadians(rotationY + dragRotationY)));
@@ -228,29 +220,6 @@ public class ItemRevealScreen extends AbstractRandomRunScreen {
         
         context.getMatrices().pop();
     }
-    
-    private void renderShadow(DrawContext context, int x, int y, float scale) {
-        int sw = (int)(40 * scale); 
-        int sh = (int)(10 * scale); 
-        
-        
-        context.fillGradient(x - sw, y - sh, x + sw, y + sh, 0x60000000, 0x00000000);
-    }
-    
-    private void renderPurpleGlow(DrawContext context, int x, int y) {
-        RenderSystem.enableBlend();
-        
-        RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE);
-        
-        int size = 60;
-        
-        context.fillGradient(x - size, y - size, x + size, y + size, 0x408B5CF6, 0x008B5CF6);
-        context.fillGradient(x - size/2, y - size/2, x + size/2, y + size/2, 0x208B5CF6, 0x008B5CF6);
-        
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.disableBlend();
-    }
-    
     
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {

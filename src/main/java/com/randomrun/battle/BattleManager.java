@@ -342,11 +342,16 @@ public class BattleManager {
                     }
                     
             
+                    // Only trigger loading if we are the host OR if we detect both ready and no one has triggered it yet
+                    // Allow ANYONE to trigger it to prevent "Host waiting for Guest" deadlocks
                     if (updatedRoom.isHostReady() && updatedRoom.isGuestReady()) {
-                        RandomRunMod.LOGGER.info("✓ Both players ready in lobby (from listener) - triggering LOADING");
-                        MinecraftClient.getInstance().execute(() -> {
-                            setStatusLoading();
-                        });
+                        // Check if we already triggered loading locally to avoid double execution
+                        if (!loadingTriggered) {
+                            RandomRunMod.LOGGER.info("✓ Both players ready in lobby - triggering LOADING");
+                            MinecraftClient.getInstance().execute(() -> {
+                                setStatusLoading();
+                            });
+                        }
                     }
                 }
                 
@@ -355,30 +360,41 @@ public class BattleManager {
                     updatedRoom.isHostLoaded() && updatedRoom.isGuestLoaded() &&
                     (!currentRoom.isHostLoaded() || !currentRoom.isGuestLoaded())) {
                     
-                    String playerName = MinecraftClient.getInstance().getSession().getUsername();
-                    boolean isHost = currentRoom.isHost(playerName);
+                    // ANYONE can trigger FROZEN status if both are loaded
+                    // This prevents the issue where host is loaded but doesn't check again
                     
-                    if (isHost) {
-         
-                        CompletableFuture.runAsync(() -> {
-                            try {
-                                String roomPath = currentRoom.isPrivate() ? "/rooms/private/" : "/rooms/public/";
-                                
-                                JsonObject statusUpdate = new JsonObject();
-                                statusUpdate.addProperty("status", "FROZEN");
-                                
-                                firebaseClient.patch(roomPath + roomId, statusUpdate).join();
-                                
-                                RandomRunMod.LOGGER.info("✓ Both players loaded - status set to FROZEN");
-                            } catch (Exception e) {
-                                RandomRunMod.LOGGER.error("Failed to set FROZEN status", e);
+                    CompletableFuture.runAsync(() -> {
+                        try {
+                            String roomPath = currentRoom.isPrivate() ? "/rooms/private/" : "/rooms/public/";
+                            
+                            JsonObject statusUpdate = new JsonObject();
+                            statusUpdate.addProperty("status", "FROZEN");
+                            // Reset ready status for the FROZEN phase
+                            statusUpdate.addProperty("hostReady", false);
+                            statusUpdate.addProperty("guestReady", false);
+                            
+                            // Allow ANY player to trigger this to ensure it happens
+                            // The first one to patch wins, subsequent patches are redundant but harmless
+                            firebaseClient.patch(roomPath + roomId, statusUpdate).join();
+                            RandomRunMod.LOGGER.info("✓ Both players loaded - status set to FROZEN (ready flags reset)");
+                            
+                            // Reset local ready flags immediately
+                            if (currentRoom != null) {
+                                currentRoom.setHostReady(false);
+                                currentRoom.setGuestReady(false);
+                                currentRoom.setStatus(BattleRoom.RoomStatus.FROZEN);
                             }
-                        });
-                    }
+                        } catch (Exception e) {
+                            RandomRunMod.LOGGER.error("Failed to set FROZEN status", e);
+                        }
+                    });
                 }
                 
             
-                if (newStatus == BattleRoom.RoomStatus.LOADING && oldStatus != BattleRoom.RoomStatus.LOADING) {
+                if ((newStatus == BattleRoom.RoomStatus.LOADING || 
+                     newStatus == BattleRoom.RoomStatus.FROZEN || 
+                     newStatus == BattleRoom.RoomStatus.STARTED) && 
+                    oldStatus == BattleRoom.RoomStatus.WAITING) {
                     currentRoom = updatedRoom;
                     
                     MinecraftClient.getInstance().execute(() -> {
@@ -407,6 +423,8 @@ public class BattleManager {
                
                         RandomRunMod.getInstance().getRunDataManager().setTargetItem(targetItem);
                         
+                        // Force player spawn point to world spawn if needed
+                        // This logic is primarily handled in PlayerJoinWorldMixin, but we ensure consistent seed here
                         WorldCreator.createSpeedrunWorld(targetItem, seed);
                     });
                     return;
@@ -440,9 +458,22 @@ public class BattleManager {
                 
            
                 if (newStatus == BattleRoom.RoomStatus.STARTED && oldStatus != BattleRoom.RoomStatus.STARTED) {
-                    MinecraftClient.getInstance().execute(() -> {
-                        startCountdown();
-                    });
+                    // Start countdown logic
+                    Runnable startRunnable = () -> {
+                        MinecraftClient.getInstance().execute(() -> {
+                            startCountdown();
+                        });
+                    };
+
+                    // For Public rooms: Guest enters immediately, Host waits 1.5s
+                    // This prevents "Host 2/2 Ready but stuck" issues
+                    if (!currentRoom.isPrivate() && isHost) {
+                        RandomRunMod.LOGGER.info("Public Room Host: Delaying start by 1.5s to allow guest to enter first");
+                        scheduler.schedule(startRunnable, 1500, TimeUnit.MILLISECONDS);
+                    } else {
+                        // Private rooms OR Guest in Public room: Start immediately
+                        startRunnable.run();
+                    }
                 }
                 
           
@@ -588,10 +619,15 @@ public class BattleManager {
                     
                     if (latestRoom.isHostReady() && latestRoom.isGuestReady() && 
                         latestRoom.getStatus() == BattleRoom.RoomStatus.WAITING) {
-                        RandomRunMod.LOGGER.info("✓ Both players ready in lobby - transitioning to LOADING");
-                        MinecraftClient.getInstance().execute(() -> {
-                            setStatusLoading();
-                        });
+                        
+                        if (isHostPlayer) {
+                            RandomRunMod.LOGGER.info("✓ Both players ready in lobby - HOST transitioning to LOADING");
+                            MinecraftClient.getInstance().execute(() -> {
+                                setStatusLoading();
+                            });
+                        } else {
+                            RandomRunMod.LOGGER.info("✓ Both players ready in lobby - waiting for HOST to transition");
+                        }
                     }
                 }
                 
@@ -623,10 +659,9 @@ public class BattleManager {
                 boolean isHost = currentRoom.isHost(playerName);
                 
                 RandomRunMod.LOGGER.info("═══════════════════════════════════");
-                RandomRunMod.LOGGER.info("⚡ SENDING READY");
+                RandomRunMod.LOGGER.info("⚡ SENDING READY (/go)");
                 RandomRunMod.LOGGER.info("  - Room ID: " + currentRoomId);
                 RandomRunMod.LOGGER.info("  - Player: " + playerName + " (isHost: " + isHost + ")");
-                RandomRunMod.LOGGER.info("  - Path: " + path + currentRoomId);
                 
         
                 String readyField = isHost ? "hostReady" : "guestReady";
@@ -646,20 +681,43 @@ public class BattleManager {
                     currentRoom.setGuestReady(true);
                 }
                 
+                // If I am ready, I should wait for opponent.
+                // If I am the LAST one to be ready, I trigger the start.
+                // But to be safe, let's check the server state.
           
                 JsonObject latestRoomData = firebaseClient.get(path + currentRoomId).join();
                 if (latestRoomData != null) {
                     BattleRoom latestRoom = gson.fromJson(latestRoomData, BattleRoom.class);
             
+                    // UPDATE LOCAL STATE with latest from server
+                    // IMPORTANT: Force our own ready state to match what we just patched
+                    // This fixes the "Early /go" issue where server data might be slightly stale
+                    // despite the .join() call on patch
+                    if (isHost) {
+                        latestRoom.setHostReady(true);
+                    } else {
+                        latestRoom.setGuestReady(true);
+                    }
+                    
                     currentRoom = latestRoom;
                     
                     if (latestRoom.isHostReady() && latestRoom.isGuestReady() && 
                         latestRoom.getStatus() == BattleRoom.RoomStatus.FROZEN) {
+                        
+                        // ANYONE can trigger start if both are ready
+                        
                         JsonObject statusUpdate = new JsonObject();
                         statusUpdate.addProperty("status", "STARTED");
                         firebaseClient.patch(path + currentRoomId, statusUpdate).join();
                         
                         RandomRunMod.LOGGER.info("✓ Both players ready - battle starting!");
+                    } else {
+                        RandomRunMod.LOGGER.info("⏳ Waiting for opponent to be ready...");
+                        if (MinecraftClient.getInstance().player != null) {
+                            MinecraftClient.getInstance().player.sendMessage(
+                                Text.literal("§eОжидание готовности противника..."), false
+                            );
+                        }
                     }
                 }
                 RandomRunMod.LOGGER.info("═══════════════════════════════════");

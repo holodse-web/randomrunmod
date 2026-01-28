@@ -1,5 +1,6 @@
 package com.randomrun.gui.screen;
 
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.randomrun.RandomRunMod;
 import com.randomrun.battle.BattleManager;
@@ -32,16 +33,23 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
     
     private Item selectedItem = null;
     
-    // 3D item animation
+    // 3D item animation (из ItemRevealScreen)
     private float rotationY = 0f;
     private float levitationOffset = 0f;
+    private float targetLevitationOffset = 0f;
     private long openTime;
+    private long lastDragTime = 0;
+    private float rotationSpeed = 0f;
+    private float levitationSpeed = 0f;
+    private static final long RESUME_DELAY = 500;
+    private static final float RESUME_ACCELERATION = 0.02f;
     
     // Mouse drag rotation
     private boolean dragging = false;
     private float dragRotationX = 0f;
     private float dragRotationY = 0f;
     private double lastMouseX, lastMouseY;
+    private float frozenLevitationOffset = 0f;
     
     // Scrollbar
     private boolean scrollbarDragging = false;
@@ -67,16 +75,14 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
         
         int centerX = width / 2;
         
-        // Кнопка создать комнату - выше кнопки назад
         addDrawableChild(new StyledButton2(
-            centerX - 100, height - 70,
+            centerX - 100, height - 55,
             200, 20,
-            Text.literal("§a" + Text.translatable("randomrun.battle.create_room").getString()),
+            Text.translatable("randomrun.battle.create_room"),
             button -> createRoom(),
             0, 0.1f
         ));
         
-        // Кнопка назад
         addDrawableChild(new StyledButton2(
             centerX - 100, height - 30,
             200, 20,
@@ -112,32 +118,44 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
         
-        // Update animations
+        // Update animations (из ItemRevealScreen)
         long elapsed = System.currentTimeMillis() - openTime;
-        if (!dragging) {
-            rotationY += delta * 2f;
-            levitationOffset = (float) Math.sin(elapsed / 500.0) * 5f;
+        long timeSinceLastDrag = System.currentTimeMillis() - lastDragTime;
+        
+        if (dragging) {
+            rotationSpeed = 0f;
+            levitationSpeed = 0f;
+            frozenLevitationOffset = levitationOffset;
+        } else if (timeSinceLastDrag > RESUME_DELAY) {
+            rotationSpeed = Math.min(rotationSpeed + RESUME_ACCELERATION * delta, 2f);
+            levitationSpeed = Math.min(levitationSpeed + RESUME_ACCELERATION * delta, 1f);
+            
+            rotationY += delta * rotationSpeed;
+            targetLevitationOffset = (float) Math.sin(elapsed / 500.0) * 5f;
+            levitationOffset += (targetLevitationOffset - levitationOffset) * levitationSpeed * delta * 0.1f;
+        } else {
+            levitationOffset = frozenLevitationOffset;
         }
         
         int centerX = width / 2;
-        int gridY = height / 2 + 20; // Опустили сетку вниз
+        int gridY = height / 2 + 20;
         
         RenderSystem.enableBlend();
         
-        // Рендерим 3D предмет сверху
+        // Рендерим 3D предмет с эффектами (из ItemRevealScreen)
         if (selectedItem != null) {
             render3DItem(context, centerX, 80, delta);
             
-            // Название предмета под 3D моделью (светло-фиолетовый)
+            // Название предмета под 3D моделью
             String itemName = selectedItem.getName().getString();
             context.drawCenteredTextWithShadow(textRenderer,
-                Text.literal("§d" + itemName),
-                centerX, 150, 0xD946FF);
+                Text.literal(itemName),
+                centerX, 150, 0xFFFFFF);
         }
         
         context.drawCenteredTextWithShadow(textRenderer,
             Text.literal("§7Выберите предмет:"),
-            centerX, gridY - 20, 0xAAAAAA);
+            centerX, gridY - 15, 0xAAAAAA);
         
         renderItemGrid(context, mouseX, mouseY, centerX, gridY);
         renderScrollbar(context, mouseX, mouseY, centerX, gridY);
@@ -148,11 +166,13 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
     private void render3DItem(DrawContext context, int x, int y, float delta) {
         ItemStack stack = new ItemStack(selectedItem);
         
+        // Эффекты из ItemRevealScreen
+        long elapsed = System.currentTimeMillis() - openTime;
+        
         context.getMatrices().push();
         context.getMatrices().translate(x, y + levitationOffset, 100);
-        context.getMatrices().scale(64f, -64f, 64f);
+        context.getMatrices().scale(80f, -80f, 80f);
         
-        // Применяем вращение
         context.getMatrices().multiply(new Quaternionf().rotateX((float) Math.toRadians(dragRotationX)));
         context.getMatrices().multiply(new Quaternionf().rotateY((float) Math.toRadians(rotationY + dragRotationY)));
         
@@ -178,8 +198,9 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
         context.getMatrices().pop();
     }
     
+    
     private void renderItemGrid(DrawContext context, int mouseX, int mouseY, int centerX, int gridY) {
-        gridY = height / 2 + 20; // Обновленная позиция
+        gridY = height / 2 + 20;
         int gridWidth = ITEMS_PER_ROW * (ITEM_SIZE + GRID_PADDING);
         int startX = centerX - gridWidth / 2;
         
@@ -225,16 +246,13 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
         int scrollbarX = centerX + gridWidth / 2 + 10;
         int scrollbarWidth = 6;
         
-        // Background
         context.fill(scrollbarX, gridY, scrollbarX + scrollbarWidth, gridY + gridHeight, 0x80000000);
         
-        // Thumb
         float thumbRatio = (float) VISIBLE_ROWS / maxRows;
         int thumbHeight = (int) (gridHeight * thumbRatio);
         float scrollRatio = maxScroll > 0 ? (float) scrollOffset / maxScroll : 0;
         int thumbY = gridY + (int) ((gridHeight - thumbHeight) * scrollRatio);
         
-        // Check if hovering over thumb
         boolean hoveringThumb = mouseX >= scrollbarX && mouseX <= scrollbarX + scrollbarWidth &&
                                mouseY >= thumbY && mouseY <= thumbY + thumbHeight;
         
@@ -251,7 +269,7 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
         int startX = centerX - gridWidth / 2;
         
         // Проверяем клик по скроллбару
-        int scrollbarX = centerX + gridWidth / 2 + 5;
+        int scrollbarX = centerX + gridWidth / 2 + 10;
         int scrollbarWidth = 6;
         int maxRows = (int) Math.ceil((double) filteredItems.size() / ITEMS_PER_ROW);
         int maxScroll = Math.max(0, maxRows - VISIBLE_ROWS);
@@ -264,10 +282,10 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
             return true;
         }
         
-        // Проверяем клик по 3D предмету для вращения
-        int itemAreaSize = 100;
+        // Проверяем клик по 3D предмету для вращения (из ItemRevealScreen)
+        int itemAreaSize = 60; // Меньшая область для меньшего предмета
         if (mouseX >= centerX - itemAreaSize && mouseX <= centerX + itemAreaSize &&
-            mouseY >= 30 && mouseY <= 130) {
+            mouseY >= 50 && mouseY <= 140) {
             dragging = true;
             lastMouseX = mouseX;
             lastMouseY = mouseY;
@@ -295,7 +313,11 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
     
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        dragging = false;
+        if (button == 0 && dragging) {
+            dragging = false;
+            lastDragTime = System.currentTimeMillis();
+            frozenLevitationOffset = levitationOffset;
+        }
         scrollbarDragging = false;
         return super.mouseReleased(mouseX, mouseY, button);
     }
@@ -321,7 +343,7 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
         if (dragging) {
             dragRotationY += (float) (mouseX - lastMouseX) * 0.5f;
             dragRotationX += (float) (mouseY - lastMouseY) * 0.5f;
-            dragRotationX = Math.max(-45, Math.min(45, dragRotationX));
+            dragRotationX = Math.max(-90, Math.min(90, dragRotationX));
             lastMouseX = mouseX;
             lastMouseY = mouseY;
             return true;
