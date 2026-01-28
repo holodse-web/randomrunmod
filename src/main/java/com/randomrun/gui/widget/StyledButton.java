@@ -10,7 +10,6 @@ import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 
 public class StyledButton extends ButtonWidget {
-    private final int index;
     private final float delay;
     private float animationProgress = 0f;
     private float hoverProgress = 0f;
@@ -25,7 +24,6 @@ public class StyledButton extends ButtonWidget {
     
     public StyledButton(int x, int y, int width, int height, Text message, PressAction onPress, int index, float delay) {
         super(x, y, width, height, message, onPress, DEFAULT_NARRATION_SUPPLIER);
-        this.index = index;
         this.delay = delay;
         this.creationTime = System.currentTimeMillis();
     }

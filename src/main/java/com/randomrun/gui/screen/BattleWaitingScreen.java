@@ -4,7 +4,6 @@ import com.randomrun.RandomRunMod;
 import com.randomrun.battle.BattleManager;
 import com.randomrun.battle.BattleRoom;
 import com.randomrun.gui.widget.StyledButton2;
-import com.randomrun.world.WorldCreator;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;

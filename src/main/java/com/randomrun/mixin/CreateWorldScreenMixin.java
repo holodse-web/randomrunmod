@@ -1,7 +1,7 @@
 package com.randomrun.mixin;
 
 import com.randomrun.RandomRunMod;
-import com.randomrun.world.WorldCreator;
+import com.randomrun.gui.screen.TimeSelectionScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.world.CreateWorldScreen;
 import org.spongepowered.asm.mixin.Mixin;

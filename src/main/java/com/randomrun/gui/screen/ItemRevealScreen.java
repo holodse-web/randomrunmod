@@ -16,7 +16,6 @@ import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
-import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
 public class ItemRevealScreen extends AbstractRandomRunScreen {
@@ -92,21 +91,12 @@ public class ItemRevealScreen extends AbstractRandomRunScreen {
                 centerX - 100, buttonY,
                 200, 20,
                 Text.translatable("randomrun.button.start_speedrun"),
-                button -> startSpeedrun(0)
-            ));
-        }
-        
-        
-        if (askForSeed) {
-            addDrawableChild(new StyledButton2(
-                centerX - 100, buttonY - 30,
-                200, 20,
-                Text.translatable("randomrun.button.enter_seed"),
                 button -> {
-                    long timeLimit = timeChallengeEnabled && manualTimeEnabled 
-                        ? RandomRunMod.getInstance().getConfig().getManualTimeSeconds() * 1000L 
-                        : 0;
-                    MinecraftClient.getInstance().setScreen(new SeedInputScreen(this, targetItem, timeLimit));
+                    if (askForSeed) {
+                        MinecraftClient.getInstance().setScreen(new SeedInputScreen(this, targetItem, 0));
+                    } else {
+                        startSpeedrun(0);
+                    }
                 }
             ));
         }

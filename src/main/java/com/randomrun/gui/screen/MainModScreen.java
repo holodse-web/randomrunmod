@@ -5,11 +5,9 @@ import com.randomrun.gui.widget.GlobalParticleSystem;
 import com.randomrun.gui.widget.LanguageDropdownWidget;
 import com.randomrun.gui.widget.ParticleSystem;
 import com.randomrun.gui.widget.StyledButton;
-import com.randomrun.util.LanguageManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -18,10 +16,8 @@ public class MainModScreen extends AbstractRandomRunScreen {
     private static final Identifier LOGO_TEXTURE = new Identifier(RandomRunMod.MOD_ID, "textures/gui/logo.png");
     
     
-    private static Screen lastScreen = null;
     
     private final Screen parent;
-    private ParticleSystem particleSystem;
     private float logoScale = 1.0f;
     private float targetLogoScale = 1.0f;
     private boolean logoHovered = false;
@@ -30,7 +26,6 @@ public class MainModScreen extends AbstractRandomRunScreen {
     private static final float FADE_SPEED = 0.08f;
     
     
-    private float animationProgress = 0f;
     private float borderAnimation = 0f;
     
    

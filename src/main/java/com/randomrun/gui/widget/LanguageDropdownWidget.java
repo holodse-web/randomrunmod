@@ -10,7 +10,6 @@ import net.minecraft.text.Text;
 public class LanguageDropdownWidget extends ButtonWidget {
     private boolean expanded = false;
     private float expandProgress = 0f;
-    private final Screen parentScreen;
     private static final String[] LANGUAGE_CODES = {"RU", "UA", "EN"};
     private static final String[] LANGUAGES = {"ru_ru", "uk_ua", "en_us"};
     private static final int BUTTON_SIZE = 20;
@@ -24,7 +23,6 @@ public class LanguageDropdownWidget extends ButtonWidget {
     public LanguageDropdownWidget(int x, int y, Screen parentScreen) {
         super(x, y, BUTTON_SIZE, BUTTON_SIZE, Text.literal(LanguageManager.getCurrentLanguageCode().toUpperCase()), 
             button -> {}, DEFAULT_NARRATION_SUPPLIER);
-        this.parentScreen = parentScreen;
     }
     
     @Override
@@ -77,55 +75,57 @@ public class LanguageDropdownWidget extends ButtonWidget {
             0xFFFFFF
         );
         
-        // Render dropdown sliding to the right
+        // Render dropdown below
         if (expandProgress > 0f) {
             String currentLang = LanguageManager.getCurrentLanguageCode().toUpperCase();
-            int dropdownX = getX() + BUTTON_SIZE + 2;
             int itemIndex = 0;
             
             for (int i = 0; i < LANGUAGE_CODES.length; i++) {
                 // Skip current language
                 if (LANGUAGE_CODES[i].equals(currentLang)) continue;
                 
-                int itemX = dropdownX + (int) (itemIndex * BUTTON_SIZE * expandProgress);
-                int itemWidth = (int) (BUTTON_SIZE * expandProgress);
+                // Vertical position below the main button
+                int itemY = getY() + BUTTON_SIZE + (int) (itemIndex * BUTTON_SIZE * expandProgress);
+                // Adjust for animation - slide down
+                int finalY = getY() + BUTTON_SIZE + (itemIndex * BUTTON_SIZE);
                 
-                if (itemWidth <= 0) {
+                // Use simple vertical stacking
+                int renderY = getY() + BUTTON_SIZE + (itemIndex * BUTTON_SIZE);
+                int itemHeight = (int) (BUTTON_SIZE * expandProgress);
+                
+                if (itemHeight <= 0) {
                     itemIndex++;
                     continue;
                 }
                 
-                boolean itemHovered = mouseX >= itemX && mouseX <= itemX + itemWidth &&
-                                     mouseY >= getY() && mouseY <= getY() + BUTTON_SIZE;
+                boolean itemHovered = mouseX >= getX() && mouseX <= getX() + BUTTON_SIZE &&
+                                     mouseY >= renderY && mouseY <= renderY + BUTTON_SIZE;
                 
                 // StyledButton style colors
                 int itemBaseColor = 0x302b63;
                 int itemHoverColor = 0x6930c3;
-                float itemHoverProgress = itemHovered ? 0.5f : 0f;
-                int itemBgColor = lerpColor(itemBaseColor, itemHoverColor, itemHoverProgress);
+                
+                // Calculate hover for this item (simplified)
+                int itemBgColor = itemHovered ? itemHoverColor : itemBaseColor;
                 int itemBgAlpha = 224;
                 int itemFinalBgColor = (itemBgAlpha << 24) | (itemBgColor & 0x00FFFFFF);
                 
-                context.fill(itemX, getY(), itemX + itemWidth, getY() + BUTTON_SIZE, itemFinalBgColor);
-                context.drawBorder(itemX, getY(), itemWidth, BUTTON_SIZE, 0xFF6930c3);
+                // Fade in alpha based on expandProgress
+                int alpha = (int) (255 * expandProgress);
                 
-                // White overlay on hover
-                if (itemHovered) {
-                    int whiteAlpha = 40;
-                    int whiteOverlay = (whiteAlpha << 24) | 0xFFFFFF;
-                    context.fill(itemX, getY(), itemX + itemWidth, getY() + BUTTON_SIZE, whiteOverlay);
-                }
+                context.fill(getX(), renderY, getX() + BUTTON_SIZE, renderY + BUTTON_SIZE, itemFinalBgColor);
                 
-                if (expandProgress > 0.5f) {
-                    int textAlpha = (int) ((expandProgress - 0.5f) * 2f * 255);
-                    context.drawCenteredTextWithShadow(
-                        MinecraftClient.getInstance().textRenderer,
-                        Text.literal(LANGUAGE_CODES[i]),
-                        itemX + itemWidth / 2,
-                        getY() + (BUTTON_SIZE - 8) / 2,
-                        0xFFFFFF | (textAlpha << 24)
-                    );
-                }
+                renderAnimatedBorder(context, getX(), renderY, getX() + BUTTON_SIZE, renderY + BUTTON_SIZE);
+                
+                context.drawCenteredTextWithShadow(
+                    MinecraftClient.getInstance().textRenderer,
+                    Text.literal(LANGUAGE_CODES[i]),
+                    getX() + BUTTON_SIZE / 2,
+                    renderY + (BUTTON_SIZE - 8) / 2,
+                    0xFFFFFF | (alpha << 24)
+                );
+                
+                // Click handling is done in mouseClicked, need to ensure it matches this layout
                 
                 itemIndex++;
             }
@@ -200,45 +200,28 @@ public class LanguageDropdownWidget extends ButtonWidget {
     
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (!this.active || !this.visible) {
-            return false;
-        }
+        if (!active || !visible) return false;
         
-        // Check if clicked on main button
-        if (mouseX >= getX() && mouseX <= getX() + BUTTON_SIZE &&
-            mouseY >= getY() && mouseY <= getY() + BUTTON_SIZE) {
+        if (this.clicked(mouseX, mouseY)) {
+            this.playDownSound(MinecraftClient.getInstance().getSoundManager());
             expanded = !expanded;
             return true;
         }
         
-        // Check if clicked on dropdown items
-        if (expanded && expandProgress > 0.5f) {
+        if (expanded) {
             String currentLang = LanguageManager.getCurrentLanguageCode().toUpperCase();
-            int dropdownX = getX() + BUTTON_SIZE + 2;
             int itemIndex = 0;
             
             for (int i = 0; i < LANGUAGE_CODES.length; i++) {
-                // Skip current language
                 if (LANGUAGE_CODES[i].equals(currentLang)) continue;
                 
-                int itemX = dropdownX + (int) (itemIndex * BUTTON_SIZE * expandProgress);
-                int itemWidth = (int) (BUTTON_SIZE * expandProgress);
+                int renderY = getY() + BUTTON_SIZE + (itemIndex * BUTTON_SIZE);
                 
-                if (mouseX >= itemX && mouseX <= itemX + itemWidth &&
-                    mouseY >= getY() && mouseY <= getY() + BUTTON_SIZE) {
+                if (mouseX >= getX() && mouseX <= getX() + BUTTON_SIZE &&
+                    mouseY >= renderY && mouseY <= renderY + BUTTON_SIZE) {
                     
-                    // Change language
-                    String newLanguage = LANGUAGES[i];
-                    com.randomrun.RandomRunMod.getInstance().getConfig().setLanguage(newLanguage);
-                    com.randomrun.RandomRunMod.getInstance().saveConfig();
-                    
-                    // Apply language change
-                    MinecraftClient client = MinecraftClient.getInstance();
-                    if (client != null && client.getLanguageManager() != null) {
-                        client.getLanguageManager().setLanguage(newLanguage);
-                        client.reloadResources();
-                    }
-                    
+                    this.playDownSound(MinecraftClient.getInstance().getSoundManager());
+                    LanguageManager.setLanguage(LANGUAGES[i]);
                     expanded = false;
                     return true;
                 }
@@ -247,9 +230,8 @@ public class LanguageDropdownWidget extends ButtonWidget {
             }
         }
         
-        // Close dropdown if clicked outside
-        if (expanded) {
-            expanded = false;
+        if (expanded && mouseX < getX() || mouseX > getX() + BUTTON_SIZE + 100 || mouseY < getY() || mouseY > getY() + 200) {
+             expanded = false;
         }
         
         return false;

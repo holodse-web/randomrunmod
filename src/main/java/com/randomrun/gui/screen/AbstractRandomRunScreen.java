@@ -2,7 +2,7 @@ package com.randomrun.gui.screen;
 
 import com.randomrun.gui.widget.GlobalParticleSystem;
 import com.randomrun.gui.widget.ModInfoWidget;
-import net.minecraft.client.MinecraftClient;
+import com.randomrun.RandomRunMod;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;

@@ -39,7 +39,6 @@ public class BattleManager {
     private boolean isHost;
     private boolean isFrozen;
     private boolean isInBattle;
-    private boolean hasReadied;
 
     private java.util.concurrent.ScheduledFuture<?> matchmakingTask;
     private java.util.concurrent.ScheduledFuture<?> roomListenerTask;
@@ -708,7 +707,6 @@ public class BattleManager {
         }
         
         String winnerName = room.getWinner();
-        String opponentName = isHost ? room.getGuest() : room.getHost();
         
         if (won) {
             MinecraftClient.getInstance().player.sendMessage(
@@ -724,9 +722,9 @@ public class BattleManager {
             );
         } else {
             long opponentTime = isHost ? room.getGuestTime() : room.getHostTime();
-            String reason = "Противник " + winnerName + " добыл предмет первым!";
+            String reason = Text.translatable("randomrun.defeat.reason.opponent_won", winnerName).getString();
             if (opponentTime > 0) {
-                reason += " (Время: " + formatTime(opponentTime) + ")";
+                reason += Text.translatable("randomrun.defeat.reason.time", formatTime(opponentTime)).getString();
             }
             
     
@@ -802,7 +800,6 @@ public class BattleManager {
         this.isHost = false;
         this.isFrozen = false;
         this.isInBattle = false;
-        this.hasReadied = false;
         this.battleEndHandled = false;
         this.loadingTriggered = false;
         
@@ -839,7 +836,6 @@ public class BattleManager {
         this.isHost = false;
         this.isFrozen = false;
         this.isInBattle = false;
-        this.hasReadied = false;
         this.battleEndHandled = false;
         this.loadingTriggered = false;
         

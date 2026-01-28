@@ -31,6 +31,18 @@ public class LanguageManager {
         }
     }
     
+    public static void setLanguage(String newLanguage) {
+        RandomRunMod.getInstance().getConfig().setLanguage(newLanguage);
+        RandomRunMod.getInstance().saveConfig();
+        
+        // Apply language change to Minecraft
+        net.minecraft.client.MinecraftClient client = net.minecraft.client.MinecraftClient.getInstance();
+        if (client != null && client.getLanguageManager() != null) {
+            client.getLanguageManager().setLanguage(newLanguage);
+            client.reloadResources();
+        }
+    }
+    
     public static String getCurrentLanguage() {
         return RandomRunMod.getInstance().getConfig().getLanguage();
     }

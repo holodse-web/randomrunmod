@@ -2,7 +2,7 @@ package com.randomrun.gui.screen;
 
 import com.randomrun.RandomRunMod;
 import com.randomrun.data.RunDataManager;
-import com.randomrun.gui.widget.StyledButton2;
+import com.randomrun.gui.widget.StyledButton;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.TitleScreen;

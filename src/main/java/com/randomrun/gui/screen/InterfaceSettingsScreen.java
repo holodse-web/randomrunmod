@@ -31,7 +31,6 @@ public class InterfaceSettingsScreen extends AbstractRandomRunScreen {
         int buttonWidth = 250;
         int buttonHeight = 20;
         int startY = 60;
-        int spacing = 30;
         int buttonIndex = 0;
         
       

@@ -1,7 +1,6 @@
 package com.randomrun.gui.widget;
 
 import com.randomrun.RandomRunMod;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 
@@ -10,7 +9,6 @@ public class ModInfoWidget {
     private static final String VERSION = "26.4.3 BETA";
     
     private final int screenWidth;
-    private final int screenHeight;
     private final TextRenderer textRenderer;
     
     private float telegramAnimationProgress = 0f;
@@ -18,7 +16,6 @@ public class ModInfoWidget {
     
     public ModInfoWidget(int screenWidth, int screenHeight, TextRenderer textRenderer) {
         this.screenWidth = screenWidth;
-        this.screenHeight = screenHeight;
         this.textRenderer = textRenderer;
     }
     

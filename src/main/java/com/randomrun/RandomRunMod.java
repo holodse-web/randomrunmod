@@ -20,7 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RandomRunMod implements ClientModInitializer {
-    // Это не комментарий, это константа. Декомпилятор её покажет.
+    
     public static final String OWNERSHIP = "PROTECTED CODE: (c) 2026 Stanislav Kholod. Unauthorized copying is prohibited.";
     
     public static final String MOD_ID = "randomrun";

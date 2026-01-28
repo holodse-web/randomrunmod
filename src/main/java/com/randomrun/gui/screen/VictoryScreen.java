@@ -58,7 +58,7 @@ public class VictoryScreen extends AbstractRandomRunScreen {
         addDrawableChild(new StyledButton2(
             centerX - 100, height - 30,
             200, 20,
-            Text.literal("Выйти"),
+            Text.translatable("randomrun.button.exit"),
             button -> {
                 MinecraftClient client = MinecraftClient.getInstance();
                 RandomRunMod.getInstance().getRunDataManager().cancelRun();
@@ -87,7 +87,7 @@ public class VictoryScreen extends AbstractRandomRunScreen {
         context.getMatrices().push();
         context.getMatrices().translate(width / 2f, 40, 0);
         context.getMatrices().scale(scale * 2, scale * 2, 1);
-        context.drawCenteredTextWithShadow(textRenderer, "§a§lVICTORY!", 0, 0, 0x55FF55);
+        context.drawCenteredTextWithShadow(textRenderer, Text.translatable("randomrun.screen.victory.title_label"), 0, 0, 0x55FF55);
         context.getMatrices().pop();
         
         // Render 3D item

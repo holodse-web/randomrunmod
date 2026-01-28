@@ -16,7 +16,6 @@ import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 public class ItemSelectionAnimationScreen extends AbstractRandomRunScreen {
     private final Screen parent;

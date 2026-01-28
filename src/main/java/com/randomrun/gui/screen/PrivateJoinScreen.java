@@ -1,7 +1,6 @@
 package com.randomrun.gui.screen;
 
 import com.randomrun.battle.BattleManager;
-import com.randomrun.battle.BattleRoom;
 import com.randomrun.gui.widget.StyledButton2;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;

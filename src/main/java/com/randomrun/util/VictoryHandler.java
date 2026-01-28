@@ -94,15 +94,6 @@ public class VictoryHandler {
         });
     }
     
-    private static void disconnectFromWorld(MinecraftClient client) {
-        client.execute(() -> {
-            if (client.world != null) {
-                client.world.disconnect();
-            }
-            client.disconnect();
-        });
-    }
-    
     public static void tick() {
         if (victoryScheduled && waitingForDelay) {
             if (System.currentTimeMillis() >= victoryTime) {

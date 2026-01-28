@@ -32,8 +32,6 @@ public class TimeSelectionScreen extends AbstractRandomRunScreen {
     private boolean slotMachineActive = false;
     private long slotMachineStartTime;
     private int currentDisplayTime = 0;
-    private int currentDisplayMinutes = 0;
-    private int currentDisplaySeconds = 0;
     private int selectedTime = 0;
     private boolean buttonsRefreshed = false;
     private boolean soundPlayed = false;
@@ -214,9 +212,6 @@ public class TimeSelectionScreen extends AbstractRandomRunScreen {
                 if (currentTime - lastTickTime >= tickInterval) {
                     lastTickTime = currentTime;
                     currentDisplayTime = 10 + new Random().nextInt(111); // 10-120 seconds
-                    // Анимация минут и секунд отдельно
-                    currentDisplayMinutes = currentDisplayTime / 60;
-                    currentDisplaySeconds = currentDisplayTime % 60;
                     
                     // SLOT MACHINE SOUND
                     if (RandomRunMod.getInstance().getConfig().isSoundEffectsEnabled()) {
@@ -270,12 +265,6 @@ public class TimeSelectionScreen extends AbstractRandomRunScreen {
         }
     }
     
-    private String formatTime(int seconds) {
-        int min = seconds / 60;
-        int sec = seconds % 60;
-        return String.format("%02d:%02d", min, sec);
-    }
-    
     private String formatTimeText(int seconds) {
         int hours = seconds / 3600;
         int min = (seconds % 3600) / 60;
@@ -283,15 +272,18 @@ public class TimeSelectionScreen extends AbstractRandomRunScreen {
         
         StringBuilder result = new StringBuilder();
         if (hours > 0) {
-            result.append(hours).append(" ").append(hours == 1 ? "час" : hours < 5 ? "часа" : "часов");
+            String unit = hours == 1 ? Text.translatable("randomrun.time.hour").getString() : Text.translatable("randomrun.time.hours").getString();
+            result.append(hours).append(" ").append(unit);
             if (min > 0 || sec > 0) result.append(" ");
         }
         if (min > 0) {
-            result.append(min).append(" ").append(min == 1 ? "минута" : min < 5 ? "минуты" : "минут");
+            String unit = min == 1 ? Text.translatable("randomrun.time.minute").getString() : Text.translatable("randomrun.time.minutes").getString();
+            result.append(min).append(" ").append(unit);
             if (sec > 0) result.append(" ");
         }
         if (sec > 0 || (hours == 0 && min == 0)) {
-            result.append(sec).append(" ").append(sec == 1 ? "секунда" : sec < 5 ? "секунды" : "секунд");
+            String unit = sec == 1 ? Text.translatable("randomrun.time.second").getString() : Text.translatable("randomrun.time.seconds").getString();
+            result.append(sec).append(" ").append(unit);
         }
         return result.toString();
     }

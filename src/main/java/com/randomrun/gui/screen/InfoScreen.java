@@ -1,6 +1,5 @@
 package com.randomrun.gui.screen;
 
-import com.randomrun.RandomRunMod;
 import com.randomrun.gui.widget.StyledButton2;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;

@@ -11,12 +11,10 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.item.ItemStack;
-import net.minecraft.text.Text;
 
 public class HudRenderer implements HudRenderCallback {
     
     private static final int HUD_SIZE = 48; // Square HUD (уменьшен)
-    private static final int PADDING = 4;
     private static final int BORDER_WIDTH = 2; // Увеличена толщина обводки
     private float borderAnimation = 0f;
     private float blinkAnimation = 0f;
@@ -199,25 +197,5 @@ public class HudRenderer implements HudRenderCallback {
         }
         
         return 0xFF000000 | (red << 16) | (green << 8) | blue;
-    }
-    
-    private String getStatusText(RunDataManager.RunStatus status) {
-        return switch (status) {
-            case FROZEN -> "§c§lFROZEN";
-            case RUNNING -> "§a§lRUNNING";
-            case COMPLETED -> "§a§lVICTORY!";
-            case FAILED -> "§c§lFAILED";
-            default -> "";
-        };
-    }
-    
-    private int getStatusColor(RunDataManager.RunStatus status) {
-        return switch (status) {
-            case FROZEN -> 0xFF5555;
-            case RUNNING -> 0x55FF55;
-            case COMPLETED -> 0x55FF55;
-            case FAILED -> 0xFF5555;
-            default -> 0xFFFFFF;
-        };
     }
 }

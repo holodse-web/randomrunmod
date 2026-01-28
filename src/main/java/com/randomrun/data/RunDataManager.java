@@ -7,7 +7,7 @@ import com.randomrun.RandomRunMod;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.item.Item;
 import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
+import net.minecraft.text.Text;
 
 import java.io.*;
 import java.lang.reflect.Type;

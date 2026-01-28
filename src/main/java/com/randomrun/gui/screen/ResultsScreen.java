@@ -235,11 +235,9 @@ public class ResultsScreen extends AbstractRandomRunScreen {
     
     private void renderStatsSummary(DrawContext context) {
         int totalRuns = 0;
-        long totalTime = 0;
         
         for (RunDataManager.RunResult result : allResults) {
             totalRuns += result.attempts;
-            totalTime += result.bestTime;
         }
         
         int y = height - 55;

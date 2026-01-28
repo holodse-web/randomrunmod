@@ -14,13 +14,11 @@ import net.minecraft.util.Identifier;
 
 public class MatchReadyScreen extends AbstractRandomRunScreen {
     private final Screen parent;
-    private final String matchId;
     private boolean isReady = false;
     
     public MatchReadyScreen(Screen parent, String matchId) {
         super(Text.translatable("randomrun.battle.match_ready"));
         this.parent = parent;
-        this.matchId = matchId;
     }
     
     @Override
