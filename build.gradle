@@ -1,0 +1,129 @@
+import proguard.gradle.ProGuardTask
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        // Подключаем плагин ProGuard для защиты кода
+        classpath 'com.guardsquare:proguard-gradle:7.4.0'
+    }
+}
+
+plugins {
+    id 'fabric-loom' version '1.4-SNAPSHOT'
+    id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    
+    // JLayer для воспроизведения MP3
+    implementation 'javazoom:jlayer:1.0.1'
+    include 'javazoom:jlayer:1.0.1'
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 17
+}
+
+java {
+    // ВАЖНО: withSourcesJar() УДАЛЕН, чтобы не сливать исходный код
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+jar {
+    from("LICENSE") {
+        rename { "${it}_${project.archives_base_name}" }
+    }
+}
+
+// ЗАДАЧА ОБФУСКАЦИИ
+afterEvaluate {
+    task obfuscateJar(type: ProGuardTask, dependsOn: remapJar) {
+        // Входной файл
+        injars "build/libs/${archivesBaseName}-${version}.jar"
+        // Временный файл для работы
+        outjars "build/libs/${archivesBaseName}-${version}-obf.jar"
+
+        libraryjars "${System.getProperty('java.home')}/jmods/java.base.jmod"
+        configurations.runtimeClasspath.collect { it }.each { libraryjars it }
+
+        keepattributes '*Annotation*,Signature,InnerClasses,StackMapTable'
+        optimizationpasses 2
+
+        // Оставляем точки входа Fabric
+        keep "public class * implements net.fabricmc.api.ModInitializer { *; }"
+        keep "public class * implements net.fabricmc.api.ClientModInitializer { *; }"
+        
+        // Оставляем библиотеку звуков
+        keep "class javazoom.jl.** { *; }"
+
+        // ЗАЩИТА ВАШЕГО ПАКЕТА
+        // Мы оставляем названия главных классов, чтобы игра их нашла,
+        // но всё внутри методов будет перемешано.
+        keep "public class com.randomrun.RandomRunMod { *; }"
+        keep "public class com.randomrun.hud.** { *; }"
+        
+        // Сохраняем миксины
+        keep "class com.randomrun.mixin.** { *; }"
+        
+        // Сохраняем конфиг и экраны (часто рефлексия или json)
+        keep "class com.randomrun.config.** { *; }"
+        keep "class com.randomrun.gui.** { *; }"
+        
+        keepclassmembers "class com.randomrun.config.** { <fields>; }"
+
+        // Обфусцируем всё остальное
+        // allowaccessmodification // Может ломать доступ при отключенной оптимизации
+        overloadaggressively
+        repackageclasses 'a'
+        
+        dontshrink
+        // dontoptimize // Уже указано выше
+        // dontpreverify // Уже указано выше
+        ignorewarnings
+        dontwarn "**"
+
+        doLast {
+            delete "build/libs/${archivesBaseName}-${version}.jar"
+            file("build/libs/${archivesBaseName}-${version}-obf.jar").renameTo(file("build/libs/${archivesBaseName}-${version}.jar"))
+            println "Защита успешно применена к основному файлу!"
+        }
+    }
+    
+    build.dependsOn obfuscateJar
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+    }
+}

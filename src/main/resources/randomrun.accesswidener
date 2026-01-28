@@ -1,0 +1,5 @@
+accessWidener v2 client
+
+accessible class net/minecraft/client/gui/screen/world/CreateWorldScreen$WorldCreator
+accessible field net/minecraft/client/gui/screen/world/CreateWorldScreen worldCreator Lnet/minecraft/client/gui/screen/world/CreateWorldScreen$WorldCreator;
+accessible method net/minecraft/client/gui/screen/world/CreateWorldScreen createLevel ()V

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "randomrun",
+  "version": "${version}",
+  "name": "RandomRun Mod",
+  "description": "Random speedrun mod - get a random item and find it as fast as possible!",
+  "authors": [
+    "RandomRun Team"
+  ],
+  "contact": {
+    "homepage": "https://github.com/randomrun",
+    "sources": "https://github.com/randomrun/randomrun-mod"
+  },
+  "license": "MIT",
+  "icon": "assets/randomrun/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.randomrun.RandomRunMod"
+    ]
+  },
+  "mixins": [
+    "randomrun.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "fabric-api": "*",
+    "minecraft": "~1.20.4",
+    "java": ">=17"
+  }
+}
