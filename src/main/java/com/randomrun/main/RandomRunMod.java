@@ -25,7 +25,7 @@ public class RandomRunMod implements ClientModInitializer {
     public static final String OWNERSHIP = "PROTECTED CODE: (c) 2026 Stanislav Kholod. Unauthorized copying is prohibited.";
     
     public static final String MOD_ID = "randomrun";
-    public static final String MOD_VERSION = "26.55-BETA";
+    public static final String MOD_VERSION = "26.56-BETA";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     
     private static RandomRunMod instance;

@@ -9,8 +9,13 @@ import net.minecraft.item.Item;
 import net.minecraft.registry.Registries;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.util.*;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+import net.minecraft.client.MinecraftClient;
 
 public class RunDataManager {
     
@@ -34,6 +39,9 @@ public class RunDataManager {
     private long pauseStartTime = 0;
     private long totalPausedTime = 0;
     
+    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static final File CONFIG_DIR = new File(FabricLoader.getInstance().getConfigDir().toFile(), "randomrun");
+
     public enum RunStatus {
         INACTIVE,
         FROZEN,
@@ -86,6 +94,10 @@ public class RunDataManager {
     }
     
     public RunDataManager() {
+        if (!CONFIG_DIR.exists()) {
+            CONFIG_DIR.mkdirs();
+        }
+        loadLocalResults();
         refreshResultsFromLeaderboard();
     }
     
@@ -93,19 +105,66 @@ public class RunDataManager {
         LeaderboardManager.getInstance().getPlayerRecords(LeaderboardManager.getInstance().getPlayerName())
             .thenAccept(entries -> {
                 synchronized (results) {
-                    results.clear();
+                    boolean changed = false;
                     for (LeaderboardEntry entry : entries) {
-                        RunResult result = new RunResult();
-                        result.itemId = entry.targetId;
-                        result.bestTime = entry.completionTime;
-                        result.lastAttempt = entry.timestamp;
-                        result.attempts = 1; // Not persisted in DB currently
-                        result.hash = RunResult.generateHash(result.itemId, result.bestTime);
-                        results.put(result.itemId, result);
+                        RunResult current = results.get(entry.targetId);
+                        // Merge: If we don't have it, or leaderboard time is better (lower)
+                        if (current == null || entry.completionTime < current.bestTime) {
+                            RunResult result = new RunResult();
+                            result.itemId = entry.targetId;
+                            result.bestTime = entry.completionTime;
+                            result.lastAttempt = entry.timestamp;
+                            result.attempts = current != null ? current.attempts : 1;
+                            result.hash = RunResult.generateHash(result.itemId, result.bestTime);
+                            results.put(result.itemId, result);
+                            changed = true;
+                        }
+                    }
+                    if (changed) {
+                        saveLocalResults();
                     }
                 }
-                RandomRunMod.LOGGER.info("Loaded " + results.size() + " results from Leaderboard");
+                RandomRunMod.LOGGER.info("Synced results from Leaderboard. Total entries: " + results.size());
             });
+    }
+
+    private File getPlayerHistoryFile() {
+        String playerName = "unknown";
+        try {
+            if (MinecraftClient.getInstance().getSession() != null) {
+                playerName = MinecraftClient.getInstance().getSession().getUsername();
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        return new File(CONFIG_DIR, "run_history_" + playerName + ".json");
+    }
+
+    private void loadLocalResults() {
+        File file = getPlayerHistoryFile();
+        if (!file.exists()) return;
+
+        try (Reader reader = new FileReader(file)) {
+            Map<String, RunResult> loaded = gson.fromJson(reader, new TypeToken<Map<String, RunResult>>(){}.getType());
+            if (loaded != null) {
+                synchronized (results) {
+                    results.putAll(loaded);
+                }
+                RandomRunMod.LOGGER.info("Loaded " + loaded.size() + " local results from " + file.getName());
+            }
+        } catch (Exception e) {
+            RandomRunMod.LOGGER.error("Failed to load local run history", e);
+        }
+    }
+
+    private void saveLocalResults() {
+        try (Writer writer = new FileWriter(getPlayerHistoryFile())) {
+            synchronized (results) {
+                gson.toJson(results, writer);
+            }
+        } catch (Exception e) {
+            RandomRunMod.LOGGER.error("Failed to save local run history", e);
+        }
     }
     
     public void startNewRun(Item item, long timeLimitMs) {
@@ -178,7 +237,7 @@ public class RunDataManager {
     
     public void completeRun() {
         if (status == RunStatus.RUNNING) {
-            elapsedTime = System.currentTimeMillis() - startTime;
+            elapsedTime = System.currentTimeMillis() - startTime - totalPausedTime;
             status = RunStatus.COMPLETED;
             saveResult();
             RandomRunMod.LOGGER.info("Run completed! Time: " + formatTime(elapsedTime));
@@ -270,71 +329,10 @@ public class RunDataManager {
                     existing.hash = RunResult.generateHash(itemId, elapsedTime);
                 }
             }
+            saveLocalResults();
         }
         
-        // Submit to Leaderboard (Database)
-        // ONLY submit if NOT in battle mode. Battle mode submissions are handled separately.
-        // Or actually, let's allow it but ensure idempotency via unique IDs or checks.
-        // The issue is that BattleManager might report victory, and VictoryHandler might report victory.
-        // VictoryHandler calls saveResult() -> submitCurrentRun().
-        
-        // Let's rely on VictoryHandler to call saveResult() ONCE.
-        // But wait, saveResult() is private and called by completeRun().
-        // completeRun() is called by VictoryHandler.handleVictory().
-        
-        // If BattleManager calls reportVictory(), does it call completeRun()?
-        // BattleManager.handleBattleEnd() calls completeRun() ONLY if you LOST.
-        // If you WON, you probably called handleVictory() which called completeRun().
-        
-        // The double submission likely happens because:
-        // 1. VictoryHandler calls submitToLeaderboard() (which calls submitCurrentRun?) 
-        //    Wait, VictoryHandler calls submitToLeaderboard explicitly.
-        //    AND completeRun() calls saveResult() which calls submitCurrentRun().
-        //    So we have TWO calls to submitCurrentRun.
-        
-        // FIX: Remove the call to submitCurrentRun from saveResult(), OR remove it from VictoryHandler.
-        // Since saveResult() is "saving the result", it makes sense to keep it here.
-        // But VictoryHandler has explicit logic for "submitToLeaderboard".
-        
-        // Let's disable submission here if it's already being handled by VictoryHandler.
-        // Actually, let's make saveResult() NOT submit to leaderboard, and let VictoryHandler do it.
-        // OR make VictoryHandler NOT submit to leaderboard, and let saveResult() do it.
-        
-        // VictoryHandler.java:
-        // if (!battleManager.isInBattle()) {
-        //    submitToLeaderboard(runManager, elapsedTime);
-        // }
-        
-        // So VictoryHandler submits to leaderboard if NOT in battle.
-        // But saveResult() submits ALWAYS.
-        // So for singleplayer: 2 submissions.
-        // For battle: 1 submission (from saveResult).
-        
-        // We should remove submission from saveResult() and let VictoryHandler handle it centrally.
-        // But saveResult() is called when run is completed.
-        
-        /*
-        boolean isTimeChallenge = RandomRunMod.getInstance().getConfig().isTimeChallengeEnabled();
-        
-        LeaderboardManager.getInstance().submitCurrentRun(
-            itemId,
-            tType,
-            elapsedTime,
-            timeLimit,
-            difficulty,
-            isTimeChallenge
-        ).thenAccept(success -> {
-            if (success) {
-                RandomRunMod.LOGGER.info("Result saved to DB");
-                refreshResultsFromLeaderboard(); // Sync back to be sure
-            } else {
-                RandomRunMod.LOGGER.warn("Result NOT saved to DB (maybe not a PB or error)");
-            }
-        });
-        */
-        
-        // We removed the automatic submission from here to prevent duplicates.
-        // VictoryHandler is now responsible for triggering the submission.
+        // Note: Leaderboard submission is handled by VictoryHandler to prevent duplicates.
     }
     
     private void incrementAttempts() {

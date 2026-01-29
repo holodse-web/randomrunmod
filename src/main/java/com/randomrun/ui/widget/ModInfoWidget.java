@@ -7,7 +7,7 @@ import net.minecraft.client.gui.DrawContext;
 
 public class ModInfoWidget {
     private static final String TELEGRAM_URL = "https://t.me/randomrunmod";
-    private static final String VERSION = "26.55 BETA";
+    private static final String VERSION = "26.56 BETA";
     
     private final int screenWidth;
     private final TextRenderer textRenderer;
