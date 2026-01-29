@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.randomrun.RandomRunMod;
+import com.randomrun.main.RandomRunMod;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -112,6 +112,34 @@ public class FirebaseClient {
                 }
             } catch (Exception e) {
                 RandomRunMod.LOGGER.error("Firebase PATCH error: " + path, e);
+                return false;
+            }
+        });
+    }
+    
+    public CompletableFuture<Boolean> post(String path, Object data) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                String json = GSON.toJson(data);
+                
+                HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(FIREBASE_URL + path + ".json"))
+                    .timeout(Duration.ofSeconds(10))
+                    .POST(HttpRequest.BodyPublishers.ofString(json))
+                    .header("Content-Type", "application/json")
+                    .build();
+                
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                
+                if (response.statusCode() == 200) {
+                    RandomRunMod.LOGGER.info("Firebase POST success: " + path);
+                    return true;
+                } else {
+                    RandomRunMod.LOGGER.error("Firebase POST failed: " + response.statusCode());
+                    return false;
+                }
+            } catch (Exception e) {
+                RandomRunMod.LOGGER.error("Firebase POST error: " + path, e);
                 return false;
             }
         });

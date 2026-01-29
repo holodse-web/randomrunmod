@@ -1,8 +1,8 @@
 package com.randomrun.mixin;
 
-import com.randomrun.RandomRunMod;
-import com.randomrun.data.RunDataManager;
-import com.randomrun.data.SecurityManager;
+import com.randomrun.main.RandomRunMod;
+import com.randomrun.main.data.RunDataManager;
+import com.randomrun.main.data.SecurityManager;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;

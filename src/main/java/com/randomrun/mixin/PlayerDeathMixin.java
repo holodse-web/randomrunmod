@@ -1,7 +1,8 @@
 package com.randomrun.mixin;
 
-import com.randomrun.RandomRunMod;
-import com.randomrun.data.RunDataManager;
+import com.randomrun.main.RandomRunMod;
+import com.randomrun.main.data.RunDataManager;
+import com.randomrun.ui.screen.DefeatScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -27,14 +28,22 @@ public class PlayerDeathMixin {
             runManager.failRun();
             
             net.minecraft.client.MinecraftClient client = net.minecraft.client.MinecraftClient.getInstance();
-            if (client != null && runManager.getTargetItem() != null) {
+            if (client != null && (runManager.getTargetItem() != null || runManager.getTargetAdvancementId() != null)) {
                 // Cancel respawn screen and show defeat screen immediately
                 client.execute(() -> {
-                    client.setScreen(new com.randomrun.gui.screen.DefeatScreen(
-                        runManager.getTargetItem(), 
-                        finalTime,
-                        net.minecraft.text.Text.translatable("randomrun.defeat.death").getString()
-                    ));
+                    if (runManager.getTargetItem() != null) {
+                        client.setScreen(new DefeatScreen(
+                            runManager.getTargetItem(),
+                            finalTime,
+                            net.minecraft.text.Text.translatable("randomrun.defeat.death").getString()
+                        ));
+                    } else {
+                        client.setScreen(new DefeatScreen(
+                            runManager.getTargetAdvancementId(),
+                            finalTime,
+                            net.minecraft.text.Text.translatable("randomrun.defeat.death").getString()
+                        ));
+                    }
                 });
             }
         }

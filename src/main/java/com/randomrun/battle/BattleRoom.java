@@ -1,6 +1,7 @@
 package com.randomrun.battle;
 
 import com.google.gson.annotations.SerializedName;
+import com.randomrun.main.RandomRunMod;
 
 public class BattleRoom {
     

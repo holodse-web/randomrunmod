@@ -2,8 +2,7 @@
   "required": true,
   "package": "com.randomrun.mixin",
   "compatibilityLevel": "JAVA_17",
-  "client": [
-    "TitleScreenMixin",
+  "mixins": [
     "PlayerJoinWorldMixin",
     "PlayerMovementMixin",
     "PlayerJumpMixin",
@@ -11,17 +10,21 @@
     "BlockBreakMixin",
     "ItemPickupMixin",
     "PlayerDeathMixin",
-    "DeathScreenMixin",
     "GameModeProtectionMixin",
     "ClientCommandMixin",
+    "BattleFreezeMixin",
+    "BattleItemPickupMixin"
+  ],
+  "client": [
+    "TitleScreenMixin",
+    "DeathScreenMixin",
     "CreateWorldScreenMixin",
     "CreateWorldScreenAccessor",
     "WorldCreatorAccessor",
     "MouseMixin",
     "ClickableWidgetMixin",
     "GameMenuScreenMixin",
-    "BattleFreezeMixin",
-    "BattleItemPickupMixin"
+    "AdvancementUpdateMixin"
   ],
   "injectors": {
     "defaultRequire": 1

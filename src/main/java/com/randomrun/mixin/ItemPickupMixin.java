@@ -1,13 +1,11 @@
 package com.randomrun.mixin;
 
-import com.randomrun.RandomRunMod;
-import com.randomrun.data.RunDataManager;
-import com.randomrun.util.VictoryHandler;
+import com.randomrun.main.RandomRunMod;
+import com.randomrun.main.data.RunDataManager;
+import com.randomrun.main.util.VictoryHandler;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.Item;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

@@ -1,7 +1,7 @@
 package com.randomrun.mixin;
 
-import com.randomrun.RandomRunMod;
-import com.randomrun.data.RunDataManager;
+import com.randomrun.main.RandomRunMod;
+import com.randomrun.main.data.RunDataManager;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.util.math.Vec3d;
 import org.spongepowered.asm.mixin.Mixin;

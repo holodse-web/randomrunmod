@@ -6,12 +6,12 @@ package com.randomrun.battle;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.randomrun.RandomRunMod;
-import com.randomrun.data.ItemDifficulty;
-import com.randomrun.data.RunDataManager;
-import com.randomrun.gui.screen.DefeatScreen;
-import com.randomrun.gui.screen.ItemSelectionAnimationScreen;
-import com.randomrun.world.WorldCreator;
+import com.randomrun.main.RandomRunMod;
+import com.randomrun.challenges.classic.data.ItemDifficulty;
+import com.randomrun.main.data.RunDataManager;
+import com.randomrun.ui.screen.DefeatScreen;
+import com.randomrun.challenges.classic.screen.ItemSelectionAnimationScreen;
+import com.randomrun.challenges.classic.world.WorldCreator;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.Item;
 import net.minecraft.registry.Registries;
@@ -170,6 +170,38 @@ public class BattleManager {
         });
     }
     
+    private long lastEventTime = 0;
+    
+    private void checkForEvents(String eventsPath) {
+        try {
+            JsonObject events = firebaseClient.get(eventsPath).join();
+            if (events == null) return;
+            
+            String playerName = MinecraftClient.getInstance().getSession().getUsername();
+            
+            for (String key : events.keySet()) {
+                JsonObject event = events.getAsJsonObject(key);
+                long timestamp = event.get("timestamp").getAsLong();
+                
+                if (timestamp > lastEventTime) {
+                    lastEventTime = timestamp;
+                    
+                    String eventPlayer = event.get("player").getAsString();
+                    if (!eventPlayer.equals(playerName) && "ACHIEVEMENT".equals(event.get("type").getAsString())) {
+                        String title = event.get("title").getAsString();
+                        String iconId = event.get("icon").getAsString();
+                        
+                        MinecraftClient.getInstance().execute(() -> {
+                            com.randomrun.challenges.advancement.hud.OpponentAchievementHud.show(title, iconId);
+                        });
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Ignore errors (might be empty or connection issue)
+        }
+    }
+
     private void startMatchmaking(String playerName) {
         if (matchmakingTask != null && !matchmakingTask.isCancelled()) {
             matchmakingTask.cancel(false);
@@ -482,6 +514,11 @@ public class BattleManager {
                     MinecraftClient.getInstance().execute(() -> {
                         handleBattleEnd(updatedRoom);
                     });
+                }
+                
+                // Check for new events (achievements) if in private room
+                if (currentRoom.isPrivate() && newStatus == BattleRoom.RoomStatus.STARTED) {
+                    checkForEvents(path + roomId + "/events");
                 }
                 
                 currentRoom = updatedRoom;
@@ -800,11 +837,51 @@ public class BattleManager {
         }
         
         scheduler.schedule(() -> {
+            // Archive private games before deleting
+            if (room.isPrivate()) {
+                archiveRoom(room);
+            }
+            
             deleteRoom();
             stopBattle();
         }, 5, TimeUnit.SECONDS);
     }
     
+    private void archiveRoom(BattleRoom room) {
+        if (room == null) return;
+        
+        CompletableFuture.runAsync(() -> {
+            try {
+                String path = "/history/private/" + room.getRoomCode();
+                firebaseClient.put(path, room).join();
+                RandomRunMod.LOGGER.info("Archived private room: " + room.getRoomCode());
+            } catch (Exception e) {
+                RandomRunMod.LOGGER.error("Failed to archive room: " + room.getRoomCode(), e);
+            }
+        });
+    }
+
+    public void reportAchievement(String achievementId, String title, String iconItem) {
+        if (currentRoom == null || !currentRoom.isPrivate()) return;
+        
+        CompletableFuture.runAsync(() -> {
+            try {
+                String path = "/rooms/private/" + currentRoomId + "/events";
+                JsonObject event = new JsonObject();
+                event.addProperty("type", "ACHIEVEMENT");
+                event.addProperty("player", MinecraftClient.getInstance().getSession().getUsername());
+                event.addProperty("achievementId", achievementId);
+                event.addProperty("title", title);
+                event.addProperty("icon", iconItem);
+                event.addProperty("timestamp", System.currentTimeMillis());
+                
+                firebaseClient.post(path, event).join();
+            } catch (Exception e) {
+                RandomRunMod.LOGGER.error("Failed to report achievement event", e);
+            }
+        });
+    }
+
     public void leavePublicQueue(String playerName) {
         CompletableFuture.runAsync(() -> {
             try {
@@ -831,6 +908,77 @@ public class BattleManager {
                 RandomRunMod.LOGGER.error("Failed to delete room: " + roomId, e);
             }
         });
+    }
+
+    public void cleanupOnShutdown() {
+        if (currentRoomId == null) return;
+        
+        // Synchronous cleanup for shutdown hook
+        try {
+            // Check if we need to award victory on shutdown
+            if (currentRoom != null && currentRoom.isPrivate() && 
+               (currentRoom.getStatus() == BattleRoom.RoomStatus.STARTED || currentRoom.getStatus() == BattleRoom.RoomStatus.FROZEN)) {
+                
+                String myName = MinecraftClient.getInstance().getSession().getUsername();
+                String opponentName = isHost ? currentRoom.getGuest() : currentRoom.getHost();
+                
+                if (opponentName != null) {
+                    JsonObject update = new JsonObject();
+                    update.addProperty("winner", opponentName);
+                    update.addProperty("status", "FINISHED");
+                    
+                    String path = "/rooms/private/" + currentRoomId;
+                    firebaseClient.patch(path, update).join();
+                    RandomRunMod.LOGGER.info("Surrendered on shutdown. Winner: " + opponentName);
+                    return; // Don't delete room, let the winner handle it
+                }
+            }
+            
+            String path = (currentRoom != null && currentRoom.isPrivate()) ? "/rooms/private/" : "/rooms/public/";
+            firebaseClient.delete(path + currentRoomId).join();
+            RandomRunMod.LOGGER.info("Deleted room on shutdown: " + currentRoomId);
+        } catch (Exception e) {
+            RandomRunMod.LOGGER.error("Failed to delete room on shutdown", e);
+        }
+    }
+    
+    public void handleDisconnect() {
+        if (currentRoom == null || currentRoomId == null) return;
+        
+        // If game is active (STARTED or FROZEN) and private, surrender
+        if (currentRoom.isPrivate() && 
+           (currentRoom.getStatus() == BattleRoom.RoomStatus.STARTED || currentRoom.getStatus() == BattleRoom.RoomStatus.FROZEN)) {
+            
+            String myName = MinecraftClient.getInstance().getSession().getUsername();
+            String opponentName = isHost ? currentRoom.getGuest() : currentRoom.getHost();
+            
+            if (opponentName != null) {
+                RandomRunMod.LOGGER.info("Disconnecting from active private battle - Surrendering to " + opponentName);
+                
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        JsonObject update = new JsonObject();
+                        update.addProperty("winner", opponentName);
+                        update.addProperty("status", "FINISHED");
+                        
+                        String path = "/rooms/private/" + currentRoomId;
+                        firebaseClient.patch(path, update).join();
+                        RandomRunMod.LOGGER.info("Surrender sent successfully");
+                    } catch (Exception e) {
+                        RandomRunMod.LOGGER.error("Failed to send surrender", e);
+                    }
+                });
+                
+                // Stop local battle state but DON'T delete room immediately
+                // The opponent needs to see the winner status
+                stopBattle();
+                return;
+            }
+        }
+        
+        // Default cleanup (delete room if host, etc)
+        deleteRoom();
+        stopBattle();
     }
     
     public void stopBattle() {
@@ -873,6 +1021,8 @@ public class BattleManager {
     
     public void resetForNewGame() {
         RandomRunMod.LOGGER.info("🔄 Resetting BattleManager for new game");
+        
+        this.lastEventTime = System.currentTimeMillis();
         
       
         if (matchmakingTask != null) {

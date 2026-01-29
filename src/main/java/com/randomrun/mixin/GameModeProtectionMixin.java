@@ -1,7 +1,8 @@
 package com.randomrun.mixin;
 
-import com.randomrun.RandomRunMod;
-import com.randomrun.data.RunDataManager;
+import com.randomrun.main.RandomRunMod;
+import com.randomrun.main.data.RunDataManager;
+import com.randomrun.ui.screen.DefeatScreen;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.world.GameMode;
 import org.spongepowered.asm.mixin.Mixin;
@@ -27,7 +28,7 @@ public class GameModeProtectionMixin {
                 net.minecraft.client.MinecraftClient client = net.minecraft.client.MinecraftClient.getInstance();
                 if (client != null && runManager.getTargetItem() != null) {
                     client.execute(() -> {
-                        client.setScreen(new com.randomrun.gui.screen.DefeatScreen(
+                        client.setScreen(new DefeatScreen(
                             runManager.getTargetItem(), 
                             runManager.getCurrentTime(),
                             net.minecraft.text.Text.translatable("randomrun.defeat.gamemode_change").getString()

@@ -1,7 +1,7 @@
 package com.randomrun.mixin;
 
-import com.randomrun.RandomRunMod;
-import com.randomrun.data.RunDataManager;
+import com.randomrun.main.RandomRunMod;
+import com.randomrun.main.data.RunDataManager;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;

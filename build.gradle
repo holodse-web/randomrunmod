@@ -85,17 +85,15 @@ afterEvaluate {
         // ЗАЩИТА ВАШЕГО ПАКЕТА
         // Мы оставляем названия главных классов, чтобы игра их нашла,
         // но всё внутри методов будет перемешано.
-        keep "public class com.randomrun.RandomRunMod { *; }"
-        keep "public class com.randomrun.hud.** { *; }"
+        keep "class com.randomrun.main.** { *; }"
+        keep "class com.randomrun.ui.** { *; }"
+        keep "class com.randomrun.battle.** { *; }"
+        keep "class com.randomrun.challenges.** { *; }"
         
         // Сохраняем миксины
         keep "class com.randomrun.mixin.** { *; }"
         
-        // Сохраняем конфиг и экраны (часто рефлексия или json)
-        keep "class com.randomrun.config.** { *; }"
-        keep "class com.randomrun.gui.** { *; }"
-        
-        keepclassmembers "class com.randomrun.config.** { <fields>; }"
+
 
         // Обфусцируем всё остальное
         // allowaccessmodification // Может ломать доступ при отключенной оптимизации

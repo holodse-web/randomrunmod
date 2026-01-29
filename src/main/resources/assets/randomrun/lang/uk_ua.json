@@ -44,6 +44,9 @@
   "randomrun.filter.obtainable": "Тільки здобувані",
 
   "randomrun.difficulty": "Складність: %s",
+  "randomrun.difficulty.easy": "Легка",
+  "randomrun.difficulty.medium": "Середня",
+  "randomrun.difficulty.hard": "Складна",
   "randomrun.time_range": "Час: %s",
   "randomrun.drag_to_rotate": "Перетягніть для обертання",
 
@@ -183,5 +186,19 @@
   "randomrun.screen.victory.title_label": "ПЕРЕМОГА!",
   "randomrun.screen.defeat.title_label": "ПОРАЗКА",
   "randomrun.victory.new_record": "§l★ НОВИЙ РЕКОРД! ★",
-  "randomrun.defeat.reason.opponent_won": "Суперник %s здобув предмет першим!"
+  "randomrun.defeat.reason.opponent_won": "Суперник %s здобув предмет першим!",
+  
+  "randomrun.screen.control_settings.title": "Налаштування керування",
+  "randomrun.settings.start_method": "Спосіб старту: %s",
+  "randomrun.control.keybind": "Клавіша",
+  "randomrun.settings.press_key": "Натисніть клавішу...",
+  "randomrun.settings.current_key": "Поточна: %s",
+  "randomrun.settings.controls": "Налаштування керування",
+  "randomrun.battle.ready_waiting": "§a✓ Готовий! Очікування супротивника...",
+  "randomrun.command.already_started": "Забіг вже активний! Спочатку завершіть поточний.",
+  "randomrun.error.use_keybind_only": "Спосіб старту - Клавіша. Натисніть призначену клавішу для старту!",
+  
+  "randomrun.hud.unknown_achievement": "Невідоме досягнення",
+  "randomrun.credit.idea": "Ідея: @hebayter",
+  "randomrun.screen.achievement_reveal.title": "Нове досягнення"
 }

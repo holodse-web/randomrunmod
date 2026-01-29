@@ -1,6 +1,7 @@
 package com.randomrun.mixin;
 
-import com.randomrun.RandomRunMod;
+import com.randomrun.challenges.classic.world.WorldCreator;
+import com.randomrun.main.RandomRunMod;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.world.CreateWorldScreen;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,16 +14,21 @@ public abstract class CreateWorldScreenMixin {
     
     @Inject(method = "init", at = @At("TAIL"))
     private void onInit(CallbackInfo ci) {
-        if (com.randomrun.world.WorldCreator.hasPendingRun()) {
+        if (WorldCreator.hasPendingRun()) {
             CreateWorldScreen screen = (CreateWorldScreen) (Object) this;
             CreateWorldScreenAccessor screenAccessor = (CreateWorldScreenAccessor) screen;
             
             try {
                 net.minecraft.client.gui.screen.world.WorldCreator worldCreator = screenAccessor.getWorldCreator();
                 if (worldCreator != null) {
-                    String worldName = com.randomrun.world.WorldCreator.generateWorldName(
-                        com.randomrun.world.WorldCreator.getPendingTargetItem()
-                    );
+                    String worldName;
+                    if (WorldCreator.getPendingTargetItem() != null) {
+                        worldName = WorldCreator.generateWorldName(WorldCreator.getPendingTargetItem());
+                    } else if (WorldCreator.getPendingAdvancementId() != null) {
+                        worldName = "RandomRun " + WorldCreator.getPendingAdvancementId().getPath().replace('/', '_');
+                    } else {
+                        worldName = "RandomRun Speedrun";
+                    }
                     
                     RandomRunMod.LOGGER.info("Setting up speedrun world: " + worldName);
                     
@@ -34,12 +40,12 @@ public abstract class CreateWorldScreenMixin {
                     );
                     RandomRunMod.LOGGER.info("Game mode set to HARDCORE");
                     
-                    String pendingSeed = com.randomrun.world.WorldCreator.getPendingSeed();
+                    String pendingSeed = WorldCreator.getPendingSeed();
                     RandomRunMod.LOGGER.info("Pending seed from WorldCreator: " + pendingSeed);
                     
                     if (pendingSeed != null && !pendingSeed.isEmpty()) {
                         worldCreator.setSeed(pendingSeed);
-                        com.randomrun.world.WorldCreator.setLastCreatedSeed(pendingSeed);
+                        WorldCreator.setLastCreatedSeed(pendingSeed);
                         RandomRunMod.LOGGER.info("✓ Seed set to: " + pendingSeed);
                         
                         String actualSeed = worldCreator.getSeed();
@@ -47,7 +53,7 @@ public abstract class CreateWorldScreenMixin {
                     } else {
                         String generatedSeed = String.valueOf(new java.util.Random().nextLong());
                         worldCreator.setSeed(generatedSeed);
-                        com.randomrun.world.WorldCreator.setLastCreatedSeed(generatedSeed);
+                        WorldCreator.setLastCreatedSeed(generatedSeed);
                         RandomRunMod.LOGGER.info("✓ Random seed " + generatedSeed);
                     }
                 }

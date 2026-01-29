@@ -1,8 +1,8 @@
 package com.randomrun.mixin;
 
-import com.randomrun.RandomRunMod;
 import com.randomrun.battle.BattleManager;
-import com.randomrun.data.RunDataManager;
+import com.randomrun.main.RandomRunMod;
+import com.randomrun.main.data.RunDataManager;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;

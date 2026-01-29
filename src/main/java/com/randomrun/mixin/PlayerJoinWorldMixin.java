@@ -1,9 +1,10 @@
 package com.randomrun.mixin;
 
-import com.randomrun.RandomRunMod;
+import com.randomrun.main.RandomRunMod;
 import com.randomrun.battle.BattleManager;
 import com.randomrun.battle.BattleRoom;
-import com.randomrun.data.RunDataManager;
+import com.randomrun.main.data.RunDataManager;
+import com.randomrun.challenges.classic.world.WorldCreator;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.item.Item;
@@ -58,7 +59,7 @@ public class PlayerJoinWorldMixin {
             battleManager.setPlayerLoaded();
             
             // Clear pending data to prevent memory leaks
-            com.randomrun.world.WorldCreator.clearPendingData();
+            WorldCreator.clearPendingData();
             
             // Teleport to world spawn to ensure same position for both players
             MinecraftClient.getInstance().execute(() -> {

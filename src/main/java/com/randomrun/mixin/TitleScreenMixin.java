@@ -1,9 +1,10 @@
 package com.randomrun.mixin;
 
-import com.randomrun.gui.screen.MainModScreen;
-import com.randomrun.gui.screen.UpdateRequiredScreen;
-import com.randomrun.gui.widget.StyledButton;
-import com.randomrun.version.VersionChecker;
+import com.randomrun.main.RandomRunMod;
+import com.randomrun.main.version.VersionChecker;
+import com.randomrun.ui.screen.MainModScreen;
+import com.randomrun.ui.screen.UpdateRequiredScreen;
+import com.randomrun.ui.widget.StyledButton;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.text.Text;
@@ -29,28 +30,28 @@ public abstract class TitleScreenMixin extends Screen {
         // Получаем VersionChecker
         VersionChecker checker = VersionChecker.getInstance();
         
-        com.randomrun.RandomRunMod.LOGGER.info("=== TitleScreen Button Click Debug ===");
-        com.randomrun.RandomRunMod.LOGGER.info("Check completed: " + checker.isCheckCompleted());
-        com.randomrun.RandomRunMod.LOGGER.info("Update required: " + checker.isUpdateRequired());
-        com.randomrun.RandomRunMod.LOGGER.info("Current version: " + checker.getCurrentVersion());
-        com.randomrun.RandomRunMod.LOGGER.info("Latest version: " + checker.getLatestVersion());
+        RandomRunMod.LOGGER.info("=== TitleScreen Button Click Debug ===");
+        RandomRunMod.LOGGER.info("Check completed: " + checker.isCheckCompleted());
+        RandomRunMod.LOGGER.info("Update required: " + checker.isUpdateRequired());
+        RandomRunMod.LOGGER.info("Current version: " + checker.getCurrentVersion());
+        RandomRunMod.LOGGER.info("Latest version: " + checker.getLatestVersion());
         
         this.addDrawableChild(new StyledButton(
             x, y, buttonWidth, buttonHeight,
             Text.literal("RandomRun"),
             button -> {
                 if (this.client != null) {
-                    com.randomrun.RandomRunMod.LOGGER.info("=== RandomRun Button Clicked ===");
-                    com.randomrun.RandomRunMod.LOGGER.info("Update required: " + checker.isUpdateRequired());
+                    RandomRunMod.LOGGER.info("=== RandomRun Button Clicked ===");
+                    RandomRunMod.LOGGER.info("Update required: " + checker.isUpdateRequired());
                     
                     // Проверяем версию
                     if (checker.isUpdateRequired()) {
                         // Версия устарела - показываем экран обновления
-                        com.randomrun.RandomRunMod.LOGGER.info("Opening UpdateRequiredScreen");
+                        RandomRunMod.LOGGER.info("Opening UpdateRequiredScreen");
                         this.client.setScreen(new UpdateRequiredScreen());
                     } else {
                         // Версия актуальна - открываем мод
-                        com.randomrun.RandomRunMod.LOGGER.info("Opening MainModScreen");
+                        RandomRunMod.LOGGER.info("Opening MainModScreen");
                         this.client.setScreen(new MainModScreen(this));
                     }
                 }

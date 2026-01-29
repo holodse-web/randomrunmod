@@ -48,6 +48,9 @@
   "randomrun.filter.obtainable": "Obtainable Only",
 
   "randomrun.difficulty": "Difficulty: %s",
+  "randomrun.difficulty.easy": "Easy",
+  "randomrun.difficulty.medium": "Medium",
+  "randomrun.difficulty.hard": "Hard",
   "randomrun.time_range": "Time: %s",
   "randomrun.drag_to_rotate": "Drag to rotate",
   
@@ -167,5 +170,23 @@
   "randomrun.screen.defeat.title_label": "DEFEAT",
   "randomrun.victory.new_record": "§l★ NEW RECORD! ★",
   "randomrun.defeat.reason.opponent_won": "Opponent %s obtained the item first!",
-  "randomrun.defeat.reason.time": " (Time: %s)"
+  "randomrun.defeat.reason.time": " (Time: %s)",
+
+  "randomrun.settings.achievement_challenge_menu": "Achievement Challenge",
+  "randomrun.settings.achievement_challenge_enabled": "Achievement Challenge: %s",
+  "randomrun.achievement.details_hint": "§7Middle click for details",
+  
+  "randomrun.screen.control_settings.title": "Control Settings",
+  "randomrun.settings.start_method": "Start Method: %s",
+  "randomrun.control.keybind": "Keybind",
+  "randomrun.settings.press_key": "Press any key...",
+  "randomrun.settings.current_key": "Current: %s",
+  "randomrun.settings.controls": "Control Settings",
+  "randomrun.battle.ready_waiting": "§a✓ Ready! Waiting for opponent...",
+  "randomrun.command.already_started": "Run is already active! Finish current run first.",
+  "randomrun.error.use_keybind_only": "Start method is set to Keybind. Press the bound key to start!",
+  
+  "randomrun.hud.unknown_achievement": "Unknown Achievement",
+  "randomrun.credit.idea": "Idea: @hebayter",
+  "randomrun.screen.achievement_reveal.title": "New Achievement"
 }

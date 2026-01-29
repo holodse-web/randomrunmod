@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "randomrun",
-  "version": "${version}",
+  "version": "26.55-BETA",
   "name": "RandomRun Mod",
   "description": "Random speedrun mod - get a random item and find it as fast as possible!",
   "authors": [
@@ -16,7 +16,7 @@
   "environment": "client",
   "entrypoints": {
     "client": [
-      "com.randomrun.RandomRunMod"
+      "com.randomrun.main.RandomRunMod"
     ]
   },
   "mixins": [
