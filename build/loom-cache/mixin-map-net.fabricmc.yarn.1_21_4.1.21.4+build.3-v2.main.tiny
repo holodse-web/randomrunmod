@@ -1,6 +1,0 @@
-v1	named	intermediary
-FIELD	com/randomrun/mixin/ClickableWidgetMixin	I	width	field_22758
-FIELD	com/randomrun/mixin/ClickableWidgetMixin	I	height	field_22759
-FIELD	com/randomrun/mixin/PlayerDisconnectMixin	Lnet/minecraft/server/network/ServerPlayerEntity;	player	field_14140
-METHOD	com/randomrun/mixin/ClickableWidgetMixin	()I	getX	method_46426
-METHOD	com/randomrun/mixin/ClickableWidgetMixin	()I	getY	method_46427

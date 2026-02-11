@@ -1,9 +1,0 @@
-accessWidener v2 named
-
-accessible class net/minecraft/client/gui/screen/world/CreateWorldScreen$WorldCreator
-accessible field net/minecraft/client/gui/screen/world/CreateWorldScreen worldCreator Lnet/minecraft/client/gui/screen/world/CreateWorldScreen$WorldCreator;
-accessible method net/minecraft/client/gui/screen/world/CreateWorldScreen createLevel ()V
-accessible method net/minecraft/client/gui/screen/world/WorldCreator updateDataConfiguration (Lnet/minecraft/resource/DataConfiguration;)V
-accessible method net/minecraft/client/gui/screen/world/CreateWorldScreen$WorldCreator updateDataConfiguration (Lnet/minecraft/resource/DataConfiguration;)V
-accessible field net/minecraft/client/MinecraftClient entityModelLoader Lnet/minecraft/client/render/entity/model/EntityModelLoader;
-accessible method net/minecraft/client/MinecraftClient getEntityModelLoader ()Lnet/minecraft/client/render/entity/model/EntityModelLoader;
