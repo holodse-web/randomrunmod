@@ -6,9 +6,9 @@ package com.randomrun.challenges.advancement.screen;
 
 import com.randomrun.main.RandomRunMod;
 import com.randomrun.challenges.advancement.data.AdvancementLoader;
-import com.randomrun.ui.widget.StyledButton2;
-import com.randomrun.ui.widget.CreditWidget;
-import com.randomrun.ui.screen.AbstractRandomRunScreen;
+import com.randomrun.ui.widget.styled.ButtonDefault;
+import com.randomrun.ui.widget.HebayterWidget;
+import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -32,6 +32,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
     private static final int GRID_PADDING = 2;
     
     // Slot machine animation
+    // Анимация слот-машины
     private boolean slotMachineActive = false;
     private long slotMachineStartTime;
     private int slotMachineIndex = 0;
@@ -42,15 +43,18 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
     private static final long SLOT_MACHINE_DURATION = 3000;
     
     // Particle effects for slot machine
+    // Эффекты частиц для слот-машины
     private List<Particle> particles = new ArrayList<>();
     
     private long openTime;
     
     // Detail modal
+    // Модальное окно с деталями
     private AdvancementLoader.AdvancementInfo selectedDetailAdvancement = null;
     
     // Credit widget
-    private CreditWidget creditWidget;
+    // Виджет кредитов
+    private HebayterWidget creditWidget;
     
     public AchievementSelectionScreen(Screen parent) {
         super(Text.translatable("randomrun.screen.achievement_selection.title"));
@@ -63,6 +67,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
         openTime = System.currentTimeMillis();
         
         // Load advancements
+        // Загрузка достижений
         allAdvancements = AdvancementLoader.getAdvancements();
         filteredAdvancements = new ArrayList<>(allAdvancements);
         
@@ -71,16 +76,19 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
         int gridHeight = VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING);
         
         // Search field
+        // Поле поиска
         searchField = new TextFieldWidget(textRenderer, centerX - 100, gridY - 30, 200, 20, Text.translatable("randomrun.search"));
         searchField.setPlaceholder(Text.translatable("randomrun.search.placeholder_achievement"));
         searchField.setChangedListener(this::onSearchChanged);
         addDrawableChild(searchField);
         
         // Credit widget
-        creditWidget = new CreditWidget(10, height - 20, Text.translatable("randomrun.credit.idea").getString(), "https://www.tiktok.com/@hebayter?_r=1&_t=ZS-93TaWwDu10z");
+        // Виджет кредитов
+        creditWidget = new HebayterWidget(10, height - 20, Text.translatable("randomrun.credit.idea").getString(), "https://www.tiktok.com/@hebayter?_r=1&_t=ZS-93TaWwDu10z");
         
         // Random achievement button
-        addDrawableChild(new StyledButton2(
+        // Кнопка случайного достижения
+        addDrawableChild(new ButtonDefault(
             centerX - 100, gridY + gridHeight + 10,
             200, 20,
             Text.translatable("randomrun.button.random_achievement"),
@@ -89,7 +97,8 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
         ));
         
         // Back button
-        addDrawableChild(new StyledButton2(
+        // Кнопка назад
+        addDrawableChild(new ButtonDefault(
             width / 2 - 100, height - 30,
             200, 20,
             Text.translatable("randomrun.button.back"),
@@ -122,17 +131,22 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
         slotMachineIndex = 0;
         particles.clear();
         
-        // Pre-generate random items for slot machine
         slotMachineItems.clear();
         Random random = new Random();
-        if (!allAdvancements.isEmpty()) {
-            for (int i = 0; i < 50; i++) {
-                slotMachineItems.add(allAdvancements.get(random.nextInt(allAdvancements.size())));
-            }
-            slotMachineResult = allAdvancements.get(random.nextInt(allAdvancements.size()));
-        } else {
+        
+        if (allAdvancements.isEmpty()) {
             slotMachineActive = false;
+            return;
         }
+
+
+
+        // Classic slot machine
+        // Классическая слот-машина
+        for (int i = 0; i < 50; i++) {
+            slotMachineItems.add(allAdvancements.get(random.nextInt(allAdvancements.size())));
+        }
+        slotMachineResult = allAdvancements.get(random.nextInt(allAdvancements.size()));
     }
     
     public void resetSlotMachine() {
@@ -150,6 +164,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
         super.render(context, mouseX, mouseY, delta);
         
         // Animation
+        // Анимация
         long elapsed = System.currentTimeMillis() - openTime;
         float animationProgress = Math.min(1f, elapsed / 400f);
         float easedProgress = 1f - (float) Math.pow(1 - animationProgress, 3);
@@ -162,6 +177,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
             updateParticles(delta);
             
             // Auto-proceed when slot machine finishes
+            // Авто-продолжение при завершении работы слот-машины
             long elapsedSlot = System.currentTimeMillis() - slotMachineStartTime;
             if (elapsedSlot >= SLOT_MACHINE_DURATION + 1000 && slotMachineResult != null) {
                 MinecraftClient.getInstance().setScreen(new AchievementRevealScreen(this, slotMachineResult));
@@ -182,6 +198,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
         }
         
         // Render credit widget
+        // Рендер виджета кредитов
         if (creditWidget != null) {
             creditWidget.render(context, mouseX, mouseY, delta);
         }
@@ -190,8 +207,10 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
     private void renderDetailModal(DrawContext context, int mouseX, int mouseY) {
         context.getMatrices().push();
         context.getMatrices().translate(0, 0, 300); // Move above items
+        // Сдвиг поверх элементов
 
         // Blur background (semi-transparent black overlay)
+        // Размытие фона (полупрозрачное черное наложение)
         context.fill(0, 0, width, height, 0xDD000000);
         
         int modalWidth = 220;
@@ -200,10 +219,12 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
         int y = (height - modalHeight) / 2;
         
         // Modal background
+        // Фон модального окна
         context.fill(x, y, x + modalWidth, y + modalHeight, 0xFF202020);
         context.drawBorder(x, y, modalWidth, modalHeight, 0xFF6930c3);
         
         // Icon
+        // Иконка
         MatrixStack matrices = context.getMatrices();
         matrices.push();
         matrices.translate(x + modalWidth / 2, y + 35, 0);
@@ -212,9 +233,11 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
         matrices.pop();
         
         // Title
+        // Заголовок
         context.drawCenteredTextWithShadow(textRenderer, selectedDetailAdvancement.title, x + modalWidth / 2, y + 70, 0xFFFFD700);
         
         // Description
+        // Описание
         int textY = y + 90;
         for (net.minecraft.text.OrderedText line : textRenderer.wrapLines(selectedDetailAdvancement.description, modalWidth - 20)) {
             context.drawCenteredTextWithShadow(textRenderer, line, x + modalWidth / 2, textY, 0xAAAAAA);
@@ -222,6 +245,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
         }
         
         // Difficulty and Time (moved below description)
+        // Сложность и Время (перемещено под описание)
         if (selectedDetailAdvancement.difficulty != null) {
             textY += 10; // Spacing
             String difficultyKey = "randomrun.difficulty." + selectedDetailAdvancement.difficulty.name().toLowerCase();
@@ -229,6 +253,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
             Text difficultyLabel = Text.translatable("randomrun.difficulty", difficultyText);
             
             // Format time range
+            // Форматирование временного диапазона
             String timeRange = selectedDetailAdvancement.difficulty.getTimeRangeString();
             Text timeText = Text.translatable("randomrun.time_range", timeRange);
             
@@ -237,6 +262,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
         }
         
         // Close hint
+        // Подсказка о закрытии
         context.drawCenteredTextWithShadow(textRenderer, Text.translatable("randomrun.button.back"), x + modalWidth / 2, y + modalHeight - 15, 0x666666);
         
         context.getMatrices().pop();
@@ -297,11 +323,13 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
         int centerY = height / 2;
         
         // Pulsating background
+        // Пульсирующий фон
         float pulse = (float) Math.sin(elapsed / 200.0) * 0.1f + 0.9f;
         int bgAlpha = (int) (0xCC * pulse) << 24;
         context.fill(centerX - 70, centerY - 60, centerX + 70, centerY + 60, bgAlpha);
         
         // Animated border
+        // Анимированная рамка
         int borderColor = 0xFF6930c3;
         if (progress >= 1.0f) {
             float glow = (float) Math.sin(elapsed / 150.0) * 0.3f + 0.7f;
@@ -311,6 +339,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
         
         if (progress < 1.0f) {
             // Spinning animation
+            // Анимация вращения
             long currentTime = System.currentTimeMillis();
             int tickInterval = (int) (50 + progress * 200);
             
@@ -319,6 +348,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
                 lastTickTime = currentTime;
                 
                 // Spawn particles
+                // Создание частиц
                 spawnParticles(centerX, centerY);
                 
                 if (RandomRunMod.getInstance().getConfig().isSoundEffectsEnabled()) {
@@ -337,11 +367,13 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
             AdvancementLoader.AdvancementInfo displayAdv = slotMachineItems.get(slotMachineIndex);
             
             // Rotating icon with motion blur effect
+            // Вращающаяся иконка с эффектом размытия в движении
             MatrixStack matrices = context.getMatrices();
             matrices.push();
             matrices.translate(centerX, centerY, 0);
             
             // Rotation
+            // Вращение
             float rotation = (currentTime % 1000) / 1000.0f * 360f;
             matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Z.rotationDegrees(rotation * progress));
             
@@ -350,11 +382,13 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
             matrices.pop();
             
             // Spinning text
+            // Вращающийся текст
             context.drawCenteredTextWithShadow(textRenderer, 
                 Text.translatable("randomrun.achievement.spinning"), 
                 centerX, centerY + 48, interpolateColor(0xFFFFFF, 0xFFD700, (float) Math.sin(elapsed / 100.0)));
         } else {
             // Result with celebration
+            // Результат с празднованием
             if (!soundPlayed && RandomRunMod.getInstance().getConfig().isSoundEffectsEnabled()) {
                 float volume = RandomRunMod.getInstance().getConfig().getSoundVolume() / 100f;
                 MinecraftClient.getInstance().getSoundManager().play(
@@ -367,6 +401,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
                 soundPlayed = true;
                 
                 // Spawn celebration particles
+                // Создание праздничных частиц
                 Random random = new Random();
                 for (int i = 0; i < 30; i++) {
                     spawnCelebrationParticle(centerX, centerY, random);
@@ -374,6 +409,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
             }
             
             // Bouncing icon animation
+            // Анимация прыгающей иконки
             float bounceProgress = (elapsed - SLOT_MACHINE_DURATION) / 1000.0f;
             float bounce = (float) Math.abs(Math.sin(bounceProgress * Math.PI * 4)) * (1 - bounceProgress) * 10;
             
@@ -386,6 +422,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
         }
         
         // Render particles
+        // Рендер частиц
         renderParticles(context, delta);
     }
     
@@ -490,6 +527,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
         }
         
         // Scrollbar logic
+        // Логика полосы прокрутки
         if (filteredAdvancements.size() > ITEMS_PER_ROW * VISIBLE_ROWS) {
             int totalRows = (int) Math.ceil(filteredAdvancements.size() / (float) ITEMS_PER_ROW);
             int maxScroll = Math.max(0, totalRows - VISIBLE_ROWS);
@@ -515,6 +553,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
         }
         
         // Grid click
+        // Клик по сетке
         int gridX = width / 2 - (ITEMS_PER_ROW * (ITEM_SIZE + GRID_PADDING)) / 2;
         int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2;
         int gridWidth = ITEMS_PER_ROW * (ITEM_SIZE + GRID_PADDING);
@@ -530,12 +569,12 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
             if (index >= 0 && index < filteredAdvancements.size()) {
                 AdvancementLoader.AdvancementInfo selected = filteredAdvancements.get(index);
                 
-                if (button == 2) { // Middle click
+                if (button == 2) { // Middle click - Средняя кнопка мыши
                     selectedDetailAdvancement = selected;
                     return true;
                 }
                 
-                if (button == 0) { // Left click
+                if (button == 0) { // Left click - Левая кнопка мыши
                     MinecraftClient.getInstance().setScreen(new AchievementRevealScreen(this, selected));
                     return true;
                 }
@@ -590,6 +629,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
     }
     
     // Helper class for particles
+    // Вспомогательный класс для частиц
     private static class Particle {
         float x, y;
         float vx, vy;
@@ -607,7 +647,7 @@ public class AchievementSelectionScreen extends AbstractRandomRunScreen {
         void update(float delta) {
             x += vx;
             y += vy;
-            vy += 0.1f; // Gravity
+            vy += 0.1f; // Гравитация
             life -= 0.02f;
         }
     }

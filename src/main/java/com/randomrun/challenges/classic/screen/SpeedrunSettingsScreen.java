@@ -1,11 +1,9 @@
 package com.randomrun.challenges.classic.screen;
 
 import com.randomrun.main.RandomRunMod;
-import com.randomrun.challenges.time.screen.ManualTimerInputScreen;
-import com.randomrun.challenges.time.screen.TimeSelectionScreen;
 import com.randomrun.main.config.ModConfig;
-import com.randomrun.ui.widget.StyledButton2;
-import com.randomrun.ui.screen.AbstractRandomRunScreen;
+import com.randomrun.ui.widget.styled.ButtonDefault;
+import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -33,14 +31,14 @@ public class SpeedrunSettingsScreen extends AbstractRandomRunScreen {
         int centerX = width / 2;
         int buttonWidth = 250;
         int buttonHeight = 20;
-        int startY = 80;
-        int spacing = 30;
+        int startY = 50;
+        int spacing = 25;
         
-        // Allow unobtainable items toggle
+        // Переключатель недоступных предметов
         String toggleText = config.isAllowUnobtainableItems() 
             ? "§a" + Text.translatable("randomrun.toggle.enabled").getString()
             : "§c" + Text.translatable("randomrun.toggle.disabled").getString();
-        addDrawableChild(new StyledButton2(
+        addDrawableChild(new ButtonDefault(
             centerX - buttonWidth / 2, startY,
             buttonWidth, buttonHeight,
             Text.translatable("randomrun.settings.unobtainable_items", toggleText),
@@ -49,22 +47,23 @@ public class SpeedrunSettingsScreen extends AbstractRandomRunScreen {
                 RandomRunMod.getInstance().saveConfig();
                 refreshScreen();
             },
-            0, 0.1f, isRefreshing // Skip animation if refreshing
+            0, 0.1f, isRefreshing // Пропустить анимацию, если обновление
         ));
         
-        // Victory screen mode button
-        spacing = 30;
+        startY += spacing;
+        
+        // Кнопка режима экрана победы
         String victoryModeText = switch (config.getVictoryScreenMode()) {
             case SHOW -> "§a" + Text.translatable("randomrun.victory_screen.show").getString();
             case HIDE -> "§c" + Text.translatable("randomrun.victory_screen.hide").getString();
             case SHOW_AFTER_10_SECONDS -> "§e" + Text.translatable("randomrun.victory_screen.show_after_10").getString();
         };
-        addDrawableChild(new StyledButton2(
-            centerX - buttonWidth / 2, startY + spacing,
+        addDrawableChild(new ButtonDefault(
+            centerX - buttonWidth / 2, startY,
             buttonWidth, buttonHeight,
             Text.translatable("randomrun.settings.victory_screen", victoryModeText),
             button -> {
-                // Cycle through modes
+                // Переключение режимов
                 ModConfig.VictoryScreenMode currentMode = config.getVictoryScreenMode();
                 ModConfig.VictoryScreenMode nextMode = switch (currentMode) {
                     case SHOW -> ModConfig.VictoryScreenMode.HIDE;
@@ -78,25 +77,71 @@ public class SpeedrunSettingsScreen extends AbstractRandomRunScreen {
             0, 0.1f, isRefreshing
         ));
         
-        // Ask for custom seed button
-        spacing += 30;
+        startY += spacing;
+        
+        // Кнопка запроса кастомного сида
         String seedToggleText = config.isAskForCustomSeed() 
             ? "§a" + Text.translatable("randomrun.toggle.enabled").getString()
             : "§c" + Text.translatable("randomrun.toggle.disabled").getString();
-        addDrawableChild(new StyledButton2(
-            centerX - buttonWidth / 2, startY + spacing,
+        addDrawableChild(new ButtonDefault(
+            centerX - buttonWidth / 2, startY,
             buttonWidth, buttonHeight,
             Text.translatable("randomrun.settings.ask_custom_seed", seedToggleText),
             button -> {
-                config.setAskForCustomSeed(!config.isAskForCustomSeed());
+                boolean newState = !config.isAskForCustomSeed();
+                config.setAskForCustomSeed(newState);
+                RandomRunMod.getInstance().saveConfig();
+                
+                if (newState) {
+                    MinecraftClient.getInstance().getToastManager().add(new net.minecraft.client.toast.SystemToast(
+                        net.minecraft.client.toast.SystemToast.Type.PERIODIC_NOTIFICATION, 
+                        Text.translatable("randomrun.settings.seed_warning.title"), 
+                        Text.translatable("randomrun.settings.seed_warning.desc")
+                    ));
+                }
+                
+                refreshScreen();
+            },
+            0, 0.1f, isRefreshing
+        ));
+
+        startY += spacing;
+
+        String deleteWorldsText = config.isDeleteWorldsAfterSpeedrun()
+            ? "§a" + Text.translatable("randomrun.toggle.enabled").getString()
+            : "§c" + Text.translatable("randomrun.toggle.disabled").getString();
+        addDrawableChild(new ButtonDefault(
+            centerX - buttonWidth / 2, startY,
+            buttonWidth, buttonHeight,
+            Text.translatable("randomrun.settings.delete_worlds", deleteWorldsText),
+            button -> {
+                config.setDeleteWorldsAfterSpeedrun(!config.isDeleteWorldsAfterSpeedrun());
                 RandomRunMod.getInstance().saveConfig();
                 refreshScreen();
             },
             0, 0.1f, isRefreshing
         ));
         
-        // Back button (aligned with main menu, skip animation on refresh)
-        addDrawableChild(new StyledButton2(
+        startY += spacing;
+
+        // Кнопка режима Хардкор
+        String hardcoreText = config.isHardcoreModeEnabled()
+            ? "§a" + Text.translatable("randomrun.toggle.enabled").getString()
+            : "§c" + Text.translatable("randomrun.toggle.disabled").getString();
+        addDrawableChild(new ButtonDefault(
+            centerX - buttonWidth / 2, startY,
+            buttonWidth, buttonHeight,
+            Text.translatable("randomrun.settings.hardcore_mode", hardcoreText),
+            button -> {
+                config.setHardcoreModeEnabled(!config.isHardcoreModeEnabled());
+                RandomRunMod.getInstance().saveConfig();
+                refreshScreen();
+            },
+            0, 0.1f, isRefreshing
+        ));
+        
+        // Кнопка назад (выровнена с главным меню, пропуск анимации при обновлении)
+        addDrawableChild(new ButtonDefault(
             centerX - 50, height - 30,
             100, buttonHeight,
             Text.translatable("randomrun.button.back"),
@@ -113,7 +158,7 @@ public class SpeedrunSettingsScreen extends AbstractRandomRunScreen {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
         
-        // Title
+        // Заголовок
         context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 20, 0xFFFFFF);
     }
     

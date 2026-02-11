@@ -25,19 +25,19 @@ public class TickHandler {
     private static void onEndTick(MinecraftClient client) {
         if (client.player == null || client.world == null) return;
         
-        // Check menu state for pause/resume
+        // Проверка состояния меню для паузы/возобновления
         checkMenuState(client);
         
-        // Update victory handler
+        // Обновление обработчика победы
         VictoryHandler.tick();
         
-        // Update time limit handler
+        // Обновление обработчика лимита времени
         TimeLimitHandler.tick();
         
-        // Check for inventory item pickup (backup check)
+        // Проверка инвентаря на наличие предмета (резервная проверка)
         checkInventoryForTarget(client);
         
-        // Check start key
+        // Проверка клавиши старта
         checkStartKey(client);
     }
     
@@ -65,12 +65,12 @@ public class TickHandler {
         
         if (runManager.getStatus() == RunDataManager.RunStatus.RUNNING) {
             if (isInMenu && !wasInMenu) {
-                // Just opened menu
+                // Только что открыли меню
                 if (!runManager.isPaused()) {
                     runManager.pauseRun();
                 }
             } else if (!isInMenu && wasInMenu) {
-                // Just closed menu
+                // Только что закрыли меню
                 if (runManager.isPaused()) {
                     runManager.resumeRun();
                 }
@@ -86,10 +86,10 @@ public class TickHandler {
         if (runManager.getStatus() != RunDataManager.RunStatus.RUNNING) return;
         if (runManager.getTargetItem() == null) return;
         
-        // Check if target item is in inventory
+        // Проверка, есть ли целевой предмет в инвентаре
         for (int i = 0; i < client.player.getInventory().size(); i++) {
             if (client.player.getInventory().getStack(i).getItem() == runManager.getTargetItem()) {
-                // Found the item!
+                // Предмет найден!
                 VictoryHandler.handleVictory();
                 break;
             }

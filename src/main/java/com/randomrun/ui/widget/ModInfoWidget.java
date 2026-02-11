@@ -1,15 +1,15 @@
 package com.randomrun.ui.widget;
 
 import com.randomrun.main.RandomRunMod;
-import com.randomrun.main.config.ModConfig;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 
 public class ModInfoWidget {
     private static final String TELEGRAM_URL = "https://t.me/randomrunmod";
-    private static final String VERSION = "26.56 BETA";
+    private static final String VERSION = "26.7";
     
     private final int screenWidth;
+    private final int screenHeight;
     private final TextRenderer textRenderer;
     
     private float telegramAnimationProgress = 0f;
@@ -17,25 +17,27 @@ public class ModInfoWidget {
     
     public ModInfoWidget(int screenWidth, int screenHeight, TextRenderer textRenderer) {
         this.screenWidth = screenWidth;
+        this.screenHeight = screenHeight;
         this.textRenderer = textRenderer;
     }
     
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         renderVersion(context);
+        // renderAntiCheatStatus(context); // Отключено
         renderTelegramLink(context, mouseX, mouseY, delta);
     }
     
     private void renderVersion(DrawContext context) {
         int versionWidth = textRenderer.getWidth(VERSION);
         int x = screenWidth - versionWidth - 10;
-        int y = 10;
+        int y = screenHeight - 20; // Снизу-справа
         
         context.drawTextWithShadow(textRenderer, VERSION, x, y, 0xAAAAAA);
     }
     
     private void renderTelegramLink(DrawContext context, int mouseX, int mouseY, float delta) {
         int x = 10;
-        int y = 10;
+        int y = screenHeight - 20; // Снизу-слева
         
         String baseText = "Telegram";
         String fullText = TELEGRAM_URL;
@@ -85,16 +87,16 @@ public class ModInfoWidget {
         try {
             // Используем Minecraft API для открытия ссылок
             net.minecraft.util.Util.getOperatingSystem().open(TELEGRAM_URL);
-            RandomRunMod.LOGGER.info("Opening Telegram link: " + TELEGRAM_URL);
+            RandomRunMod.LOGGER.info("Открытие ссылки Telegram: " + TELEGRAM_URL);
             return true;
         } catch (Exception e) {
-            RandomRunMod.LOGGER.error("Failed to open Telegram link", e);
+            RandomRunMod.LOGGER.error("Не удалось открыть ссылку Telegram", e);
             // Fallback на Desktop API
             try {
                 java.awt.Desktop.getDesktop().browse(new java.net.URI(TELEGRAM_URL));
                 return true;
             } catch (Exception e2) {
-                RandomRunMod.LOGGER.error("Fallback also failed", e2);
+                RandomRunMod.LOGGER.error("Резервный метод также не сработал", e2);
                 return false;
             }
         }

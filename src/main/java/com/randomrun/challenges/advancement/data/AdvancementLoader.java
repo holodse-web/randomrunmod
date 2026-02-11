@@ -40,6 +40,7 @@ public class AdvancementLoader {
         cachedAdvancements = new ArrayList<>();
         
         // Try to load from FabricLoader mod container for "minecraft"
+        // Попытка загрузить из контейнера модов FabricLoader для "minecraft"
         try {
             java.util.Optional<net.fabricmc.loader.api.ModContainer> minecraft = net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer("minecraft");
             if (minecraft.isPresent()) {
@@ -56,42 +57,51 @@ public class AdvancementLoader {
                                     JsonObject display = json.getAsJsonObject("display");
                                     
                                     // Get Title
+                                    // Получение заголовка
                                     Text title = parseText(display.get("title"));
                                     
                                     // Get Description
+                                    // Получение описания
                                     Text description = parseText(display.get("description"));
                                     
                                     // Get Icon
+                                    // Получение иконки
                                     JsonObject iconObj = display.getAsJsonObject("icon");
                                     String itemStr = iconObj.get("item").getAsString();
-                                    ItemStack icon = new ItemStack(Registries.ITEM.get(new Identifier(itemStr)));
+                                    ItemStack icon = new ItemStack(Registries.ITEM.get(Identifier.of(itemStr)));
                                     
                                     // Construct ID
                                     // Path is like .../data/minecraft/advancements/story/root.json
                                     // Relativize to data/minecraft/advancements
+                                    // Создание ID
+                                    // Путь выглядит как .../data/minecraft/advancements/story/root.json
+                                    // Относительный путь к data/minecraft/advancements
                                     java.nio.file.Path relative = advancementsPath.relativize(path);
                                     String relativeStr = relative.toString().replace(java.io.File.separator, "/");
                                     if (relativeStr.endsWith(".json")) {
                                         relativeStr = relativeStr.substring(0, relativeStr.length() - 5);
                                     }
-                                    Identifier advId = new Identifier("minecraft", relativeStr);
+                                    Identifier advId = Identifier.of("minecraft", relativeStr);
                                     
                                     // Filter out recipes just in case (though we look in advancements folder)
+                                    // Отфильтровать рецепты на всякий случай (хотя мы смотрим в папке advancements)
                                     if (!relativeStr.contains("recipes/")) {
                                         cachedAdvancements.add(new AdvancementInfo(advId, title, description, icon));
                                     }
                                 }
                             } catch (Exception e) {
                                 // Ignore malformed files
+                                // Игнорировать некорректные файлы
                             }
                         });
                 }
             }
         } catch (Exception e) {
-            RandomRunMod.LOGGER.error("Failed to load vanilla advancements via FabricLoader", e);
+            RandomRunMod.LOGGER.error("Ошибка загрузки ванильных достижений через FabricLoader", e);
         }
         
         // Fallback to Resource Manager if empty (e.g. if structure changes or in dev env)
+        // Резервный вариант: Resource Manager, если пусто (например, если структура изменилась или в среде разработки)
         if (cachedAdvancements.isEmpty()) {
             ResourceManager resourceManager = MinecraftClient.getInstance().getResourceManager();
             resourceManager.findResources("advancements", path -> path.getPath().endsWith(".json"))
@@ -105,16 +115,16 @@ public class AdvancementLoader {
                              Text description = parseText(display.get("description"));
                              JsonObject iconObj = display.getAsJsonObject("icon");
                              String itemStr = iconObj.get("item").getAsString();
-                             ItemStack icon = new ItemStack(Registries.ITEM.get(new Identifier(itemStr)));
-                             
-                             String path = id.getPath();
+                            ItemStack icon = new ItemStack(Registries.ITEM.get(Identifier.of(itemStr)));
+                            
+                            String path = id.getPath();
                              if (path.startsWith("advancements/")) {
                                  path = path.substring("advancements/".length());
                              }
                              if (path.endsWith(".json")) {
                                  path = path.substring(0, path.length() - 5);
                              }
-                             Identifier advId = new Identifier(id.getNamespace(), path);
+                             Identifier advId = Identifier.of(id.getNamespace(), path);
                              cachedAdvancements.add(new AdvancementInfo(advId, title, description, icon));
                          }
                     } catch (Exception e) { }
@@ -130,12 +140,14 @@ public class AdvancementLoader {
         }
         
         // Handle {"translate": "key"} style
+        // Обработка стиля {"translate": "key"}
         if (element.isJsonObject()) {
             JsonObject obj = element.getAsJsonObject();
             if (obj.has("translate")) {
                 String key = obj.get("translate").getAsString();
                 if (obj.has("with")) {
                     // TODO: Handle args if needed, but for titles it's usually simple
+                    // TODO: Обработать аргументы, если нужно, но для заголовков это обычно просто
                 }
                 return Text.translatable(key);
             }
@@ -145,11 +157,7 @@ public class AdvancementLoader {
         }
         
         // Fallback using Minecraft's serializer if possible, or just toString as last resort
-        try {
-            // Use fromJson(String) if fromJson(JsonElement) is not available
-            return Text.Serialization.fromJson(element.toString());
-        } catch (Exception e) {
-            return Text.literal(element.toString());
-        }
+        // Резервный вариант с использованием сериализатора Minecraft, если возможно, или просто toString как последнее средство
+        return Text.literal(element.toString());
     }
 }

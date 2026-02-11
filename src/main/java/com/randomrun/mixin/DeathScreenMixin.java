@@ -2,8 +2,7 @@ package com.randomrun.mixin;
 
 import com.randomrun.main.RandomRunMod;
 import com.randomrun.main.data.RunDataManager;
-import com.randomrun.ui.screen.DefeatScreen;
-import com.randomrun.challenges.classic.screen.SpeedrunScreen;
+import com.randomrun.ui.screen.endgame.DefeatScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.DeathScreen;
 import net.minecraft.text.Text;
@@ -15,18 +14,23 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(DeathScreen.class)
 public class DeathScreenMixin {
     
-    // Injected into DeathScreen constructor
+    // Внедрено в конструктор DeathScreen
     @Inject(method = "<init>", at = @At("RETURN"))
     private void onDeathScreenInit(Text message, boolean isHardcore, CallbackInfo ci) {
         RunDataManager runManager = RandomRunMod.getInstance().getRunDataManager();
         
-        // If there's an active run, close this death screen and show defeat screen instead
+        // Если есть активный забег, закрыть экран смерти и показать экран поражения
         if (runManager.getStatus() == RunDataManager.RunStatus.RUNNING ||
             runManager.getStatus() == RunDataManager.RunStatus.FROZEN) {
             
+            // Если мы в битве, не показываем экран поражения (работает авто-возрождение)
+            if (com.randomrun.battle.BattleManager.getInstance().isInBattle()) {
+                return;
+            }
+
             MinecraftClient client = MinecraftClient.getInstance();
             if (client != null && (runManager.getTargetItem() != null || runManager.getTargetAdvancementId() != null)) {
-                // Close death screen and show defeat screen
+                // Закрыть экран смерти и показать экран поражения
                 client.execute(() -> {
                     long finalTime = runManager.getCurrentTime();
                     runManager.failRun();

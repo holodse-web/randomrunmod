@@ -38,6 +38,7 @@ public class SecurityManager {
         BLOCKED_COMMANDS.add("spreadplayers");
         BLOCKED_COMMANDS.add("spawnpoint");
         BLOCKED_COMMANDS.add("setworldspawn");
+        BLOCKED_COMMANDS.add("seed");
     }
     
     public static String generateHash(String data) {
@@ -51,7 +52,7 @@ public class SecurityManager {
             }
             return sb.toString();
         } catch (NoSuchAlgorithmException e) {
-            RandomRunMod.LOGGER.error("Failed to generate hash", e);
+            RandomRunMod.LOGGER.error("Не удалось сгенерировать хэш", e);
             return "error";
         }
     }

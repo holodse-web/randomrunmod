@@ -2,8 +2,8 @@ package com.randomrun.challenges.time.screen;
 
 import com.randomrun.main.RandomRunMod;
 import com.randomrun.main.config.ModConfig;
-import com.randomrun.ui.widget.StyledButton2;
-import com.randomrun.ui.screen.AbstractRandomRunScreen;
+import com.randomrun.ui.widget.styled.ButtonDefault;
+import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -35,11 +35,11 @@ public class TimeChallengeSettingsScreen extends AbstractRandomRunScreen {
         int spacing = 30;
         int buttonIndex = 0;
         
-        // Time challenge toggle
+        // Переключатель челленджа на время
         String challengeToggle = config.isTimeChallengeEnabled() 
             ? "§a" + Text.translatable("randomrun.toggle.enabled").getString()
             : "§c" + Text.translatable("randomrun.toggle.disabled").getString();
-        addDrawableChild(new StyledButton2(
+        addDrawableChild(new ButtonDefault(
             centerX - buttonWidth / 2, startY,
             buttonWidth, buttonHeight,
             Text.translatable("randomrun.settings.time_challenge_enabled", challengeToggle),
@@ -51,15 +51,15 @@ public class TimeChallengeSettingsScreen extends AbstractRandomRunScreen {
             buttonIndex++, 0.1f, isRefreshing
         ));
         
-        // Only show these settings if time challenge is enabled
+        // Показываем эти настройки только если челлендж на время включен
         if (config.isTimeChallengeEnabled()) {
-            // Use item difficulty toggle
+            // Переключатель использования сложности предметов
             String difficultyToggle = config.isUseItemDifficulty() 
                 ? "§a" + Text.translatable("randomrun.toggle.enabled").getString()
                 : "§c" + Text.translatable("randomrun.toggle.disabled").getString();
-            // Don't skip animation for these buttons when challenge is first enabled
+            // Не пропускать анимацию для этих кнопок, когда челлендж только что включен
             boolean skipSubAnimation = isRefreshing;
-            addDrawableChild(new StyledButton2(
+            addDrawableChild(new ButtonDefault(
                 centerX - buttonWidth / 2, startY + spacing,
                 buttonWidth, buttonHeight,
                 Text.translatable("randomrun.settings.use_difficulty", difficultyToggle),
@@ -71,14 +71,14 @@ public class TimeChallengeSettingsScreen extends AbstractRandomRunScreen {
                 buttonIndex++, 0.15f, skipSubAnimation
             ));
             
-            // Manual time toggle
+            // Переключатель ручного времени
             String manualTimeToggle = config.isManualTimeEnabled() 
                 ? "§a" + Text.translatable("randomrun.toggle.enabled").getString()
                 : "§c" + Text.translatable("randomrun.toggle.disabled").getString();
             boolean isManualTime = config.isManualTimeEnabled();
             int manualTimeButtonWidth = isManualTime ? buttonWidth - 30 : buttonWidth;
             
-            addDrawableChild(new StyledButton2(
+            addDrawableChild(new ButtonDefault(
                 centerX - buttonWidth / 2, startY + spacing * 2,
                 manualTimeButtonWidth, buttonHeight,
                 Text.translatable("randomrun.settings.manual_time", manualTimeToggle),
@@ -90,9 +90,9 @@ public class TimeChallengeSettingsScreen extends AbstractRandomRunScreen {
                 buttonIndex++, 0.2f, skipSubAnimation
             ));
             
-            // Edit button (only if manual time is enabled)
+            // Кнопка редактирования (только если включено ручное время)
             if (isManualTime) {
-                addDrawableChild(new StyledButton2(
+                addDrawableChild(new ButtonDefault(
                     centerX + buttonWidth / 2 - 25, startY + spacing * 2,
                     25, buttonHeight,
                     Text.literal("✏️"),
@@ -102,8 +102,8 @@ public class TimeChallengeSettingsScreen extends AbstractRandomRunScreen {
             }
         }
         
-        // Back button (aligned with main menu)
-        addDrawableChild(new StyledButton2(
+        // Кнопка назад (выровнена с главным меню)
+        addDrawableChild(new ButtonDefault(
             centerX - 50, height - 30,
             100, buttonHeight,
             Text.translatable("randomrun.button.back"),

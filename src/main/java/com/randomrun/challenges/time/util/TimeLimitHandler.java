@@ -2,7 +2,7 @@ package com.randomrun.challenges.time.util;
 
 import com.randomrun.main.RandomRunMod;
 import com.randomrun.main.data.RunDataManager;
-import com.randomrun.ui.screen.DefeatScreen;
+import com.randomrun.ui.screen.endgame.DefeatScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.Item;
 import net.minecraft.sound.SoundEvents;
@@ -22,12 +22,11 @@ public class TimeLimitHandler {
         // Check time limit
         if (runManager.isTimeLimitExceeded() && !defeatTriggered) {
             defeatTriggered = true;
-            handleTimeOut();
+            handleTimeOut(runManager);
         }
     }
     
-    private static void handleTimeOut() {
-        RunDataManager runManager = RandomRunMod.getInstance().getRunDataManager();
+    private static void handleTimeOut(RunDataManager runManager) {
         MinecraftClient client = MinecraftClient.getInstance();
         
         if (client.player == null || client.world == null) return;

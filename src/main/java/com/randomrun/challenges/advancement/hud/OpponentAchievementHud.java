@@ -12,20 +12,21 @@ import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
-import java.util.ArrayDeque;
-import java.util.Queue;
+import net.minecraft.client.render.RenderTickCounter;
 
 public class OpponentAchievementHud implements HudRenderCallback {
     
     private static class Notification {
         String title;
+        String playerName;
         ItemStack icon;
         long startTime;
         
-        Notification(String title, String iconId) {
+        Notification(String playerName, String title, String iconId) {
+            this.playerName = playerName;
             this.title = title;
             try {
-                this.icon = new ItemStack(Registries.ITEM.get(new Identifier(iconId)));
+                this.icon = new ItemStack(Registries.ITEM.get(Identifier.of(iconId)));
             } catch (Exception e) {
                 this.icon = ItemStack.EMPTY;
             }
@@ -33,43 +34,38 @@ public class OpponentAchievementHud implements HudRenderCallback {
         }
     }
     
-    private static final Queue<Notification> notificationQueue = new ArrayDeque<>();
-    private static Notification currentNotification = null;
-    private static float slideAnimation = 0f;
+    private static final java.util.List<Notification> activeNotifications = new java.util.ArrayList<>();
     private static final long DISPLAY_DURATION = 4000;
     
-    public static void show(String title, String iconId) {
-        notificationQueue.add(new Notification(title, iconId));
+    public static void show(String playerName, String title, String iconId) {
+        activeNotifications.add(new Notification(playerName, title, iconId));
     }
     
     @Override
-    public void onHudRender(DrawContext context, float tickDelta) {
+    public void onHudRender(DrawContext context, RenderTickCounter tickCounter) {
+        if (activeNotifications.isEmpty()) return;
+        
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || client.world == null) return;
         
         long now = System.currentTimeMillis();
         
-        if (currentNotification == null) {
-            if (!notificationQueue.isEmpty()) {
-                currentNotification = notificationQueue.poll();
-                currentNotification.startTime = now;
-                slideAnimation = 0f;
-            } else {
-                return;
-            }
+        activeNotifications.removeIf(n -> now - n.startTime > DISPLAY_DURATION);
+        
+        if (activeNotifications.isEmpty()) return;
+        
+        for (int i = 0; i < activeNotifications.size(); i++) {
+            renderNotification(context, client, activeNotifications.get(i), i, now);
         }
+    }
+    
+    private void renderNotification(DrawContext context, MinecraftClient client, Notification notification, int index, long now) {
+        int width = 160;
+        int height = 32;
+        int spacing = 5;
         
-        long elapsed = now - currentNotification.startTime;
-        
-        if (elapsed > DISPLAY_DURATION) {
-            currentNotification = null;
-            return;
-        }
-        
-        // Animation logic
-        // 0-500ms: Slide in
-        // 500ms - (Duration-500ms): Stay
-        // (Duration-500ms) - Duration: Slide out
+        long elapsed = now - notification.startTime;
+        float slideAnimation;
         
         if (elapsed < 500) {
             slideAnimation = elapsed / 500f;
@@ -79,30 +75,17 @@ public class OpponentAchievementHud implements HudRenderCallback {
             slideAnimation = 1f;
         }
         
-        renderNotification(context, client);
-    }
-    
-    private void renderNotification(DrawContext context, MinecraftClient client) {
-        int width = 160;
-        int height = 32;
-        
-        // Position: Top Right, slightly lower than own achievements (which are Top Left usually, but user said Top Right?)
-        // Wait, AchievementHudRenderer uses Top Left.
-        // User said: "Show it top right but slightly lower so it doesn't overlap own achievements"
-        // If own achievements are Top Left, then Top Right is free.
-        // If vanilla achievements are Top Right, we should be careful.
-        // Vanilla toast is Top Right.
-        // Let's put it Top Right, but offset Y by typical toast height (32) + some padding.
-        
         int screenWidth = client.getWindow().getScaledWidth();
         int targetX = screenWidth - width - 5;
         int startX = screenWidth + 5;
         
         int x = (int)(startX + (targetX - startX) * easeOutCubic(slideAnimation));
-        int y = 40; // Lower than vanilla toasts (usually at y=0)
+        int y = 40 + (index * (height + spacing)); 
         
         // Draw background (Purple theme for opponent)
+        // Рисование фона (Фиолетовая тема для противника)
         // Outer border
+        // Внешняя рамка
         int borderColor = 0xFF8B5CF6; // Light purple
         context.fill(x + 2, y, x + width - 2, y + 1, borderColor);
         context.fill(x + 2, y + height - 1, x + width - 2, y + height, borderColor);
@@ -114,19 +97,22 @@ public class OpponentAchievementHud implements HudRenderCallback {
         context.fill(x + width - 2, y + height - 2, x + width - 1, y + height - 1, borderColor);
         
         // Inner background
+        // Внутренний фон
         int bgColor = 0xFF2E1065; // Dark purple
         context.fill(x + 1, y + 2, x + width - 1, y + height - 2, bgColor);
         context.fill(x + 2, y + 1, x + width - 2, y + height - 1, bgColor);
         
         // Icon
-        if (currentNotification.icon != null && !currentNotification.icon.isEmpty()) {
-            context.drawItem(currentNotification.icon, x + 8, y + 8);
+        // Иконка
+        if (notification.icon != null && !notification.icon.isEmpty()) {
+            context.drawItem(notification.icon, x + 8, y + 8);
         }
         
         // Text
-        context.drawText(client.textRenderer, Text.literal("Соперник получил:"), x + 30, y + 6, 0xFFA78BFA, false);
+        // Текст
+        context.drawText(client.textRenderer, Text.literal(notification.playerName + " выполнил:"), x + 30, y + 6, 0xFFA78BFA, false);
         
-        String title = currentNotification.title;
+        String title = notification.title;
         int maxWidth = width - 35;
         if (client.textRenderer.getWidth(title) > maxWidth) {
             title = client.textRenderer.trimToWidth(title, maxWidth - 10) + "...";

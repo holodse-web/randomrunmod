@@ -19,9 +19,19 @@ public class BattleItemPickupMixin {
     private void onPlayerTick(CallbackInfo ci) {
         PlayerEntity player = (PlayerEntity) (Object) this;
         
+        // Запуск только на стороне клиента и ТОЛЬКО для основного игрока
+        // Это предотвращает сообщение хоста о победе других игроков в общем мире
         if (!player.getWorld().isClient) return;
         
-        // Optimize: check only once per second (20 ticks) instead of every tick
+        net.minecraft.client.MinecraftClient client = net.minecraft.client.MinecraftClient.getInstance();
+        if (client.player == null || !player.getUuid().equals(client.player.getUuid())) {
+            return;
+        }
+        
+        // DEBUG LOGGING
+        // RandomRunMod.LOGGER.info("BattleItemPickupMixin: Проверка подбора предмета для " + player.getName().getString());
+        
+        // Оптимизация: проверка только раз в секунду (20 тиков) вместо каждого тика
         if (++tickCounter < 20) return;
         tickCounter = 0;
         
@@ -30,7 +40,7 @@ public class BattleItemPickupMixin {
         
         if (battleManager.isInBattle()) {
             if (runManager.getStatus() != RunDataManager.RunStatus.RUNNING) {
-                // Not running yet, skip check
+                // Еще не запущено, пропуск проверки
                 return;
             }
             
@@ -39,9 +49,9 @@ public class BattleItemPickupMixin {
                     long elapsedTime = runManager.getCurrentTime();
                     
                     RandomRunMod.LOGGER.info("═══════════════════════════════════");
-                    RandomRunMod.LOGGER.info("🏆 TARGET ITEM FOUND IN INVENTORY!");
-                    RandomRunMod.LOGGER.info("  - Item: " + stack.getItem().getName().getString());
-                    RandomRunMod.LOGGER.info("  - Time: " + elapsedTime + "ms");
+                    RandomRunMod.LOGGER.info("🏆 ЦЕЛЕВОЙ ПРЕДМЕТ НАЙДЕН В ИНВЕНТАРЕ!");
+                    RandomRunMod.LOGGER.info("  - Предмет: " + stack.getItem().getName().getString());
+                    RandomRunMod.LOGGER.info("  - Время: " + elapsedTime + "мс");
                     RandomRunMod.LOGGER.info("═══════════════════════════════════");
                     
                     runManager.completeRun();

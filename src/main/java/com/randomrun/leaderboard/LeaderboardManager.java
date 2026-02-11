@@ -1,14 +1,20 @@
 package com.randomrun.leaderboard;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.randomrun.battle.FirebaseClient;
 import com.randomrun.main.RandomRunMod;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.MinecraftClient;
 
-import java.util.UUID;
+// import java.util.UUID; // UNUSED
 import java.util.concurrent.CompletableFuture;
 
 public class LeaderboardManager {
+    
+    // Изменение этой константы эффективно "сбрасывает" таблицу лидеров для старых клиентов
+    // или переносит новые записи в новую таблицу.
+    // private static final String PROTOCOL_VERSION = "v1"; // UNUSED
     
     private static LeaderboardManager instance;
     private final FirebaseClient firebaseClient;
@@ -28,84 +34,37 @@ public class LeaderboardManager {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 if (!entry.verifyIntegrity()) {
-                    RandomRunMod.LOGGER.error("Failed to submit record: integrity check failed");
+                    RandomRunMod.LOGGER.error("Не удалось отправить рекорд: проверка целостности не пройдена");
                     return false;
                 }
                 
-                RandomRunMod.LOGGER.info("═══════════════════════════════════");
-                RandomRunMod.LOGGER.info("📊 Submitting record to Firebase:");
-                RandomRunMod.LOGGER.info("  - Player: " + entry.playerName);
-                RandomRunMod.LOGGER.info("  - Target: " + entry.targetId);
-                RandomRunMod.LOGGER.info("  - Type: " + entry.targetType);
-                RandomRunMod.LOGGER.info("  - Time: " + entry.completionTime + "ms");
+                // Путь: /leaderboards/{targetId}/{playerName}
+                // Используем ID игрока как ключ, чтобы перезаписывать старый рекорд (Upsert)
+                String path = "/leaderboards/" + sanitizeId(entry.targetId) + "/" + sanitizeId(entry.playerName);
                 
-                // Check for existing records from this player for this target
-                String playerBasePath = "/leaderboard/players/" + sanitizeId(entry.playerName);
-                com.google.gson.JsonObject existingRecords = firebaseClient.get(playerBasePath).join();
-                
-                String recordToDelete = null;
-                long bestExistingTime = Long.MAX_VALUE;
-                
-                if (existingRecords != null) {
-                    com.google.gson.Gson gson = new com.google.gson.Gson();
-                    for (String key : existingRecords.keySet()) {
-                        try {
-                            LeaderboardEntry existing = gson.fromJson(existingRecords.get(key), LeaderboardEntry.class);
-                            if (existing != null && existing.targetId.equals(entry.targetId)) {
-                                if (existing.completionTime < bestExistingTime) {
-                                    bestExistingTime = existing.completionTime;
-                                    recordToDelete = key;
-                                }
-                            }
-                        } catch (Exception e) {
-                            RandomRunMod.LOGGER.warn("Failed to parse existing record: " + key, e);
-                        }
+                // Сначала проверяем, есть ли уже рекорд лучше
+                JsonElement existingElement = firebaseClient.get(path).join();
+                if (existingElement != null && existingElement.isJsonObject()) {
+                    JsonObject existing = existingElement.getAsJsonObject();
+                    LeaderboardEntry oldEntry = new com.google.gson.Gson().fromJson(existing, LeaderboardEntry.class);
+                    if (oldEntry.completionTime <= entry.completionTime) {
+                         RandomRunMod.LOGGER.info("Новый результат хуже или равен старому. Пропуск.");
+                         return false;
                     }
                 }
-                
-                // If new time is worse than existing, don't save
-                if (bestExistingTime < entry.completionTime) {
-                    RandomRunMod.LOGGER.info("⚠️ New time (" + entry.completionTime + "ms) is worse than existing (" + bestExistingTime + "ms). Not saving.");
-                    return false;
-                }
-                
-                String uniqueId = UUID.randomUUID().toString();
-                String recordPath = "/leaderboard/records/" + entry.targetType.toLowerCase() + "/" + 
-                                   sanitizeId(entry.targetId) + "/" + uniqueId;
-                String playerPath = "/leaderboard/players/" + sanitizeId(entry.playerName) + "/" + uniqueId;
-                
-                RandomRunMod.LOGGER.info("  - Record Path: " + recordPath);
-                RandomRunMod.LOGGER.info("  - Player Path: " + playerPath);
-                RandomRunMod.LOGGER.info("═══════════════════════════════════");
-                
-                // Delete old record if exists
-                if (recordToDelete != null) {
-                    String oldPlayerPath = playerBasePath + "/" + recordToDelete;
-                    String oldRecordPath = "/leaderboard/records/" + entry.targetType.toLowerCase() + "/" + 
-                                          sanitizeId(entry.targetId) + "/" + recordToDelete;
-                    
-                    RandomRunMod.LOGGER.info("🗑️ Deleting old record: " + recordToDelete);
-                    firebaseClient.delete(oldPlayerPath).join();
-                    firebaseClient.delete(oldRecordPath).join();
-                }
-                
-                // Save to records path (organized by target)
-                boolean recordSuccess = firebaseClient.put(recordPath, entry).join();
-                
-                // Save to player path (organized by player)
-                boolean playerSuccess = firebaseClient.put(playerPath, entry).join();
-                
-                boolean success = recordSuccess && playerSuccess;
+
+                boolean success = firebaseClient.put(path, entry).join();
                 
                 if (success) {
-                    RandomRunMod.LOGGER.info("✅ Record successfully submitted to Firebase (both paths)!");
-                } else {
-                    RandomRunMod.LOGGER.error("❌ Failed to submit record to Firebase (record: " + recordSuccess + ", player: " + playerSuccess + ")");
+                    RandomRunMod.LOGGER.info("✅ Рекорд успешно обновлен: " + entry.targetId);
+                    
+                    // Removed side effects (PlayerProfile and GlobalStatsManager updates)
+                    // These are now handled in VictoryHandler and BattleManager to avoid double counting
                 }
                 
                 return success;
             } catch (Exception e) {
-                RandomRunMod.LOGGER.error("Error submitting record to leaderboard", e);
+                RandomRunMod.LOGGER.error("Ошибка при отправке рекорда", e);
                 return false;
             }
         });
@@ -113,11 +72,11 @@ public class LeaderboardManager {
     
     public LeaderboardEntry createEntry(String playerName, String targetId, String targetType,
                                        long completionTime, String worldSeed, long timeLimit,
-                                       String difficulty, boolean isTimeChallenge) {
+                                       String difficulty, boolean isTimeChallenge, int attempts, boolean isHardcore) {
         String modVersion = RandomRunMod.MOD_VERSION;
         String minecraftVersion = SharedConstants.getGameVersion().getName();
         
-        return new LeaderboardEntry(
+        LeaderboardEntry entry = new LeaderboardEntry(
             playerName,
             targetId,
             targetType,
@@ -127,8 +86,11 @@ public class LeaderboardManager {
             difficulty,
             isTimeChallenge,
             modVersion,
-            minecraftVersion
+            minecraftVersion,
+            isHardcore
         );
+        entry.attempts = attempts;
+        return entry;
     }
     
     public String getPlayerName() {
@@ -138,7 +100,7 @@ public class LeaderboardManager {
         } else if (client.getSession() != null) {
             return client.getSession().getUsername();
         }
-        return "Unknown Player";
+        return "Неизвестный игрок";
     }
     
     public String getCurrentWorldSeed() {
@@ -154,7 +116,7 @@ public class LeaderboardManager {
                 long seed = client.getServer().getOverworld().getSeed();
                 return String.valueOf(seed);
             } catch (Exception e) {
-                RandomRunMod.LOGGER.warn("Could not get world seed from server", e);
+                RandomRunMod.LOGGER.warn("Не удалось получить сид мира с сервера", e);
             }
         }
         
@@ -167,7 +129,7 @@ public class LeaderboardManager {
     
     public CompletableFuture<Boolean> submitCurrentRun(String targetId, String targetType, 
                                                        long completionTime, long timeLimit, 
-                                                       String difficulty, boolean isTimeChallenge) {
+                                                       String difficulty, boolean isTimeChallenge, int attempts, boolean isHardcore) {
         String playerName = getPlayerName();
         String worldSeed = getCurrentWorldSeed();
         
@@ -179,7 +141,9 @@ public class LeaderboardManager {
             worldSeed,
             timeLimit,
             difficulty,
-            isTimeChallenge
+            isTimeChallenge,
+            attempts,
+            isHardcore
         );
         
         return submitRecord(entry);
@@ -188,36 +152,14 @@ public class LeaderboardManager {
     public CompletableFuture<java.util.List<LeaderboardEntry>> getPlayerRecords(String playerName) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                String path = "/leaderboard/players/" + sanitizeId(playerName);
-                
-                RandomRunMod.LOGGER.info("Fetching records for player: " + playerName);
-                
-                com.google.gson.JsonObject data = firebaseClient.get(path).join();
-                
-                if (data == null) {
-                    RandomRunMod.LOGGER.info("No records found for player: " + playerName);
-                    return new java.util.ArrayList<>();
-                }
-                
-                java.util.List<LeaderboardEntry> records = new java.util.ArrayList<>();
-                com.google.gson.Gson gson = new com.google.gson.Gson();
-                
-                for (String key : data.keySet()) {
-                    try {
-                        LeaderboardEntry entry = gson.fromJson(data.get(key), LeaderboardEntry.class);
-                        if (entry != null && entry.verifyIntegrity()) {
-                            records.add(entry);
-                        }
-                    } catch (Exception e) {
-                        RandomRunMod.LOGGER.warn("Failed to parse record: " + key, e);
-                    }
-                }
-                
-                RandomRunMod.LOGGER.info("Loaded " + records.size() + " records for player: " + playerName);
-                return records;
-                
+                // В новой схеме мы не храним список рекордов игрока отдельно.
+                // Чтобы получить их, нужно запросить профиль игрока (PlayerProfile.bests)
+                // Или сделать сложный запрос ко всем лидербордам (неэффективно).
+                // Для совместимости возвращаем пустой список, так как эта функция 
+                // использовалась для синхронизации локальной истории, 
+                // которая теперь берется из профиля.
+                return new java.util.ArrayList<>();
             } catch (Exception e) {
-                RandomRunMod.LOGGER.error("Error fetching player records", e);
                 return new java.util.ArrayList<>();
             }
         });
@@ -226,42 +168,28 @@ public class LeaderboardManager {
     public CompletableFuture<java.util.List<LeaderboardEntry>> getTopRecordsForTarget(String targetId, String targetType, int limit) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                String path = "/leaderboard/records/" + targetType.toLowerCase() + "/" + sanitizeId(targetId);
+                String path = "/leaderboards/" + sanitizeId(targetId);
                 
-                RandomRunMod.LOGGER.info("Fetching top " + limit + " records for: " + targetId);
+                JsonElement dataElement = firebaseClient.get(path).join();
+                if (dataElement == null || !dataElement.isJsonObject()) return new java.util.ArrayList<>();
                 
-                com.google.gson.JsonObject data = firebaseClient.get(path).join();
-                
-                if (data == null) {
-                    RandomRunMod.LOGGER.info("No records found for: " + targetId);
-                    return new java.util.ArrayList<>();
-                }
-                
+                JsonObject data = dataElement.getAsJsonObject();
                 java.util.List<LeaderboardEntry> records = new java.util.ArrayList<>();
                 com.google.gson.Gson gson = new com.google.gson.Gson();
                 
                 for (String key : data.keySet()) {
-                    try {
-                        LeaderboardEntry entry = gson.fromJson(data.get(key), LeaderboardEntry.class);
-                        if (entry != null && entry.verifyIntegrity()) {
-                            records.add(entry);
-                        }
-                    } catch (Exception e) {
-                        RandomRunMod.LOGGER.warn("Failed to parse record: " + key, e);
+                    LeaderboardEntry entry = gson.fromJson(data.get(key), LeaderboardEntry.class);
+                    if (entry != null) {
+                        records.add(entry);
                     }
                 }
                 
                 records.sort(java.util.Comparator.comparingLong(e -> e.completionTime));
+                if (records.size() > limit) records = records.subList(0, limit);
                 
-                if (records.size() > limit) {
-                    records = records.subList(0, limit);
-                }
-                
-                RandomRunMod.LOGGER.info("Loaded " + records.size() + " top records for: " + targetId);
                 return records;
-                
             } catch (Exception e) {
-                RandomRunMod.LOGGER.error("Error fetching top records", e);
+                RandomRunMod.LOGGER.error("Ошибка при получении лучших рекордов", e);
                 return new java.util.ArrayList<>();
             }
         });

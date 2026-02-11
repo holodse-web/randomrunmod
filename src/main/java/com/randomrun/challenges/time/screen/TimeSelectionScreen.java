@@ -3,21 +3,21 @@ package com.randomrun.challenges.time.screen;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.randomrun.main.RandomRunMod;
 import com.randomrun.challenges.classic.data.ItemDifficulty;
-import com.randomrun.ui.widget.StyledButton2;
-import com.randomrun.ui.screen.AbstractRandomRunScreen;
+import com.randomrun.ui.widget.styled.ButtonDefault;
+import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
 import com.randomrun.challenges.classic.screen.ItemRevealScreen;
 import com.randomrun.challenges.classic.screen.SeedInputScreen;
 import com.randomrun.challenges.classic.screen.SpeedrunScreen;
 import com.randomrun.challenges.advancement.data.AdvancementLoader;
 import com.randomrun.challenges.advancement.screen.AchievementRevealScreen;
-import com.randomrun.ui.screen.MainModScreen;
+import com.randomrun.ui.screen.main.MainModScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.model.BakedModel;
-import net.minecraft.client.render.model.json.ModelTransformationMode;
+// import net.minecraft.client.render.model.BakedModel; // UNUSED
+import net.minecraft.item.ModelTransformationMode;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
@@ -83,7 +83,7 @@ public class TimeSelectionScreen extends AbstractRandomRunScreen {
         
         if (slotMachineActive && elapsed < SLOT_MACHINE_DURATION) {
             // Во время анимации - только кнопка назад
-            addDrawableChild(new StyledButton2(
+            addDrawableChild(new ButtonDefault(
                 centerX - 100, buttonY,
                 200, 20,
                 Text.translatable("randomrun.button.back"),
@@ -98,16 +98,16 @@ public class TimeSelectionScreen extends AbstractRandomRunScreen {
         } else if (!slotMachineActive || elapsed >= SLOT_MACHINE_DURATION) {
             // До анимации или после - показываем соответствующие кнопки
             if (selectedTime == 0) {
-                // Random time button (before slot machine)
-                addDrawableChild(new StyledButton2(
+                // Кнопка случайного времени (до слот-машины)
+                addDrawableChild(new ButtonDefault(
                     centerX - 100, buttonY,
                     200, 20,
                     Text.translatable("randomrun.button.random_time"),
                     button -> startTimeSlotMachine()
                 ));
             } else {
-                // Start speedrun button (after slot machine)
-                addDrawableChild(new StyledButton2(
+                // Кнопка старта спидрана (после слот-машины)
+                addDrawableChild(new ButtonDefault(
                     centerX - 100, buttonY,
                     200, 20,
                     Text.translatable("randomrun.button.start_speedrun"),
@@ -131,8 +131,8 @@ public class TimeSelectionScreen extends AbstractRandomRunScreen {
                 ));
             }
             
-            // Back button
-            addDrawableChild(new StyledButton2(
+            // Кнопка назад
+            addDrawableChild(new ButtonDefault(
                 centerX - 100, height - 30,
                 200, 20,
                 Text.translatable("randomrun.button.back"),
@@ -154,20 +154,20 @@ public class TimeSelectionScreen extends AbstractRandomRunScreen {
         soundPlayed = false;
         buttonsRefreshed = false;
         
-        // Generate random time based on difficulty
+        // Генерация случайного времени на основе сложности
         if (isAdvancement) {
             boolean useDifficulty = RandomRunMod.getInstance().getConfig().isUseAchievementDifficulty();
             if (useDifficulty && advDifficulty != null) {
                 selectedTime = advDifficulty.getRandomTime();
             } else {
-                selectedTime = 30 + new Random().nextInt(91); // 30-120 seconds
+                selectedTime = 30 + new Random().nextInt(91); // 30-120 секунд
             }
         } else {
             boolean useDifficulty = RandomRunMod.getInstance().getConfig().isUseItemDifficulty();
             if (useDifficulty && itemDifficulty != null) {
                 selectedTime = itemDifficulty.getRandomTime();
             } else {
-                selectedTime = 30 + new Random().nextInt(91); // 30-120 seconds
+                selectedTime = 30 + new Random().nextInt(91); // 30-120 секунд
             }
         }
     }
@@ -194,7 +194,7 @@ public class TimeSelectionScreen extends AbstractRandomRunScreen {
     
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        // Call parent render (handles fade automatically)
+        // Вызов рендера родителя (автоматически обрабатывает затемнение)
         super.render(context, mouseX, mouseY, delta);
         
         RenderSystem.enableBlend();
@@ -202,13 +202,13 @@ public class TimeSelectionScreen extends AbstractRandomRunScreen {
         int centerX = width / 2;
         int centerY = height / 2 + 50; // Опустили меню еще ниже (было +30)
 
-        // Render 3D item (outside the box, higher and larger)
+        // Рендер 3D предмета (вне коробки, выше и больше)
         render3DItem(context, centerX, centerY - 150, delta);
         
-        // Render time selection box (like slot machine in SpeedrunScreen)
+        // Рендер коробки выбора времени (как слот-машина в SpeedrunScreen)
         renderTimeSelectionBox(context);
         
-        // Render item/achievement name below 3D item
+        // Рендер имени предмета/достижения под 3D предметом
         String displayName = isAdvancement ? targetAdvancement.title.getString() : targetItem.getName().getString();
         context.drawCenteredTextWithShadow(textRenderer, displayName, centerX, centerY - 80, 0xFFFFFF);
 
@@ -216,7 +216,7 @@ public class TimeSelectionScreen extends AbstractRandomRunScreen {
     }
     
     private void render3DItem(DrawContext context, int x, int y, float delta) {
-        // Update animations
+        // Обновление анимаций
         long elapsed = System.currentTimeMillis() - openTime;
         rotationY += delta * 2f;
         levitationOffset = (float) Math.sin(elapsed / 500.0) * 5f;
@@ -230,19 +230,19 @@ public class TimeSelectionScreen extends AbstractRandomRunScreen {
         context.getMatrices().multiply(new Quaternionf().rotateY((float) Math.toRadians(rotationY)));
         
         MinecraftClient client = MinecraftClient.getInstance();
-        BakedModel model = client.getItemRenderer().getModel(stack, null, null, 0);
+        // BakedModel model = client.getItemRenderer().getModels().getModel(stack);
         
         DiffuseLighting.disableGuiDepthLighting();
         
         client.getItemRenderer().renderItem(
             stack,
             ModelTransformationMode.GUI,
-            false,
-            context.getMatrices(),
-            context.getVertexConsumers(),
             15728880,
             OverlayTexture.DEFAULT_UV,
-            model
+            context.getMatrices(),
+            MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers(),
+            client.world,
+            0
         );
         
         context.draw();

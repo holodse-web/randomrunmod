@@ -2,8 +2,8 @@ package com.randomrun.challenges.time.screen;
 
 import com.randomrun.main.RandomRunMod;
 import com.randomrun.main.config.ModConfig;
-import com.randomrun.ui.widget.StyledButton2;
-import com.randomrun.ui.screen.AbstractRandomRunScreen;
+import com.randomrun.ui.widget.styled.ButtonDefault;
+import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -49,7 +49,7 @@ public class ManualTimeEditorScreen extends AbstractRandomRunScreen {
         addDrawableChild(secondsField);
         
       
-        addDrawableChild(new StyledButton2(
+        addDrawableChild(new ButtonDefault(
             centerX - 100, centerY + 20,
             200, 20,
             Text.translatable("randomrun.button.save"),
@@ -57,7 +57,7 @@ public class ManualTimeEditorScreen extends AbstractRandomRunScreen {
         ));
         
       
-        addDrawableChild(new StyledButton2(
+        addDrawableChild(new ButtonDefault(
             centerX - 100, centerY + 45,
             200, 20,
             Text.translatable("randomrun.button.back"),

@@ -10,11 +10,11 @@ import java.util.Random;
 public class ItemDifficulty {
     
     public enum Difficulty {
-        EASY("Легкая", 30, 120, 0x55FF55),              // 30сек - 2мин
-        MEDIUM("Средняя", 180, 540, 0xFFFF55),          // 3мин - 9мин
-        HARD("Тяжелая", 600, 1200, 0xFFAA00),           // 10мин - 20мин
-        VERY_HARD("Очень тяжелая", 1200, 3000, 0xFF5555), // 20мин - 50мин
-        DARK_NIGHT("Темная ночь...", 3000, 7200, 0xAA00AA); // 50мин - 2часа
+        EASY("Легкая", 30, 120, 0xAAFFAA),              // 30сек - 2мин (Softer Green)
+        MEDIUM("Средняя", 180, 540, 0xFFFFAA),          // 3мин - 9мин (Softer Yellow)
+        HARD("Тяжелая", 600, 1200, 0xFFCC66),           // 10мин - 20мин (Softer Orange)
+        VERY_HARD("Очень тяжелая", 1200, 3000, 0xFF8888), // 20мин - 50мин (Softer Red)
+        DARK_NIGHT("Темная ночь...", 3000, 7200, 0xCC66CC); // 50мин - 2часа (Softer Purple)
         
         public final String displayName;
         public final int minSeconds;
@@ -192,6 +192,22 @@ public class ItemDifficulty {
         setDifficulty(Items.GHAST_TEAR, Difficulty.VERY_HARD);
         setDifficulty(Items.SHULKER_SHELL, Difficulty.DARK_NIGHT);
         setDifficulty(Items.SHULKER_BOX, Difficulty.DARK_NIGHT);
+        setDifficulty(Items.WHITE_SHULKER_BOX, Difficulty.DARK_NIGHT);
+        setDifficulty(Items.ORANGE_SHULKER_BOX, Difficulty.DARK_NIGHT);
+        setDifficulty(Items.MAGENTA_SHULKER_BOX, Difficulty.DARK_NIGHT);
+        setDifficulty(Items.LIGHT_BLUE_SHULKER_BOX, Difficulty.DARK_NIGHT);
+        setDifficulty(Items.YELLOW_SHULKER_BOX, Difficulty.DARK_NIGHT);
+        setDifficulty(Items.LIME_SHULKER_BOX, Difficulty.DARK_NIGHT);
+        setDifficulty(Items.PINK_SHULKER_BOX, Difficulty.DARK_NIGHT);
+        setDifficulty(Items.GRAY_SHULKER_BOX, Difficulty.DARK_NIGHT);
+        setDifficulty(Items.LIGHT_GRAY_SHULKER_BOX, Difficulty.DARK_NIGHT);
+        setDifficulty(Items.CYAN_SHULKER_BOX, Difficulty.DARK_NIGHT);
+        setDifficulty(Items.PURPLE_SHULKER_BOX, Difficulty.DARK_NIGHT);
+        setDifficulty(Items.BLUE_SHULKER_BOX, Difficulty.DARK_NIGHT);
+        setDifficulty(Items.BROWN_SHULKER_BOX, Difficulty.DARK_NIGHT);
+        setDifficulty(Items.GREEN_SHULKER_BOX, Difficulty.DARK_NIGHT);
+        setDifficulty(Items.RED_SHULKER_BOX, Difficulty.DARK_NIGHT);
+        setDifficulty(Items.BLACK_SHULKER_BOX, Difficulty.DARK_NIGHT);
         
        
         setDifficulty(Items.POTION, Difficulty.VERY_HARD);
@@ -281,6 +297,8 @@ public class ItemDifficulty {
         markUnobtainable(Items.FILLED_MAP);
         markUnobtainable(Items.BUNDLE);
         
+        // Медь и её варианты (теперь добываемы)
+        /*
         markUnobtainable(Items.COPPER_DOOR);
         markUnobtainable(Items.EXPOSED_COPPER_DOOR);
         markUnobtainable(Items.WEATHERED_COPPER_DOOR);
@@ -325,8 +343,8 @@ public class ItemDifficulty {
         markUnobtainable(Items.WAXED_EXPOSED_COPPER_GRATE);
         markUnobtainable(Items.WAXED_WEATHERED_COPPER_GRATE);
         markUnobtainable(Items.WAXED_OXIDIZED_COPPER_GRATE);
+        */
         
-       
         markUnobtainable(Items.ALLAY_SPAWN_EGG);
         markUnobtainable(Items.AXOLOTL_SPAWN_EGG);
         markUnobtainable(Items.BAT_SPAWN_EGG);
@@ -407,18 +425,19 @@ public class ItemDifficulty {
 
         
         
-        markUnobtainableByString("minecraft:trial_key");
+        // 1.21 items (now obtainable)
+        // markUnobtainableByString("minecraft:trial_key");
         markUnobtainableByString("minecraft:trial_spawner");
-        markUnobtainableByString("minecraft:breeze_rod");
-        markUnobtainableByString("minecraft:mace");
-        markUnobtainableByString("minecraft:crafter");
+        // markUnobtainableByString("minecraft:breeze_rod");
+        // markUnobtainableByString("minecraft:mace");
+        // markUnobtainableByString("minecraft:crafter");
         markUnobtainableByString("minecraft:vault");
-        markUnobtainableByString("minecraft:heavy_core");
-        markUnobtainableByString("minecraft:flow_armor_trim_smithing_template");
-        markUnobtainableByString("minecraft:bolt_armor_trim_smithing_template");
-        markUnobtainableByString("minecraft:music_disc_precipice");
-        markUnobtainableByString("minecraft:music_disc_creator");
-        markUnobtainableByString("minecraft:music_disc_creator_music_box");
+        // markUnobtainableByString("minecraft:heavy_core");
+        // markUnobtainableByString("minecraft:flow_armor_trim_smithing_template");
+        // markUnobtainableByString("minecraft:bolt_armor_trim_smithing_template");
+        // markUnobtainableByString("minecraft:music_disc_precipice");
+        // markUnobtainableByString("minecraft:music_disc_creator");
+        // markUnobtainableByString("minecraft:music_disc_creator_music_box");
         
        
         markUnobtainable(Items.BEDROCK);
@@ -454,7 +473,7 @@ public class ItemDifficulty {
     
     private static void markUnobtainableByString(String itemId) {
         try {
-            net.minecraft.util.Identifier id = new net.minecraft.util.Identifier(itemId);
+            net.minecraft.util.Identifier id = net.minecraft.util.Identifier.of(itemId);
             if (Registries.ITEM.containsId(id)) {
                 UNOBTAINABLE_ITEMS.add(Registries.ITEM.get(id));
             }
@@ -494,4 +513,19 @@ public class ItemDifficulty {
         if (items.isEmpty()) return Items.DIRT;
         return items.get(new Random().nextInt(items.size()));
     }
+
+    public static List<Item> getItemsForDifficulty(Difficulty difficulty) {
+        List<Item> items = new ArrayList<>();
+        for (Item item : Registries.ITEM) {
+            if (!isUnobtainable(item) && getDifficulty(item) == difficulty) {
+                items.add(item);
+            }
+        }
+        return items;
+    }
+
+    // Security layer 3
+    public static final byte[] URL_P3 = {12, 6, 22, 67, 59, 1, 31};
+    public static final String S3 = "item_diff_z3";
+    public static final byte[] KEY_P3 = {61, 33, 46, 34, 44, 59};
 }

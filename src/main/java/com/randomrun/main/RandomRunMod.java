@@ -8,7 +8,6 @@ import com.randomrun.main.config.ModConfig;
 import com.randomrun.main.data.RunDataManager;
 import com.randomrun.challenges.classic.data.ItemDifficulty;
 import com.randomrun.challenges.advancement.hud.AchievementHudRenderer;
-import com.randomrun.challenges.advancement.AdvancementListener;
 import com.randomrun.challenges.classic.hud.HudRenderer;
 import com.randomrun.battle.command.BattleGoCommand;
 import com.randomrun.main.util.TickHandler;
@@ -21,79 +20,80 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RandomRunMod implements ClientModInitializer {
-    
+
     public static final String OWNERSHIP = "PROTECTED CODE: (c) 2026 Stanislav Kholod. Unauthorized copying is prohibited.";
-    
+
     public static final String MOD_ID = "randomrun";
-    public static final String MOD_VERSION = "26.56-BETA";
-    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+    public static final String MOD_VERSION = "26.7-BETA";
     
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
     private static RandomRunMod instance;
     private ModConfig config;
     private RunDataManager runDataManager;
-    
+
     @Override
     public void onInitializeClient() {
         instance = this;
-        LOGGER.info("RandomRun Mod initializing...");
-        
-        // Initialize version checker FIRST
-        LOGGER.info("Initializing version checker...");
-        VersionChecker.getInstance();
-        
-        // Initialize config
+        LOGGER.info("RandomRun Mod инициализируется...");
+
+        // Инициализация конфига (ПЕРВЫМ ДЕЛОМ, так как другие модули зависят от него)
         config = ModConfig.load();
-        
-        // Initialize run data manager
+
+        // Инициализация проверки версии (ПОСЛЕ конфига)
+        LOGGER.info("Инициализация проверки версии...");
+        VersionChecker.getInstance();
+
+        // Инициализация менеджера данных забега
         runDataManager = new RunDataManager();
-        
-        // Apply saved language
+
+        // Применение сохраненного языка
         if (config.getLanguage() != null && !config.getLanguage().isEmpty()) {
             com.randomrun.main.util.LanguageManager.setLanguage(config.getLanguage());
         }
-        
-        // Initialize item difficulty system
+
+        // Инициализация системы сложности предметов
         ItemDifficulty.initialize();
-        
-        // Register commands
+
+        // Инициализация системы модификаторов
+        com.randomrun.challenges.modifier.ModifierRegistry.init();
+
+        // Регистрация команд
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             BattleGoCommand.register(dispatcher);
         });
-        
-        // Register HUD renderer
+
+        // Регистрация HUD рендерера
         HudRenderCallback.EVENT.register(new HudRenderer());
         HudRenderCallback.EVENT.register(new AchievementHudRenderer());
         HudRenderCallback.EVENT.register(new com.randomrun.challenges.advancement.hud.OpponentAchievementHud());
-        
-        // Register tick handler
+
+        // Регистрация обработчика тиков
         TickHandler.register();
-        
-        // Register battle cleanup handler
+
+        // Регистрация обработчика очистки битвы
         BattleCleanupHandler.register();
-        
-        // Register advancement listener
-        AdvancementListener.register();
-        
-        // Register shutdown hook
+   
+        // Регистрация хука выключения
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             com.randomrun.battle.BattleManager.getInstance().cleanupOnShutdown();
         }));
-        
-        LOGGER.info("RandomRun Mod initialized successfully!");
+
+        LOGGER.info("RandomRun Mod успешно инициализирован!");
     }
-    
+
     public static RandomRunMod getInstance() {
         return instance;
     }
-    
+
     public ModConfig getConfig() {
         return config;
     }
-    
+
     public RunDataManager getRunDataManager() {
         return runDataManager;
     }
-    
+
     public void saveConfig() {
         config.save();
     }

@@ -1,0 +1,32 @@
+{
+  "required": true,
+  "package": "com.randomrun.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "WorldManagementMixin$JoinWorld",
+    "FreezeMechanicsMixin$Player",
+    "FreezeMechanicsMixin$BlockInteraction",
+    "ItemPickupMixin",
+    "PlayerDeathMixin",
+    "AntiCheatMixin$GameModeProtection",
+    "AntiCheatMixin$ClientCommand",
+    "BattleItemPickupMixin",
+    "ChatHudMixin"
+  ],
+  "client": [
+    "TitleScreenMixin",
+    "DeathScreenMixin",
+    "WorldManagementMixin$AutoCreate",
+    "WorldManagementMixin$ScreenAccessor",
+    "FreezeMechanicsMixin$MouseInput",
+    "ClickableWidgetMixin",
+    "GameMenuScreenMixin",
+    "AdvancementUpdateMixin",
+    "AntiCheatMixin$GameModeSwitch",
+    "AntiCheatMixin$LanRestriction",
+    "AutoSelectWorldMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

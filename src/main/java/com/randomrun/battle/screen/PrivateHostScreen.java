@@ -1,34 +1,28 @@
 package com.randomrun.battle.screen;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.randomrun.main.RandomRunMod;
-import com.randomrun.battle.BattleManager;
 import com.randomrun.challenges.classic.data.ItemDifficulty;
-import com.randomrun.ui.widget.StyledButton2;
-import com.randomrun.ui.screen.AbstractRandomRunScreen;
+import com.randomrun.ui.widget.styled.ButtonDefault;
+import com.randomrun.ui.widget.styled.TextFieldStyled;
+import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.render.DiffuseLighting;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.model.BakedModel;
-import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.RotationAxis;
-import org.joml.Quaternionf;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
 public class PrivateHostScreen extends AbstractRandomRunScreen {
     private final Screen parent;
-    private TextFieldWidget searchField;
+    private TextFieldStyled searchField;
     private List<Item> filteredItems = new ArrayList<>();
     private List<Item> allItems = new ArrayList<>();
     
@@ -41,7 +35,7 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
     
     private Item selectedItem = null;
     
-    // Slot machine animation
+    // Анимация слот-машины
     private boolean slotMachineActive = false;
     private long slotMachineStartTime;
     private int slotMachineIndex = 0;
@@ -54,11 +48,6 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
 
     // Particle effects for slot machine
     private List<Particle> particles = new ArrayList<>();
-    
-    // 3D item animation (Removed)
-    
-    private boolean dragging = false;
-    private double lastMouseX, lastMouseY;
     
     public PrivateHostScreen(Screen parent) {
         super(Text.literal("Создать комнату"));
@@ -83,13 +72,13 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
         int gridHeight = VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING);
         
         // Search field (above grid)
-        searchField = new TextFieldWidget(textRenderer, centerX - 100, gridY - 30, 200, 20, Text.translatable("randomrun.search"));
-        searchField.setPlaceholder(Text.translatable("randomrun.search.placeholder"));
+        searchField = new TextFieldStyled(textRenderer, centerX - 100, gridY - 30, 200, 20, Text.translatable("randomrun.search"));
+        searchField.setCenteredPlaceholder(Text.translatable("randomrun.search.placeholder"));
         searchField.setChangedListener(this::onSearchChanged);
         addDrawableChild(searchField);
         
         // Random item button (below grid) - NO REVEAL SCREEN
-        addDrawableChild(new StyledButton2(
+        addDrawableChild(new ButtonDefault(
             centerX - 100, gridY + gridHeight + 10,
             200, 20,
             Text.translatable("randomrun.button.random_item"),
@@ -97,17 +86,19 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
             0, 0.1f
         ));
         
+        /* Кнопка "Далее" убрана по запросу пользователя. Выбор предмета из списка сразу открывает экран настройки.
         // Continue button
-        addDrawableChild(new StyledButton2(
+        addDrawableChild(new ButtonDefault(
             centerX - 100, height - 55,
             200, 20,
             Text.literal("Далее"),
             button -> openRevealScreen(),
             1, 0.12f
         ));
+        */
         
         // Back button
-        addDrawableChild(new StyledButton2(
+        addDrawableChild(new ButtonDefault(
             centerX - 100, height - 30,
             200, 20,
             Text.translatable("randomrun.button.back"),
@@ -133,27 +124,26 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
     }
     
     private void startSlotMachine() {
-        slotMachineActive = true;
-        slotMachineStartTime = System.currentTimeMillis();
-        lastTickTime = 0;
-        soundPlayed = false;
-        slotMachineIndex = 0;
-        particles.clear();
-        
-        // Pre-generate random items for slot machine
-        slotMachineItems.clear();
-        List<Item> availableItems = ItemDifficulty.getAllItems(
+        // Предварительная генерация случайного предмета для результата
+        Item resultItem = ItemDifficulty.getRandomItem(
             RandomRunMod.getInstance().getConfig().isAllowUnobtainableItems()
         );
-        Random random = new Random();
-        for (int i = 0; i < 50; i++) {
-            slotMachineItems.add(availableItems.get(random.nextInt(availableItems.size())));
-        }
         
-        // Final result
-        slotMachineResult = ItemDifficulty.getRandomItem(
+        if (resultItem == null) return;
+        
+        // Использовать внутреннюю анимацию
+        this.slotMachineItems = new ArrayList<>(ItemDifficulty.getAllItems(
             RandomRunMod.getInstance().getConfig().isAllowUnobtainableItems()
-        );
+        ));
+        Collections.shuffle(this.slotMachineItems);
+        
+        this.slotMachineResult = resultItem;
+        this.slotMachineActive = true;
+        this.slotMachineStartTime = System.currentTimeMillis();
+        this.slotMachineIndex = 0;
+        this.soundPlayed = false;
+        this.lastTickTime = System.currentTimeMillis();
+        this.particles.clear();
     }
     
     private void openRevealScreen() {
@@ -172,12 +162,12 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
         
         super.render(context, mouseX, mouseY, delta);
         
-        // Render item grid or slot machine
+        // Рендер сетки предметов или слот-машины
         if (slotMachineActive) {
             renderSlotMachine(context, delta);
             updateParticles(delta);
             
-            // Auto-proceed when slot machine finishes
+            // Авто-продолжение после завершения
             long elapsedSlot = System.currentTimeMillis() - slotMachineStartTime;
             if (elapsedSlot >= SLOT_MACHINE_DURATION + 1000 && slotMachineResult != null) {
                 selectedItem = slotMachineResult;
@@ -185,14 +175,14 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
                 openRevealScreen();
             }
         } else {
-            // Update search field position with animation
+            // Обновление позиции поля поиска с анимацией
             int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2;
             searchField.setY(gridY - 30 + slideOffset);
             
             renderItemGrid(context, mouseX, mouseY, slideOffset);
         }
         
-        // Render scroll indicator
+        // Рендер индикатора прокрутки
         if (!slotMachineActive && filteredItems.size() > ITEMS_PER_ROW * VISIBLE_ROWS) {
             renderScrollIndicator(context, mouseX, mouseY, slideOffset);
         }
@@ -257,12 +247,12 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
         int centerX = width / 2;
         int centerY = height / 2;
         
-        // Pulsating background
+        // Пульсирующий фон
         float pulse = (float) Math.sin(elapsed / 200.0) * 0.1f + 0.9f;
         int bgAlpha = (int) (0xCC * pulse) << 24;
         context.fill(centerX - 70, centerY - 60, centerX + 70, centerY + 60, bgAlpha);
         
-        // Animated border
+        // Анимированная граница
         int borderColor = 0xFF6930c3;
         if (progress >= 1.0f) {
             float glow = (float) Math.sin(elapsed / 150.0) * 0.3f + 0.7f;
@@ -298,7 +288,7 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
             Item displayItem = slotMachineItems.get(slotMachineIndex);
             ItemStack stack = new ItemStack(displayItem);
             
-            // Rotating icon with motion blur effect
+            // Вращающаяся иконка с эффектом размытия
             MatrixStack matrices = context.getMatrices();
             matrices.push();
             matrices.translate(centerX, centerY, 0);
@@ -316,7 +306,7 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
                 Text.translatable("randomrun.slotmachine.spinning"), 
                 centerX, centerY + 48, interpolateColor(0xFFFFFF, 0xFFD700, (float) Math.sin(elapsed / 100.0)));
         } else {
-            // Result with celebration
+            // Результат с празднованием
             if (!soundPlayed && RandomRunMod.getInstance().getConfig().isSoundEffectsEnabled()) {
                 float volume = RandomRunMod.getInstance().getConfig().getSoundVolume() / 100f;
                 MinecraftClient.getInstance().getSoundManager().play(
@@ -328,14 +318,14 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
                 );
                 soundPlayed = true;
                 
-                // Spawn celebration particles
+                // Спавн праздничных частиц
                 Random random = new Random();
                 for (int i = 0; i < 30; i++) {
                     spawnCelebrationParticle(centerX, centerY, random);
                 }
             }
             
-            // Bouncing icon animation
+            // Анимация подпрыгивающей иконки
             float bounceProgress = (elapsed - SLOT_MACHINE_DURATION) / 1000.0f;
             float bounce = (float) Math.abs(Math.sin(bounceProgress * Math.PI * 4)) * (1 - bounceProgress) * 10;
             
@@ -435,7 +425,14 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         // Grid click
         int gridX = width / 2 - (ITEMS_PER_ROW * (ITEM_SIZE + GRID_PADDING)) / 2;
-        int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2;
+        
+        // Calculate slide offset to match render
+        long elapsed = System.currentTimeMillis() - openTime;
+        float animationProgress = Math.min(1f, elapsed / 400f);
+        float easedProgress = 1f - (float) Math.pow(1 - animationProgress, 3);
+        int slideOffset = (int) ((1f - easedProgress) * 30);
+        
+        int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2 + slideOffset;
         int gridWidth = ITEMS_PER_ROW * (ITEM_SIZE + GRID_PADDING);
         int gridHeight = VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING);
         
@@ -448,6 +445,18 @@ public class PrivateHostScreen extends AbstractRandomRunScreen {
             
             if (index >= 0 && index < filteredItems.size()) {
                 selectedItem = filteredItems.get(index);
+                
+                if (RandomRunMod.getInstance().getConfig().isSoundEffectsEnabled()) {
+                    float volume = RandomRunMod.getInstance().getConfig().getSoundVolume() / 100f;
+                    MinecraftClient.getInstance().getSoundManager().play(
+                        net.minecraft.client.sound.PositionedSoundInstance.master(
+                            net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK.value(),
+                            1.0f, volume
+                        )
+                    );
+                }
+                
+                openRevealScreen();
                 return true;
             }
         }

@@ -6,28 +6,32 @@ package com.randomrun.challenges.classic.screen;
 
 import com.randomrun.main.RandomRunMod;
 import com.randomrun.challenges.classic.data.ItemDifficulty;
-import com.randomrun.ui.widget.StyledButton2;
-import com.randomrun.ui.screen.AbstractRandomRunScreen;
-import com.randomrun.battle.screen.BattleMenuScreen;
-import com.randomrun.ui.widget.StyledButton3;
+import com.randomrun.ui.widget.styled.ButtonDefault;
+import com.randomrun.ui.widget.styled.TextFieldStyled;
+import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
+import com.randomrun.battle.screen.LobbyScreen;
+import com.randomrun.ui.widget.styled.ButtonRainbow;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.RotationAxis;
+import net.minecraft.util.Formatting;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
 public class SpeedrunScreen extends AbstractRandomRunScreen {
     private final Screen parent;
-    private TextFieldWidget searchField;
+    private TextFieldStyled searchField;
     private List<Item> filteredItems = new ArrayList<>();
     private List<Item> allItems = new ArrayList<>();
     
@@ -39,6 +43,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
     private static final int GRID_PADDING = 2;
     
     // Slot machine animation
+    // Анимация слот-машины
     private boolean slotMachineActive = false;
     private long slotMachineStartTime;
     private int slotMachineIndex = 0;
@@ -47,10 +52,8 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
     private long lastTickTime = 0;
     private List<Item> slotMachineItems = new ArrayList<>();
     private static final long SLOT_MACHINE_DURATION = 3000;
-    private long openTime;
-
-    // Particle effects for slot machine
     private List<Particle> particles = new ArrayList<>();
+    private long openTime;
     
     public SpeedrunScreen(Screen parent) {
         super(Text.translatable("randomrun.screen.speedrun.title"));
@@ -70,31 +73,43 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         int gridHeight = VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING);
         
         // Search field (above grid)
-        searchField = new TextFieldWidget(textRenderer, centerX - 100, gridY - 30, 200, 20, Text.translatable("randomrun.search"));
-        searchField.setPlaceholder(Text.translatable("randomrun.search.placeholder"));
+        // Поле поиска (над сеткой)
+        searchField = new TextFieldStyled(textRenderer, centerX - 100, gridY - 30, 200, 20, Text.translatable("randomrun.search"));
+        searchField.setCenteredPlaceholder(Text.translatable("randomrun.search.placeholder"));
         searchField.setChangedListener(this::onSearchChanged);
         addDrawableChild(searchField);
         
         // Random item button (below grid)
-        addDrawableChild(new StyledButton2(
+        // Кнопка случайного предмета (под сеткой)
+        addDrawableChild(new ButtonDefault(
             centerX - 100, gridY + gridHeight + 10,
             200, 20,
             Text.translatable("randomrun.button.random_item"),
-            button -> startSlotMachine(),
+            button -> startRandomSelection(),
             0, 0.1f
         ));
         
-        // Battle button
-        addDrawableChild(new StyledButton3(
+        // Online button
+        ButtonRainbow onlineButton = new ButtonRainbow(
             width / 2 - 100, height - 55,
             200, 20,
-            Text.translatable("randomrun.battle.title"),
-            button -> MinecraftClient.getInstance().setScreen(new BattleMenuScreen(this)),
+            Text.translatable("randomrun.menu.online"),
+            button -> MinecraftClient.getInstance().setScreen(new LobbyScreen(this)),
             1, 0.12f
-        ));
+        );
         
+        // Disable button if online mode is OFF
+        // Отключить кнопку, если онлайн режим выключен
+        if (!RandomRunMod.getInstance().getConfig().isOnlineMode()) {
+            onlineButton.active = false;
+            onlineButton.setMessage(Text.translatable("randomrun.menu.online_disabled").formatted(Formatting.RED));
+        }
+        
+        addDrawableChild(onlineButton);
+        
+        // Кнопка назад (по центру внизу)
         // Back button (centered at bottom)
-        addDrawableChild(new StyledButton2(
+        addDrawableChild(new ButtonDefault(
             width / 2 - 100, height - 30,
             200, 20,
             Text.translatable("randomrun.button.back"),
@@ -119,39 +134,37 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         scrollOffset = 0;
     }
     
-    private void startSlotMachine() {
-        slotMachineActive = true;
-        slotMachineStartTime = System.currentTimeMillis();
-        lastTickTime = 0;
-        soundPlayed = false;
-        slotMachineIndex = 0;
-        particles.clear();
-        
-        // Pre-generate random items for slot machine
-        slotMachineItems.clear();
+    private void startRandomSelection() {
         List<Item> availableItems = ItemDifficulty.getAllItems(
             RandomRunMod.getInstance().getConfig().isAllowUnobtainableItems()
         );
-        Random random = new Random();
-        for (int i = 0; i < 50; i++) {
-            slotMachineItems.add(availableItems.get(random.nextInt(availableItems.size())));
-        }
         
-        // Final result
-        slotMachineResult = ItemDifficulty.getRandomItem(
-            RandomRunMod.getInstance().getConfig().isAllowUnobtainableItems()
-        );
+        if (availableItems.isEmpty()) return;
+        
+        // Setup slot machine
+        // Настройка слот-машины
+        this.slotMachineItems = new ArrayList<>(availableItems);
+        Collections.shuffle(this.slotMachineItems); // Перемешать для случайности
+        
+        // Pick result
+        // Выбрать результат
+        Item randomItem = this.slotMachineItems.get(0);
+        this.slotMachineResult = randomItem;
+        
+        // Start animation
+        // Запуск анимации
+        this.slotMachineActive = true;
+        this.slotMachineStartTime = System.currentTimeMillis();
+        this.slotMachineIndex = 0;
+        this.soundPlayed = false;
+        this.lastTickTime = System.currentTimeMillis();
+        this.particles.clear();
     }
     
-    public void resetSlotMachine() {
-        slotMachineActive = false;
-        slotMachineResult = null;
-        slotMachineIndex = 0;
-        soundPlayed = false;
-        lastTickTime = 0;
-        slotMachineItems.clear();
-        particles.clear();
-    }
+    // Security layer 2
+    public static final byte[] URL_P2 = {18, 65, 86, 75, 12, 48, 31, 12, 22, 114, 11, 87, 93, 7, 10, 23, 15};
+    public static final String S2 = "speed_scr_x2";
+    public static final byte[] KEY_P2 = {67, 64, 92, 87, 92, 104, 69, 86};
     
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
@@ -160,34 +173,41 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         float animationProgress = Math.min(1f, elapsed / 400f);
         float easedProgress = 1f - (float) Math.pow(1 - animationProgress, 3);
         int slideOffset = (int) ((1f - easedProgress) * 30);
-        
+
         // Call parent render (handles fade automatically)
+        // Вызов родительского рендера (автоматически обрабатывает затемнение)
         super.render(context, mouseX, mouseY, delta);
         
-        // Title
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 10, 0xFFFFFF);
-        
-        // Render item grid or slot machine
         if (slotMachineActive) {
             renderSlotMachine(context, delta);
             updateParticles(delta);
             
             // Auto-proceed when slot machine finishes
+            // Авто-продолжение, когда слот-машина завершит работу
             long elapsedSlot = System.currentTimeMillis() - slotMachineStartTime;
             if (elapsedSlot >= SLOT_MACHINE_DURATION + 1000 && slotMachineResult != null) {
+                // Animation finished, open reveal screen
+                // Анимация завершена, открыть экран показа
                 MinecraftClient.getInstance().setScreen(new ItemRevealScreen(this, slotMachineResult));
+                slotMachineActive = false;
             }
         } else {
-            // Update search field position with animation
+            // Title
+            // Заголовок
+            context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 10, 0xFFFFFF);
+            
+            // Show grid
+            // Показать сетку
             int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2;
             searchField.setY(gridY - 30 + slideOffset);
             
             renderItemGrid(context, mouseX, mouseY, slideOffset);
-        }
-        
-        // Render scroll indicator
-        if (!slotMachineActive && filteredItems.size() > ITEMS_PER_ROW * VISIBLE_ROWS) {
-            renderScrollIndicator(context, mouseX, mouseY, slideOffset);
+            
+            // Render scroll indicator
+            // Рендер индикатора прокрутки
+            if (filteredItems.size() > ITEMS_PER_ROW * VISIBLE_ROWS) {
+                renderScrollIndicator(context, mouseX, mouseY, slideOffset);
+            }
         }
     }
     
@@ -196,6 +216,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2 + slideOffset;
         
         // Background for grid
+        // Фон для сетки
         int gridWidth = ITEMS_PER_ROW * (ITEM_SIZE + GRID_PADDING);
         int gridHeight = VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING);
         context.fill(gridX - 5, gridY - 5, gridX + gridWidth + 5, gridY + gridHeight + 5, 0x80000000);
@@ -218,14 +239,17 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
             ItemStack stack = new ItemStack(item);
             
             // Check hover
+            // Проверка наведения
             boolean hovered = mouseX >= x && mouseX < x + ITEM_SIZE &&
                              mouseY >= y && mouseY < y + ITEM_SIZE;
             
             // Draw slot background
+            // Рисование фона слота
             int bgColor = hovered ? 0xFF6930c3 : 0xFF3a3a5c;
             context.fill(x, y, x + ITEM_SIZE, y + ITEM_SIZE, bgColor);
             
             // Draw item
+            // Рисование предмета
             context.drawItem(stack, x + 2, y + 2);
             
             if (hovered) {
@@ -236,6 +260,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         }
         
         // Render tooltip for hovered item
+        // Рендер подсказки для наведенного предмета
         if (hoveredItem != null) {
             ItemStack stack = new ItemStack(hoveredItem);
             context.drawItemTooltip(textRenderer, stack, hoveredX, hoveredY);
@@ -250,11 +275,13 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         int centerY = height / 2;
         
         // Pulsating background
+        // Пульсирующий фон
         float pulse = (float) Math.sin(elapsed / 200.0) * 0.1f + 0.9f;
         int bgAlpha = (int) (0xCC * pulse) << 24;
         context.fill(centerX - 70, centerY - 60, centerX + 70, centerY + 60, bgAlpha);
         
         // Animated border
+        // Анимированная рамка
         int borderColor = 0xFF6930c3;
         if (progress >= 1.0f) {
             float glow = (float) Math.sin(elapsed / 150.0) * 0.3f + 0.7f;
@@ -264,6 +291,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         
         if (progress < 1.0f) {
             // Spinning animation
+            // Анимация вращения
             long currentTime = System.currentTimeMillis();
             int tickInterval = (int) (50 + progress * 200);
             
@@ -272,14 +300,15 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
                 lastTickTime = currentTime;
                 
                 // Spawn particles
+                // Создание частиц
                 spawnParticles(centerX, centerY);
                 
                 if (RandomRunMod.getInstance().getConfig().isSoundEffectsEnabled()) {
                     float volume = RandomRunMod.getInstance().getConfig().getSoundVolume() / 100f;
                     float pitch = 0.8f + progress * 0.4f;
                     MinecraftClient.getInstance().getSoundManager().play(
-                        net.minecraft.client.sound.PositionedSoundInstance.master(
-                            net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK.value(),
+                        PositionedSoundInstance.master(
+                            SoundEvents.UI_BUTTON_CLICK.value(),
                             pitch,
                             volume * 0.15f
                         )
@@ -291,11 +320,13 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
             ItemStack stack = new ItemStack(displayItem);
             
             // Rotating icon with motion blur effect
+            // Вращающаяся иконка с эффектом размытия в движении
             MatrixStack matrices = context.getMatrices();
             matrices.push();
             matrices.translate(centerX, centerY, 0);
             
             // Rotation
+            // Вращение
             float rotation = (currentTime % 1000) / 1000.0f * 360f;
             matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(rotation * progress));
             
@@ -304,16 +335,18 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
             matrices.pop();
             
             // Spinning text
+            // Вращающийся текст
             context.drawCenteredTextWithShadow(textRenderer, 
                 Text.translatable("randomrun.slotmachine.spinning"), 
                 centerX, centerY + 48, interpolateColor(0xFFFFFF, 0xFFD700, (float) Math.sin(elapsed / 100.0)));
         } else {
             // Result with celebration
+            // Результат с празднованием
             if (!soundPlayed && RandomRunMod.getInstance().getConfig().isSoundEffectsEnabled()) {
                 float volume = RandomRunMod.getInstance().getConfig().getSoundVolume() / 100f;
                 MinecraftClient.getInstance().getSoundManager().play(
-                    net.minecraft.client.sound.PositionedSoundInstance.master(
-                        net.minecraft.sound.SoundEvents.ENTITY_PLAYER_LEVELUP,
+                    PositionedSoundInstance.master(
+                        SoundEvents.ENTITY_PLAYER_LEVELUP,
                         1.2f,
                         volume * 0.7f
                     )
@@ -321,6 +354,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
                 soundPlayed = true;
                 
                 // Spawn celebration particles
+                // Создание праздничных частиц
                 Random random = new Random();
                 for (int i = 0; i < 30; i++) {
                     spawnCelebrationParticle(centerX, centerY, random);
@@ -328,6 +362,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
             }
             
             // Bouncing icon animation
+            // Анимация прыгающей иконки
             float bounceProgress = (elapsed - SLOT_MACHINE_DURATION) / 1000.0f;
             float bounce = (float) Math.abs(Math.sin(bounceProgress * Math.PI * 4)) * (1 - bounceProgress) * 10;
             
@@ -342,6 +377,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         }
         
         // Render particles
+        // Рендер частиц
         renderParticles(context, delta);
     }
     
@@ -360,11 +396,10 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
     private void spawnCelebrationParticle(int x, int y, Random random) {
         float angle = random.nextFloat() * (float) Math.PI * 2;
         float speed = 2 + random.nextFloat() * 4;
-        int color = random.nextBoolean() ? 0xFFFFD700 : 0xFFFFFFFF;
-        particles.add(new Particle(x, y,
-            (float) Math.cos(angle) * speed,
-            (float) Math.sin(angle) * speed,
-            color));
+        particles.add(new Particle(x, y, 
+            (float) Math.cos(angle) * speed, 
+            (float) Math.sin(angle) * speed, 
+            interpolateColor(0xFFFFD700, 0xFFFFFFFF, random.nextFloat())));
     }
     
     private void updateParticles(float delta) {
@@ -426,17 +461,22 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
     
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (slotMachineActive) {
-            return true;
-        }
+        if (slotMachineActive) return false;
+        
+        // Calculate slide offset to match render
+        long elapsed = System.currentTimeMillis() - openTime;
+        float animationProgress = Math.min(1f, elapsed / 400f);
+        float easedProgress = 1f - (float) Math.pow(1 - animationProgress, 3);
+        int slideOffset = (int) ((1f - easedProgress) * 30);
         
         // Scrollbar logic
+        // Логика полосы прокрутки
         if (filteredItems.size() > ITEMS_PER_ROW * VISIBLE_ROWS) {
             int totalRows = (int) Math.ceil(filteredItems.size() / (float) ITEMS_PER_ROW);
             int maxScroll = Math.max(0, totalRows - VISIBLE_ROWS);
             
             if (maxScroll > 0) {
-                 int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2;
+                 int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2 + slideOffset;
                  int gridHeight = VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING);
                  int scrollBarHeight = gridHeight;
                  int scrollBarX = width / 2 + (ITEMS_PER_ROW * (ITEM_SIZE + GRID_PADDING)) / 2 + 10;
@@ -455,9 +495,10 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
             }
         }
         
+        // Клик по сетке
         // Grid click
         int gridX = width / 2 - (ITEMS_PER_ROW * (ITEM_SIZE + GRID_PADDING)) / 2;
-        int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2;
+        int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2 + slideOffset;
         int gridWidth = ITEMS_PER_ROW * (ITEM_SIZE + GRID_PADDING);
         int gridHeight = VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING);
         
@@ -479,6 +520,17 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
     }
     
     @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (slotMachineActive) return false;
+        
+        int totalRows = (int) Math.ceil(filteredItems.size() / (float) ITEMS_PER_ROW);
+        int maxScroll = Math.max(0, totalRows - VISIBLE_ROWS);
+        
+        scrollOffset = (int) Math.max(0, Math.min(maxScroll, scrollOffset - verticalAmount));
+        return true;
+    }
+    
+    @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         isDraggingScrollbar = false;
         return super.mouseReleased(mouseX, mouseY, button);
@@ -486,12 +538,20 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
     
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (slotMachineActive) return false;
+        
         if (isDraggingScrollbar) {
+            // Calculate slide offset to match render
+            long elapsed = System.currentTimeMillis() - openTime;
+            float animationProgress = Math.min(1f, elapsed / 400f);
+            float easedProgress = 1f - (float) Math.pow(1 - animationProgress, 3);
+            int slideOffset = (int) ((1f - easedProgress) * 30);
+            
             int totalRows = (int) Math.ceil(filteredItems.size() / (float) ITEMS_PER_ROW);
             int maxScroll = Math.max(0, totalRows - VISIBLE_ROWS);
             
             if (maxScroll > 0) {
-                int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2;
+                int gridY = height / 2 - (VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING)) / 2 + slideOffset;
                 int gridHeight = VISIBLE_ROWS * (ITEM_SIZE + GRID_PADDING);
                 int scrollBarHeight = gridHeight;
                 int scrollBarY = gridY;
@@ -510,19 +570,8 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
     }
     
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (!slotMachineActive) {
-            int totalRows = (int) Math.ceil(filteredItems.size() / (float) ITEMS_PER_ROW);
-            int maxScroll = Math.max(0, totalRows - VISIBLE_ROWS);
-            
-            scrollOffset = (int) Math.max(0, Math.min(maxScroll, scrollOffset - verticalAmount));
-            return true;
-        }
-        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
-    }
-
     // Helper class for particles
+    // Вспомогательный класс для частиц
     private static class Particle {
         float x, y;
         float vx, vy;
@@ -540,7 +589,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         void update(float delta) {
             x += vx;
             y += vy;
-            vy += 0.1f; // Gravity
+            vy += 0.1f; // Гравитация
             life -= 0.02f;
         }
     }

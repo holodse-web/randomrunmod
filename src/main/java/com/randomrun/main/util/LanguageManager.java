@@ -4,8 +4,8 @@ import com.randomrun.main.RandomRunMod;
 
 public class LanguageManager {
     
-    private static final String[] LANGUAGES = {"ru_ru", "uk_ua", "en_us", "be_by"};
-    private static final String[] LANGUAGE_CODES = {"RU", "UA", "EN", "BY"};
+    private static final String[] LANGUAGES = {"ru_ru", "uk_ua", "en_us"};
+    private static final String[] LANGUAGE_CODES = {"RU", "UA", "EN"};
     
     public static void cycleLanguage() {
         String current = RandomRunMod.getInstance().getConfig().getLanguage();
@@ -27,15 +27,24 @@ public class LanguageManager {
         RandomRunMod.getInstance().getConfig().setLanguage(newLanguage);
         RandomRunMod.getInstance().saveConfig();
         
-        // Apply language change to Minecraft
+        // Применить смену языка к Minecraft
         net.minecraft.client.MinecraftClient client = net.minecraft.client.MinecraftClient.getInstance();
         if (client != null && client.getLanguageManager() != null) {
-            client.getLanguageManager().setLanguage(newLanguage);
-            client.reloadResources();
-            
-            // Force save to options.txt
+            // В 1.21+ смена языка может требовать установки через options
             client.options.language = newLanguage;
+            client.getLanguageManager().setLanguage(newLanguage);
+            
+            // Принудительно сохранить в options.txt
             client.options.write();
+            
+            // Перезагружаем ресурсы и обновляем экран после завершения
+            client.reloadResources().thenRun(() -> {
+                client.execute(() -> {
+                    if (client.currentScreen != null) {
+                        client.currentScreen.init(client, client.getWindow().getScaledWidth(), client.getWindow().getScaledHeight());
+                    }
+                });
+            });
         }
     }
     
@@ -46,10 +55,23 @@ public class LanguageManager {
         if (client != null && client.getLanguageManager() != null) {
             String currentClientLang = client.getLanguageManager().getLanguage();
             
-            // If config differs from actual client language, force update
-            if (!configLang.equals(currentClientLang)) {
-                RandomRunMod.LOGGER.info("Language mismatch detected (Config: " + configLang + ", Game: " + currentClientLang + "). Forcing update...");
-                setLanguage(configLang);
+            // Если конфиг отличается от фактического языка клиента, принудительно обновить (регистронезависимо)
+            if (!configLang.equalsIgnoreCase(currentClientLang)) {
+                RandomRunMod.LOGGER.info("Обнаружено несовпадение языка (Конфиг: " + configLang + ", Игра: " + currentClientLang + "). Принудительное обновление...");
+                
+                // Устанавливаем язык в клиенте
+                client.options.language = configLang;
+                client.getLanguageManager().setLanguage(configLang);
+                client.options.write();
+                
+                // Перезагружаем ресурсы
+                client.reloadResources().thenRun(() -> {
+                    client.execute(() -> {
+                        if (client.currentScreen != null) {
+                            client.currentScreen.init(client, client.getWindow().getScaledWidth(), client.getWindow().getScaledHeight());
+                        }
+                    });
+                });
             }
         }
     }

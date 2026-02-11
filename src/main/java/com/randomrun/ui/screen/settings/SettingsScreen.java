@@ -1,0 +1,93 @@
+package com.randomrun.ui.screen.settings;
+
+import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
+
+import com.randomrun.ui.widget.styled.ButtonMenu;
+import com.randomrun.ui.widget.styled.ButtonRainbow;
+import com.randomrun.challenges.classic.screen.SpeedrunSettingsScreen;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.text.Text;
+
+public class SettingsScreen extends AbstractRandomRunScreen {
+    private final Screen parent;
+    
+    public SettingsScreen(Screen parent) {
+        super(Text.translatable("randomrun.screen.settings.title"));
+        this.parent = parent;
+    }
+    
+    @Override
+    protected void init() {
+        super.init();
+        int centerX = width / 2;
+        int buttonWidth = 200;
+        int buttonHeight = 20;
+        int startY = 40; 
+        int spacing = 26; 
+        
+        // Настройки испытаний (Сюда перемещено Испытание временем)
+        addDrawableChild(new ButtonRainbow(
+            centerX - buttonWidth / 2, startY,
+            buttonWidth, buttonHeight,
+            Text.translatable("randomrun.settings.challenges"), 
+            button -> MinecraftClient.getInstance().setScreen(new ChallengesSettingsScreen(this)),
+            0, 0f
+        ).setAnimationDirection(ButtonRainbow.AnimationDirection.HORIZONTAL_LEFT));
+        
+        // Настройки спидрана
+        addDrawableChild(new ButtonMenu(
+            centerX - buttonWidth / 2, startY + spacing,
+            buttonWidth, buttonHeight,
+            Text.translatable("randomrun.settings.speedrun"),
+            button -> MinecraftClient.getInstance().setScreen(new SpeedrunSettingsScreen(this)),
+            1, 0.1f
+        ));
+        
+        // Настройки интерфейса (редактор HUD)
+        addDrawableChild(new ButtonMenu(
+            centerX - buttonWidth / 2, startY + spacing * 2,
+            buttonWidth, buttonHeight,
+            Text.translatable("randomrun.settings.interface"),
+            button -> MinecraftClient.getInstance().setScreen(new InterfaceSettingsScreen(this)),
+            2, 0.15f
+        ));
+        
+        // Настройки звука
+        addDrawableChild(new ButtonMenu(
+            centerX - buttonWidth / 2, startY + spacing * 3,
+            buttonWidth, buttonHeight,
+            Text.translatable("randomrun.settings.sound"),
+            button -> MinecraftClient.getInstance().setScreen(new SoundSettingsScreen(this)),
+            3, 0.2f
+        ));
+        
+        // Настройки управления
+        addDrawableChild(new ButtonMenu(
+            centerX - buttonWidth / 2, startY + spacing * 4,
+            buttonWidth, buttonHeight,
+            Text.translatable("randomrun.settings.controls"),
+            button -> MinecraftClient.getInstance().setScreen(new ControlSettingsScreen(this)),
+            4, 0.25f
+        ));
+        
+        // Кнопка назад
+        addDrawableChild(new ButtonMenu(
+            centerX - buttonWidth / 2, height - 30,
+            buttonWidth, buttonHeight,
+            Text.translatable("randomrun.button.back"),
+            button -> MinecraftClient.getInstance().setScreen(parent),
+            5, 0.3f
+        ));
+    }
+
+    @Override
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        super.render(context, mouseX, mouseY, delta);
+        
+        // Title
+        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 20, 0xFFFFFF);
+    }
+    
+}

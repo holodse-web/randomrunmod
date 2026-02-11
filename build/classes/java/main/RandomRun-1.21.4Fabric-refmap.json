@@ -1,0 +1,168 @@
+{
+  "mappings": {
+    "com/randomrun/mixin/AdvancementUpdateMixin": {
+      "onAdvancements": "Lnet/minecraft/class_634;method_11130(Lnet/minecraft/class_2779;)V"
+    },
+    "com/randomrun/mixin/AntiCheatMixin$ClientCommand": {
+      "sendChatCommand": "Lnet/minecraft/class_634;method_45730(Ljava/lang/String;)V"
+    },
+    "com/randomrun/mixin/AntiCheatMixin$GameModeProtection": {
+      "setGameMode": "Lnet/minecraft/class_636;method_2907(Lnet/minecraft/class_1934;)V"
+    },
+    "com/randomrun/mixin/AntiCheatMixin$GameModeSwitch": {
+      "<init>": "Lnet/minecraft/class_5289;<init>()V"
+    },
+    "com/randomrun/mixin/AntiCheatMixin$LanRestriction": {
+      "openToLan": "Lnet/minecraft/class_1132;method_3763(Lnet/minecraft/class_1934;ZI)Z"
+    },
+    "com/randomrun/mixin/AutoSelectWorldMixin": {
+      "init": "Lnet/minecraft/class_526;method_25426()V"
+    },
+    "com/randomrun/mixin/BattleItemPickupMixin": {
+      "tick": "Lnet/minecraft/class_1657;method_5773()V"
+    },
+    "com/randomrun/mixin/ChatHudMixin": {
+      "addMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/message/MessageSignatureData;Lnet/minecraft/client/gui/hud/MessageIndicator;)V": "Lnet/minecraft/class_338;method_44811(Lnet/minecraft/class_2561;Lnet/minecraft/class_7469;Lnet/minecraft/class_7591;)V"
+    },
+    "com/randomrun/mixin/DeathScreenMixin": {
+      "<init>": "Lnet/minecraft/class_418;<init>(Lnet/minecraft/class_2561;Z)V"
+    },
+    "com/randomrun/mixin/DebugHudMixin": {
+      "render": "Lnet/minecraft/class_329;method_1753(Lnet/minecraft/class_332;Lnet/minecraft/class_9779;)V",
+      "renderHotbar": "Lnet/minecraft/class_329;method_1759(Lnet/minecraft/class_332;Lnet/minecraft/class_9779;)V"
+    },
+    "com/randomrun/mixin/DisconnectCleanupMixin": {
+      "disconnect(Lnet/minecraft/client/gui/screen/Screen;)V": "Lnet/minecraft/class_310;method_56134(Lnet/minecraft/class_437;)V"
+    },
+    "com/randomrun/mixin/FreezeMechanicsMixin$BlockInteraction": {
+      "attackBlock": "Lnet/minecraft/class_636;method_2910(Lnet/minecraft/class_2338;Lnet/minecraft/class_2350;)Z",
+      "updateBlockBreakingProgress": "Lnet/minecraft/class_636;method_2902(Lnet/minecraft/class_2338;Lnet/minecraft/class_2350;)Z"
+    },
+    "com/randomrun/mixin/FreezeMechanicsMixin$ClientInput": {
+      "doAttack": "Lnet/minecraft/class_310;method_1536()Z",
+      "doItemUse": "Lnet/minecraft/class_310;method_1583()V"
+    },
+    "com/randomrun/mixin/FreezeMechanicsMixin$KeyBindingMixin": {
+      "isPressed": "Lnet/minecraft/class_304;method_1434()Z"
+    },
+    "com/randomrun/mixin/FreezeMechanicsMixin$Player": {
+      "tick": "Lnet/minecraft/class_746;method_5773()V"
+    },
+    "com/randomrun/mixin/GameMenuScreenMixin": {
+      "disconnect": "Lnet/minecraft/class_433;method_47632()V",
+      "init": "Lnet/minecraft/class_433;method_25426()V"
+    },
+    "com/randomrun/mixin/ItemPickupMixin": {
+      "insertStack(Lnet/minecraft/item/ItemStack;)Z": "Lnet/minecraft/class_1661;method_7394(Lnet/minecraft/class_1799;)Z"
+    },
+    "com/randomrun/mixin/LevelLoadingScreenMixin": {
+      "render": "Lnet/minecraft/class_3928;method_25394(Lnet/minecraft/class_332;IIF)V"
+    },
+    "com/randomrun/mixin/PlayerConnectionMixin": {
+      "onPlayerConnect": "Lnet/minecraft/class_3324;method_14570(Lnet/minecraft/class_2535;Lnet/minecraft/class_3222;Lnet/minecraft/class_8792;)V"
+    },
+    "com/randomrun/mixin/PlayerDeathMixin": {
+      "onDeath": "Lnet/minecraft/class_1309;method_6078(Lnet/minecraft/class_1282;)V"
+    },
+    "com/randomrun/mixin/PlayerDisconnectMixin": {
+      "onDisconnected": "Lnet/minecraft/class_3244;method_10839(Lnet/minecraft/class_9812;)V"
+    },
+    "com/randomrun/mixin/TitleScreenMixin": {
+      "init": "Lnet/minecraft/class_442;method_25426()V"
+    },
+    "com/randomrun/mixin/WorldManagementMixin$AutoCreate": {
+      "init": "Lnet/minecraft/class_525;method_25426()V"
+    },
+    "com/randomrun/mixin/WorldManagementMixin$JoinWorld": {
+      "onGameJoin": "Lnet/minecraft/class_634;method_11120(Lnet/minecraft/class_2678;)V"
+    },
+    "com/randomrun/mixin/WorldManagementMixin$ScreenAccessor": {
+      "createLevel": "method_2736()V",
+      "worldCreator": "field_42172:Lnet/minecraft/class_8100;"
+    }
+  },
+  "data": {
+    "named:intermediary": {
+      "com/randomrun/mixin/AdvancementUpdateMixin": {
+        "onAdvancements": "Lnet/minecraft/class_634;method_11130(Lnet/minecraft/class_2779;)V"
+      },
+      "com/randomrun/mixin/AntiCheatMixin$ClientCommand": {
+        "sendChatCommand": "Lnet/minecraft/class_634;method_45730(Ljava/lang/String;)V"
+      },
+      "com/randomrun/mixin/AntiCheatMixin$GameModeProtection": {
+        "setGameMode": "Lnet/minecraft/class_636;method_2907(Lnet/minecraft/class_1934;)V"
+      },
+      "com/randomrun/mixin/AntiCheatMixin$GameModeSwitch": {
+        "<init>": "Lnet/minecraft/class_5289;<init>()V"
+      },
+      "com/randomrun/mixin/AntiCheatMixin$LanRestriction": {
+        "openToLan": "Lnet/minecraft/class_1132;method_3763(Lnet/minecraft/class_1934;ZI)Z"
+      },
+      "com/randomrun/mixin/AutoSelectWorldMixin": {
+        "init": "Lnet/minecraft/class_526;method_25426()V"
+      },
+      "com/randomrun/mixin/BattleItemPickupMixin": {
+        "tick": "Lnet/minecraft/class_1657;method_5773()V"
+      },
+      "com/randomrun/mixin/ChatHudMixin": {
+        "addMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/message/MessageSignatureData;Lnet/minecraft/client/gui/hud/MessageIndicator;)V": "Lnet/minecraft/class_338;method_44811(Lnet/minecraft/class_2561;Lnet/minecraft/class_7469;Lnet/minecraft/class_7591;)V"
+      },
+      "com/randomrun/mixin/DeathScreenMixin": {
+        "<init>": "Lnet/minecraft/class_418;<init>(Lnet/minecraft/class_2561;Z)V"
+      },
+      "com/randomrun/mixin/DebugHudMixin": {
+        "render": "Lnet/minecraft/class_329;method_1753(Lnet/minecraft/class_332;Lnet/minecraft/class_9779;)V",
+        "renderHotbar": "Lnet/minecraft/class_329;method_1759(Lnet/minecraft/class_332;Lnet/minecraft/class_9779;)V"
+      },
+      "com/randomrun/mixin/DisconnectCleanupMixin": {
+        "disconnect(Lnet/minecraft/client/gui/screen/Screen;)V": "Lnet/minecraft/class_310;method_56134(Lnet/minecraft/class_437;)V"
+      },
+      "com/randomrun/mixin/FreezeMechanicsMixin$BlockInteraction": {
+        "attackBlock": "Lnet/minecraft/class_636;method_2910(Lnet/minecraft/class_2338;Lnet/minecraft/class_2350;)Z",
+        "updateBlockBreakingProgress": "Lnet/minecraft/class_636;method_2902(Lnet/minecraft/class_2338;Lnet/minecraft/class_2350;)Z"
+      },
+      "com/randomrun/mixin/FreezeMechanicsMixin$ClientInput": {
+        "doAttack": "Lnet/minecraft/class_310;method_1536()Z",
+        "doItemUse": "Lnet/minecraft/class_310;method_1583()V"
+      },
+      "com/randomrun/mixin/FreezeMechanicsMixin$KeyBindingMixin": {
+        "isPressed": "Lnet/minecraft/class_304;method_1434()Z"
+      },
+      "com/randomrun/mixin/FreezeMechanicsMixin$Player": {
+        "tick": "Lnet/minecraft/class_746;method_5773()V"
+      },
+      "com/randomrun/mixin/GameMenuScreenMixin": {
+        "disconnect": "Lnet/minecraft/class_433;method_47632()V",
+        "init": "Lnet/minecraft/class_433;method_25426()V"
+      },
+      "com/randomrun/mixin/ItemPickupMixin": {
+        "insertStack(Lnet/minecraft/item/ItemStack;)Z": "Lnet/minecraft/class_1661;method_7394(Lnet/minecraft/class_1799;)Z"
+      },
+      "com/randomrun/mixin/LevelLoadingScreenMixin": {
+        "render": "Lnet/minecraft/class_3928;method_25394(Lnet/minecraft/class_332;IIF)V"
+      },
+      "com/randomrun/mixin/PlayerConnectionMixin": {
+        "onPlayerConnect": "Lnet/minecraft/class_3324;method_14570(Lnet/minecraft/class_2535;Lnet/minecraft/class_3222;Lnet/minecraft/class_8792;)V"
+      },
+      "com/randomrun/mixin/PlayerDeathMixin": {
+        "onDeath": "Lnet/minecraft/class_1309;method_6078(Lnet/minecraft/class_1282;)V"
+      },
+      "com/randomrun/mixin/PlayerDisconnectMixin": {
+        "onDisconnected": "Lnet/minecraft/class_3244;method_10839(Lnet/minecraft/class_9812;)V"
+      },
+      "com/randomrun/mixin/TitleScreenMixin": {
+        "init": "Lnet/minecraft/class_442;method_25426()V"
+      },
+      "com/randomrun/mixin/WorldManagementMixin$AutoCreate": {
+        "init": "Lnet/minecraft/class_525;method_25426()V"
+      },
+      "com/randomrun/mixin/WorldManagementMixin$JoinWorld": {
+        "onGameJoin": "Lnet/minecraft/class_634;method_11120(Lnet/minecraft/class_2678;)V"
+      },
+      "com/randomrun/mixin/WorldManagementMixin$ScreenAccessor": {
+        "createLevel": "method_2736()V",
+        "worldCreator": "field_42172:Lnet/minecraft/class_8100;"
+      }
+    }
+  }
+}

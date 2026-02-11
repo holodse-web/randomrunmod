@@ -24,9 +24,9 @@ public class BattleGoCommand {
             return 0;
         }
         
-        // Delegate to shared handler
-        // Note: StartRunHandler sends messages to player, so we don't need to send them here
-        // unless player is null, which is unlikely in client command
+        // Делегирование общему обработчику
+        // Примечание: StartRunHandler отправляет сообщения игроку, поэтому нам не нужно отправлять их здесь,
+        // если только игрок не null, что маловероятно в клиентской команде
         boolean success = StartRunHandler.tryStartRun(context.getSource().getPlayer());
         return success ? 1 : 0;
     }

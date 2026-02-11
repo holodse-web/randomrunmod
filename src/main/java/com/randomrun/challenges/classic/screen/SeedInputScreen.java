@@ -1,8 +1,8 @@
 package com.randomrun.challenges.classic.screen;
 
 import com.randomrun.main.RandomRunMod;
-import com.randomrun.ui.widget.StyledButton2;
-import com.randomrun.ui.screen.AbstractRandomRunScreen;
+import com.randomrun.ui.widget.styled.ButtonDefault;
+import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -52,7 +52,8 @@ public class SeedInputScreen extends AbstractRandomRunScreen {
         setInitialFocus(seedField);
         
         // Use seed button
-        addDrawableChild(new StyledButton2(
+        // Кнопка использования сида
+        addDrawableChild(new ButtonDefault(
             centerX - 100, centerY + 20,
             200, 20,
             Text.translatable("randomrun.button.use_seed"),
@@ -83,7 +84,8 @@ public class SeedInputScreen extends AbstractRandomRunScreen {
         ));
         
         // Back button (aligned with main menu)
-        addDrawableChild(new StyledButton2(
+        // Кнопка назад (выровнена с главным меню)
+        addDrawableChild(new ButtonDefault(
             centerX - 100, height - 30,
             200, 20,
             Text.translatable("randomrun.button.back"),
@@ -97,11 +99,13 @@ public class SeedInputScreen extends AbstractRandomRunScreen {
         super.render(context, mouseX, mouseY, delta);
         
         // Title
+        // Заголовок
         context.drawCenteredTextWithShadow(textRenderer, 
             Text.translatable("randomrun.seed_input.title"), 
             width / 2, height / 2 - 40, 0xFFFFFF);
         
         // Item/Advancement name
+        // Имя предмета/достижения
         String name = targetAdvancement != null ? targetAdvancement.title.getString() : targetItem.getName().getString();
         context.drawCenteredTextWithShadow(textRenderer,
             Text.literal("§d" + name),

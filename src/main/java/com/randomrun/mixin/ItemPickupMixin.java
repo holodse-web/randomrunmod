@@ -17,8 +17,18 @@ public class ItemPickupMixin {
     
     @Inject(method = "insertStack(Lnet/minecraft/item/ItemStack;)Z", at = @At("HEAD"))
     private void onItemInsert(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
+        // Проверка только на стороне клиента
+        PlayerInventory inventory = (PlayerInventory) (Object) this;
+        if (inventory.player == null || !inventory.player.getWorld().isClient) return;
+        
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return;
+        
+        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Убедиться, что этот инвентарь принадлежит локальному игроку!
+        // Если Хост (Сервер+Клиент) обрабатывает инвентарь Гостя, inventory.player != client.player
+        if (!inventory.player.getUuid().equals(client.player.getUuid())) {
+            return;
+        }
         
         RunDataManager runManager = RandomRunMod.getInstance().getRunDataManager();
         
@@ -26,8 +36,11 @@ public class ItemPickupMixin {
             Item pickedItem = stack.getItem();
             
             if (runManager.checkItemPickup(pickedItem)) {
-                // Victory!
-                VictoryHandler.handleVictory();
+                // Победа!
+                // VictoryHandler.handleVictory(); // УДАЛЕНО: Победа обрабатывается в TickHandler или BattleItemPickupMixin, чтобы не дублировать
+                // Кроме того, ItemPickupMixin срабатывает ДО того, как предмет реально попадет в инвентарь (insertStack),
+                // что может вызвать проблемы с проверками инвентаря.
+                // Лучше полагаться на TickHandler.
             }
         }
     }

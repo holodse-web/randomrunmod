@@ -24,14 +24,14 @@ public abstract class AdvancementUpdateMixin {
     )
     private void onAdvancementPacket(AdvancementUpdateS2CPacket packet, CallbackInfo ci) {
         try {
-            // 1. Check for Victory (Target Advancement)
+            // 1. Проверка победы (Целевое достижение)
             checkVictory(packet);
             
-            // 2. Check for Battle Events (Opponent Achievements)
+            // 2. Проверка событий битвы (Достижения оппонента)
             checkBattleEvents(packet);
             
         } catch (Exception e) {
-            RandomRunMod.LOGGER.debug("Error in advancement check: {}", e.getMessage());
+            RandomRunMod.LOGGER.debug("Ошибка при проверке достижений: {}", e.getMessage());
         }
     }
 
@@ -48,14 +48,13 @@ public abstract class AdvancementUpdateMixin {
         AdvancementProgress progress = progressMap.get(targetId);
         
         if (progress != null && progress.isDone()) {
-             RandomRunMod.LOGGER.info("Achievement {} completed! Triggering victory.", targetId);
+             RandomRunMod.LOGGER.info("Достижение {} выполнено! Триггер победы.", targetId);
              VictoryHandler.handleVictory();
         }
     }
 
     private void checkBattleEvents(AdvancementUpdateS2CPacket packet) {
         if (!com.randomrun.battle.BattleManager.getInstance().isInBattle()) return;
-        if (!com.randomrun.battle.BattleManager.getInstance().getCurrentRoom().isPrivate()) return;
         
         var client = net.minecraft.client.MinecraftClient.getInstance();
         if (client.getNetworkHandler() == null) return;
@@ -67,7 +66,7 @@ public abstract class AdvancementUpdateMixin {
             AdvancementProgress progress = entry.getValue();
             
             if (progress.isDone()) {
-                // Get display info
+                // Получение информации для отображения
                 AdvancementEntry advEntry = client.getNetworkHandler().getAdvancementHandler().get(id);
                 if (advEntry != null && advEntry.value().display().isPresent()) {
                     var display = advEntry.value().display().get();

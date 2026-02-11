@@ -2,8 +2,8 @@ package com.randomrun.challenges.advancement.screen;
 
 import com.randomrun.main.RandomRunMod;
 import com.randomrun.main.config.ModConfig;
-import com.randomrun.ui.widget.StyledButton2;
-import com.randomrun.ui.screen.AbstractRandomRunScreen;
+import com.randomrun.ui.widget.styled.ButtonDefault;
+import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -40,25 +40,34 @@ public class AchievementSettingsScreen extends AbstractRandomRunScreen {
             ? "§a" + Text.translatable("randomrun.toggle.enabled").getString()
             : "§c" + Text.translatable("randomrun.toggle.disabled").getString();
             
-        addDrawableChild(new StyledButton2(
+        ButtonDefault toggleButton = new ButtonDefault(
             centerX - buttonWidth / 2, startY,
             buttonWidth, buttonHeight,
             Text.translatable("randomrun.settings.achievement_challenge_enabled", challengeToggle),
             button -> {
-                config.setAchievementChallengeEnabled(!config.isAchievementChallengeEnabled());
-                RandomRunMod.getInstance().saveConfig();
-                refreshScreen();
+                if (config.isAchievementChallengeEnabled()) {
+                    config.setAchievementChallengeEnabled(false);
+                    RandomRunMod.getInstance().saveConfig();
+                    refreshScreen();
+                }
             },
             buttonIndex++, 0.1f, isRefreshing
-        ));
+        );
+
+        // Блокируем кнопку, если режим уже выключен (так как он в разработке)
+        if (!config.isAchievementChallengeEnabled()) {
+            toggleButton.active = false;
+        }
         
-        // Use Difficulty Toggle
-        String difficultyToggle = config.isUseAchievementDifficulty() 
-            ? "§a" + Text.translatable("randomrun.toggle.enabled").getString()
-            : "§c" + Text.translatable("randomrun.toggle.disabled").getString();
-            
+        addDrawableChild(toggleButton);
+        
         if (config.isAchievementChallengeEnabled()) {
-            addDrawableChild(new StyledButton2(
+            // Use Difficulty Toggle
+            String difficultyToggle = config.isUseAchievementDifficulty() 
+                ? "§a" + Text.translatable("randomrun.toggle.enabled").getString()
+                : "§c" + Text.translatable("randomrun.toggle.disabled").getString();
+
+            addDrawableChild(new ButtonDefault(
                 centerX - buttonWidth / 2, startY + spacing,
                 buttonWidth, buttonHeight,
                 Text.translatable("randomrun.settings.use_difficulty", difficultyToggle),
@@ -72,7 +81,7 @@ public class AchievementSettingsScreen extends AbstractRandomRunScreen {
         }
         
         // Back button (aligned with main menu)
-        addDrawableChild(new StyledButton2(
+        addDrawableChild(new ButtonDefault(
             centerX - 50, height - 30,
             100, buttonHeight,
             Text.translatable("randomrun.button.back"),
@@ -90,6 +99,7 @@ public class AchievementSettingsScreen extends AbstractRandomRunScreen {
         super.render(context, mouseX, mouseY, delta);
         
         // Title
+        // Заголовок
         context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 20, 0xFFFFFF);
     }
 }
