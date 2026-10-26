@@ -1,0 +1,321 @@
+package com.randomrun.network;
+
+import com.randomrun.infrastructure.util.CompactLogger;
+import java.net.URI;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
+
+public class FirebaseClient {
+    private static final String TAG = "[Firebase]";
+    // Fill in your own backend endpoints. Real values are intentionally not part of the repository.
+    private static final String ROOMS_URL = "https://YOUR-ROOMS-DB.example.com";
+    private static final String LEADERBOARD_URL = "https://YOUR-LEADERBOARD-DB.example.com";
+    private static final String PROFILES_URL = "https://YOUR-PROFILES-DB.example.com";
+    private static final String ROOMS_TOKEN = "";
+    private static final String LEADERBOARD_TOKEN = "";
+    private static final String PROFILES_TOKEN = "";
+
+    private static final String PROXY_BASE = "https://YOUR-PROXY.example.com";
+    private static final String PROXY_TOKEN = "";
+
+    private static String c1 = ROOMS_URL, c2 = LEADERBOARD_URL, c3 = PROFILES_URL;
+    private static String t1 = ROOMS_TOKEN, t2 = LEADERBOARD_TOKEN, t3 = PROFILES_TOKEN;
+    private static boolean initialized = true;
+
+    private static final AtomicInteger roomsReq = new AtomicInteger(0);
+    private static final AtomicInteger leaderboardReq = new AtomicInteger(0);
+    private static final AtomicInteger profilesReq = new AtomicInteger(0);
+
+    public static String getProxyUrl(String path) {
+        return PROXY_BASE + path;
+    }
+
+    public static String getProxyToken() {
+        return PROXY_TOKEN;
+    }
+
+    public static String getUrl(String path) {
+        String base, token;
+        if (path.startsWith("/rooms")) {
+            base = c1;
+            token = t1;
+            roomsReq.incrementAndGet();
+        } else if (path.startsWith("/profiles") || path.startsWith("/players") ||
+                   path.startsWith("/version") || path.startsWith("/stats") || path.startsWith("/security")) {
+            base = c3;
+            token = t3;
+            profilesReq.incrementAndGet();
+        } else if (path.startsWith("/leaderboards") || path.startsWith("/latest_runs") || path.startsWith("/batch")) {
+            base = c2;
+            token = t2;
+            leaderboardReq.incrementAndGet();
+        } else {
+            base = c3;
+            token = t3;
+            profilesReq.incrementAndGet();
+        }
+        return base + path + ".json?auth=" + token;
+    }
+    
+    public static String getSseUrl(String path) {
+        return c1 + path + ".json?auth=" + t1;
+    }
+    
+    public static boolean isInitialized() {
+        return initialized;
+    }
+    
+    public static String getToken() {
+        return t1;
+    }
+    
+    public static int getRoomsCount() { return roomsReq.get(); }
+    public static int getLeaderboardCount() { return leaderboardReq.get(); }
+    public static int getProfilesCount() { return profilesReq.get(); }
+    
+    public static class AuthManager {
+        private static volatile boolean init = false;
+        
+        public static void initialize() {
+            init = FirebaseClient.isInitialized();
+            if (!init) {
+                CompactLogger.authError("Firebase init failed");
+            }
+        }
+        
+        public static boolean isInitialized() {
+            return init && FirebaseClient.isInitialized();
+        }
+        
+        public static String getFirebaseToken() {
+            return FirebaseClient.getToken();
+        }
+    }
+    
+    public static class DatabaseRouter {
+        public static String getUrlForPath(String path) {
+            return FirebaseClient.getUrl(path);
+        }
+        
+        public static int getRoomsRequestCount() {
+            return FirebaseClient.getRoomsCount();
+        }
+        
+        public static int getLeaderboardRequestCount() {
+            return FirebaseClient.getLeaderboardCount();
+        }
+        
+        public static int getProfilesRequestCount() {
+            return FirebaseClient.getProfilesCount();
+        }
+        
+        public static int getFallbackRequestCount() {
+            return 0;
+        }
+        
+        public static void resetMetrics() {}
+    }
+    
+    public static class FirebaseConfig {
+        public static void initialize(String r, String p, String l, String t) {}
+        public static String getUrlForPath(String path) { return FirebaseClient.getUrl(path); }
+        public static String getSseUrlForPath(String path) { return FirebaseClient.getSseUrl(path); }
+        public static boolean isInitialized() { return FirebaseClient.isInitialized(); }
+        public static String getAuthToken() { return FirebaseClient.getToken(); }
+    }
+    
+    public static class FirebaseSseClient {
+        public static final String EVENT_PUT = SseClient.EVENT_PUT;
+        public static final String EVENT_PATCH = SseClient.EVENT_PATCH;
+        public static final String EVENT_KEEP_ALIVE = "keep-alive";
+        
+        private final SseClient client;
+        
+        public FirebaseSseClient(String path, BiConsumer<String, String> onEvent, Consumer<Exception> onError, Runnable onDisconnect) {
+            this.client = new SseClient(path, onEvent, onError, onDisconnect);
+        }
+        
+        public void connect() { client.connect(); }
+        public void disconnect() { client.disconnect(); }
+        public void shutdown() { client.disconnect(); }
+        public boolean isConnected() { return client.isConnected(); }
+        public Map<String, Object> getMetrics() { return client.getMetrics(); }
+    }
+    
+    public static boolean isValidSsePath(String path) {
+        return path != null && (path.equals("rooms") || path.matches("[0-9]{5}(/events)?"));
+    }
+
+    public static class SseClient {
+        private static final int MAX_EVENT_SIZE = 1024 * 100;
+        private static final int TIMEOUT_SEC = 10;
+        
+        public static final String EVENT_PUT = "put";
+        public static final String EVENT_PATCH = "patch";
+        
+        private final AtomicBoolean connected = new AtomicBoolean(false);
+        private final AtomicBoolean shouldStop = new AtomicBoolean(false);
+        private final AtomicBoolean disconnected = new AtomicBoolean(false);
+        private volatile CompletableFuture<Void> future;
+        private volatile java.net.http.HttpClient client;
+        
+        private final String path;
+        private final BiConsumer<String, String> onEvent;
+        private final Consumer<Exception> onError;
+        private final Runnable onDisconnect;
+        
+        private final AtomicLong eventsRx = new AtomicLong(0);
+        private final AtomicLong eventsTx = new AtomicLong(0);
+        private final AtomicLong eventsFail = new AtomicLong(0);
+        private volatile long startTime = 0;
+        private volatile long lastEvent = 0;
+        
+        public SseClient(String path, BiConsumer<String, String> onEvent, Consumer<Exception> onError, Runnable onDisconnect) {
+            if (path == null || path.isEmpty()) {
+                throw new IllegalArgumentException("Path null");
+            }
+            if (!isValidSsePath(path)) {
+                throw new IllegalArgumentException("Invalid path: " + path);
+            }
+            this.path = path;
+            this.onEvent = onEvent;
+            this.onError = onError;
+            this.onDisconnect = onDisconnect;
+        }
+        
+        public void connect() {
+            if (connected.get() || shouldStop.get()) return;
+            if (!FirebaseClient.isInitialized()) {
+                onError.accept(new RuntimeException("Not initialized"));
+                return;
+            }
+            
+            shouldStop.set(false);
+            disconnected.set(false);
+            startTime = System.currentTimeMillis();
+            
+            future = CompletableFuture.runAsync(() -> {
+                try {
+                    String p = path.equals("rooms") ? "/rooms" : "/rooms/" + path;
+                    String url = FirebaseClient.getSseUrl(p);
+                    
+                    HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .header("Accept", "text/event-stream")
+                        .header("Cache-Control", "no-cache")
+                        .GET()
+                        .build();
+                    
+                    client = java.net.http.HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(TIMEOUT_SEC))
+                        .executor(HttpClient.getNetworkExecutor())
+                        .version(java.net.http.HttpClient.Version.HTTP_1_1)
+                        .build();
+                    
+                    HttpResponse<Stream<String>> resp = client.send(req, HttpResponse.BodyHandlers.ofLines());
+                    
+                    if (resp.statusCode() != 200) {
+                        onError.accept(new RuntimeException("SSE failed: " + resp.statusCode()));
+                        return;
+                    }
+                    
+                    connected.set(true);
+                    processStream(resp.body());
+                } catch (Exception e) {
+                    if (!shouldStop.get()) {
+                        CompactLogger.firebaseError("SSE error: {}", e.getMessage());
+                        onError.accept(e);
+                    }
+                } finally {
+                    cleanup();
+                }
+            }, HttpClient.getNetworkExecutor());
+        }
+        
+        private void processStream(Stream<String> lines) {
+            StringBuilder data = new StringBuilder(1024);
+            AtomicReference<String> type = new AtomicReference<>(EVENT_PUT);
+            
+            lines.forEach(line -> {
+                if (shouldStop.get()) throw new RuntimeException("Stopped");
+                
+                if (line.startsWith("event:")) {
+                    type.set(line.substring(6).trim().toLowerCase());
+                } else if (line.startsWith("data:")) {
+                    String d = line.startsWith("data: ") ? line.substring(6).trim() : line.substring(5).trim();
+                    if (data.length() + d.length() > MAX_EVENT_SIZE) {
+                        data.setLength(0);
+                        return;
+                    }
+                    data.append(d);
+                } else if (line.isEmpty() && data.length() > 0) {
+                    String full = data.toString();
+                    String t = type.get();
+                    data.setLength(0);
+                    type.set(EVENT_PUT);
+                    
+                    if (!full.isEmpty() && !full.equals("null")) {
+                        eventsRx.incrementAndGet();
+                        try {
+                            onEvent.accept(t, full);
+                            eventsTx.incrementAndGet();
+                            lastEvent = System.currentTimeMillis();
+                        } catch (Exception e) {
+                            eventsFail.incrementAndGet();
+                        }
+                    }
+                }
+            });
+        }
+        
+        private void cleanup() {
+            boolean was = connected.getAndSet(false);
+            if (client != null) {
+                try { client.close(); } catch (Exception e) {}
+                client = null;
+            }
+            if (was && !disconnected.get() && !shouldStop.get()) {
+                try { onDisconnect.run(); } catch (Exception e) {}
+            }
+        }
+        
+        public void disconnect() {
+            if (!disconnected.compareAndSet(false, true)) return;
+            shouldStop.set(true);
+            connected.set(false);
+            if (client != null) {
+                final var c = client;
+                client = null;
+                CompletableFuture.runAsync(() -> { try { c.close(); } catch (Exception e) {} });
+            }
+            if (future != null && !future.isDone()) {
+                try { future.cancel(true); } catch (Exception e) {}
+            }
+            future = null;
+        }
+        
+        public boolean isConnected() {
+            return connected.get() && !shouldStop.get();
+        }
+        
+        public Map<String, Object> getMetrics() {
+            return Map.of(
+                "rx", eventsRx.get(),
+                "tx", eventsTx.get(),
+                "fail", eventsFail.get(),
+                "uptime", startTime > 0 ? System.currentTimeMillis() - startTime : 0,
+                "last", lastEvent > 0 ? System.currentTimeMillis() - lastEvent : -1
+            );
+        }
+    }
+}
