@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "randomrun",
+  "version": "${version}",
+  "name": "RandomRun Mod",
+  "description": "Random item and advancement speedruns with solo, battle and shared-world modes.",
+  "authors": [
+    "RRM Network"
+  ],
+  "license": "All Rights Reserved",
+  "contact": {
+    "homepage": "https://t.me/randomrunmod",
+    "sources": "https://github.com/holodse-web/randomrunmod"
+  },
+  "icon": "assets/randomrun/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.randomrun.infrastructure.RandomRunMod"
+    ]
+  },
+  "mixins": [
+    "randomrun.mixins.json"
+  ],
+  "suggests": {
+    "e4mc": "*"
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "fabric-api": "*",
+    "minecraft": "26.3",
+    "java": ">=25"
+  }
+}

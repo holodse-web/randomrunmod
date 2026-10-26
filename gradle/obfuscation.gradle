@@ -1,0 +1,87 @@
+configurations {
+    proguardTool
+}
+
+dependencies {
+    proguardTool 'com.guardsquare:proguard-base:7.10.0'
+}
+
+def obfDir = layout.buildDirectory.dir('obfuscated')
+
+tasks.register('jdkModulesJar') {
+    def out = obfDir.map { it.file('jdk-modules.jar') }
+    outputs.file(out)
+    doLast {
+        def target = out.get().asFile
+        target.parentFile.mkdirs()
+        def jrt = java.nio.file.FileSystems.getFileSystem(URI.create('jrt:/'))
+        target.withOutputStream { fileOut ->
+            new java.util.zip.ZipOutputStream(fileOut).withCloseable { zip ->
+                ['java.base', 'java.net.http', 'java.desktop', 'java.logging'].each { module ->
+                    def root = jrt.getPath('/modules', module)
+                    def classes = []
+                    java.nio.file.Files.walk(root).withCloseable { walk ->
+                        walk.forEach { p ->
+                            def name = p.toString()
+                            if (name.endsWith('.class') && !name.endsWith('module-info.class')) classes << p
+                        }
+                    }
+                    classes.each { p ->
+                        zip.putNextEntry(new java.util.zip.ZipEntry(root.relativize(p).toString()))
+                        zip.write(java.nio.file.Files.readAllBytes(p))
+                        zip.closeEntry()
+                    }
+                }
+            }
+        }
+    }
+}
+
+tasks.register('proguardJar', JavaExec) {
+    group = 'build'
+    description = 'Obfuscates the mod jar with ProGuard and writes mapping.txt for crash-log retracing.'
+    def inJar = tasks.named('jar').flatMap { it.archiveFile }
+    def stageJar = obfDir.map { it.file('stage.jar') }
+    def mapping = obfDir.map { it.file('mapping.txt') }
+    def jdkJar = obfDir.map { it.file('jdk-modules.jar') }
+    dependsOn 'jar', 'jdkModulesJar'
+    classpath = configurations.proguardTool
+    mainClass = 'proguard.ProGuard'
+    jvmArgs '-Xmx2G'
+    inputs.file(inJar)
+    inputs.file('proguard-rules.pro')
+    inputs.file('proguard-dictionary.txt')
+    inputs.files(sourceSets.main.compileClasspath)
+    outputs.file(stageJar)
+    outputs.file(mapping)
+    doFirst {
+        def dictionary = file('proguard-dictionary.txt').absolutePath
+        def proguardArgs = [
+            '@' + file('proguard-rules.pro').absolutePath,
+            '-injars', inJar.get().asFile.absolutePath + '(!META-INF/jars/**)',
+            '-outjars', stageJar.get().asFile.absolutePath,
+            '-printmapping', mapping.get().asFile.absolutePath,
+            '-obfuscationdictionary', dictionary,
+            '-classobfuscationdictionary', dictionary,
+            '-packageobfuscationdictionary', dictionary,
+            '-libraryjars', jdkJar.get().asFile.absolutePath
+        ]
+        sourceSets.main.compileClasspath.files.each { proguardArgs << '-libraryjars' << it.absolutePath }
+        args = proguardArgs
+    }
+}
+
+tasks.register('obfuscatedJar', Jar) {
+    group = 'build'
+    description = 'Final obfuscated mod jar: build/obfuscated/release/'
+    dependsOn 'proguardJar'
+    archiveBaseName = project.archives_base_name
+    archiveVersion = project.version
+    archiveClassifier = ''
+    destinationDirectory = obfDir.map { it.dir('release') }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(obfDir.map { zipTree(it.file('stage.jar')) })
+    from(tasks.named('jar').flatMap { it.archiveFile }.map { zipTree(it) }) {
+        include 'META-INF/jars/**'
+    }
+}

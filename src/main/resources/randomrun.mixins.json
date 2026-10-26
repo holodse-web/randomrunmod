@@ -1,0 +1,40 @@
+{
+  "required": true,
+  "package": "com.randomrun.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "world.WorldCreationAndSpawnMixin$JoinWorld",
+    "gameplay.FreezeMechanicsMixin$Player",
+    "gameplay.FreezeMechanicsMixin$BlockInteraction",
+    "gameplay.WorldFreezeMixin$EntityTick",
+    "gameplay.ItemPickupMixin",
+    "gameplay.PlayerDeathMixin",
+    "gameplay.UpgraderRewardLifecycleMixin$Disconnect",
+    "gameplay.UpgraderRewardLifecycleMixin$Death",
+    "security.AntiCheatMixin$GameModeProtection",
+    "security.AntiCheatMixin$ClientCommand",
+    "security.GameModeTrackerMixin",
+    "ui.E4mcDomainCaptureMixin",
+    "RandomDropMixin"
+  ],
+  "client": [
+    "ui.TitleScreenMixin",
+    "ui.DeathScreenMixin",
+    "world.WorldCreationAndSpawnMixin$AutoCreate",
+    "world.WorldCreationAndSpawnMixin$ScreenAccessor",
+    "gameplay.FreezeMechanicsMixin$ClientInput",
+    "ui.GameMenuScreenMixin",
+    "progression.AdvancementUpdateMixin",
+    "security.AntiCheatMixin$GameModeSwitch",
+    "security.AntiCheatMixin$LanRestriction",
+    "world.WorldSelectionAutoClickMixin",
+    "network.DisconnectCleanupMixin",
+    "ui.LevelLoadingScreenMixin",
+    "ui.EndgameHudHiderMixin",
+    "ui.GameMenuScreenMixin$Disconnect",
+    "gameplay.FrozenKeyboardInputMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
