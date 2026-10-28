@@ -57,7 +57,7 @@ Gradle, Java 25. Backend connection details are not part of this repository: cop
 ```
 
 ## Links
-Telegram: https://t.me/randomrunmod
+Telegram: https://t.me/rrmnetwork
 
 ## License
 Copyright (c) 2026 Stanislav Kholod. All rights reserved. The source is published for reference; modification and redistribution of modified versions are not permitted. Use in modpacks is allowed with attribution. See [LICENSE](LICENSE).
