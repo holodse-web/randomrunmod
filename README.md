@@ -37,7 +37,7 @@
 - Languages: English, Русский, Українська.
 
 ## What's new in 27.0
-See [CHANGELOG.md](CHANGELOG.md). Highlights: port to Minecraft 26.3, RRM Upgrader, private-room password fix, safer version check, rendering optimizations.
+Highlights: port to Minecraft 26.3, RRM Upgrader, private-room password fix, safer version check, rendering optimizations.
 
 ## Installation
 1. Install Minecraft **26.3** and **Fabric Loader 0.19.5+** (Java 25 or newer).
