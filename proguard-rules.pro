@@ -1,6 +1,6 @@
 -dontshrink
 -dontoptimize
--dontpreverify
+# Keep JVM preverification enabled: Java 25 requires generated StackMapTable frames.
 -ignorewarnings
 -dontwarn **
 -dontnote **

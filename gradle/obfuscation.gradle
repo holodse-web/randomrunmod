@@ -85,3 +85,24 @@ tasks.register('obfuscatedJar', Jar) {
         include 'META-INF/jars/**'
     }
 }
+
+tasks.register('verifyObfuscatedJar', JavaExec) {
+    group = 'verification'
+    description = 'Verifies every release class and loads the packaged Fabric entrypoint with JVM verification enabled.'
+    dependsOn 'testClasses'
+    def releaseJar = providers.gradleProperty('verificationJar').map { file(it) }
+        .orElse(tasks.named('obfuscatedJar').flatMap { it.archiveFile }.map { it.asFile })
+    if (!providers.gradleProperty('verificationJar').isPresent()) {
+        dependsOn 'obfuscatedJar'
+    }
+    // Do not include sourceSets.main.output: it would hide invalid packaged classes.
+    classpath = files(sourceSets.test.output, releaseJar, configurations.runtimeClasspath)
+    mainClass = 'com.randomrun.infrastructure.verification.ReleaseBytecodeVerification'
+    jvmArgs '-Xverify:all'
+    inputs.file(releaseJar)
+    doFirst { args = [releaseJar.get().absolutePath] }
+}
+
+tasks.named('check') {
+    dependsOn 'verifyObfuscatedJar'
+}
