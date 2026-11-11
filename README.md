@@ -25,24 +25,6 @@ A Fabric client mod for Minecraft **26.3**, Java **25+**, mod version **27.1**. 
 2. Put `RandomRun-26.3Fabric-27.1.jar` in `mods` and remove older RandomRun jars.
 3. Use the same mod version on every player's client. WebRTC is bundled for Windows x64, Linux x64 and macOS (Intel and Apple Silicon); e4mc and a VPN are not required.
 
-## Online service
-
-API: [randomrun-api.rrmnetwork-rooms.workers.dev](https://randomrun-api.rrmnetwork-rooms.workers.dev/v1/health). Its public address is configuration, not a credential.
-
-The mod uses a Cloudflare Worker over HTTPS/WebSocket and a SQLite Durable Object for accounts, sessions, rooms, presence and signaling. Clients receive no database administrator credentials. Account and room passwords are salted and hashed server-side. Personal login tokens last up to 12 hours and stay in memory; password changes revoke previous sessions. Profile/history writes require ownership; room actions require membership and host privileges where applicable. Nickname registration does not verify Microsoft account ownership.
-
-Minecraft traffic uses an ordered, reliable, encrypted WebRTC DataChannel between guests and the host, with Cloudflare TURN as a relay fallback. The master TURN key stays in Worker secrets; room members get short-lived credentials. The integrated server binds to loopback and checks Minecraft names against authenticated peers. Rooms/status reconnect after signaling outages; broken game connections require rejoining.
-
-Online data: nickname, account ID, password/session hashes, profile settings/security reports, room state, connection metadata and submitted results. Mods and resource packs are checked locally for known cheat tools; client checks and submitted solo results cannot guarantee protection against modified clients. Offline mode does not use the online API.
-
-### Hosting and cost
-
-Workers and SQLite Durable Objects can use the free tier within request, duration and storage limits. The API runs independently; the world runs on the host's computer. Free capacity, uninterrupted availability and low latency across CIS/European networks are not guaranteed.
-
-Cloudflare Realtime includes **1,000 GB/month** shared between TURN and SFU, then **$0.05/GB** of outbound traffic. TURN activation requires billing details. This project does **not** enforce a hard spending cap. Monitor Cloudflare usage before wider distribution. See [Realtime pricing](https://developers.cloudflare.com/realtime/sfu/platform/pricing/), [Workers limits](https://developers.cloudflare.com/workers/platform/limits/) and [Durable Objects pricing](https://developers.cloudflare.com/durable-objects/platform/pricing/).
-
-Without TURN secrets, rooms, presence and direct WebRTC work, but some NATs/firewalls prevent game connections.
-
 ## Development
 
 Requires Java 25, Node.js 22+ and npm.
@@ -60,13 +42,6 @@ For a local Minecraft client set JVM property `-Drandomrun.api=http://127.0.0.1:
 Jars: `build/libs` (plain), `build/obfuscated/release` (obfuscated). The crash mapping in `build/obfuscated` is private: do not distribute it. Build tasks do not publish releases.
 
 The Upgrader catalog is regenerated with `python tools/upgrader/generate_values.py C:/path/to/minecraft-26.3-client.jar`. Its resource is `src/main/resources/assets/randomrun/upgrader_values.json`; audits go to `build/reports/upgrader`.
-
-### Deploying your own backend
-
-1. Set your `account_id` and Worker name in `server/wrangler.jsonc`. From `server`, run `npx wrangler login` and `npm run deploy`.
-2. Wrangler creates the SQLite Durable Object through the migration. Default object name `randomrun-v1` starts with an empty database. Optional server variable `HUB_NAME` selects an isolated database for deployment tests; changing it also changes which data is visible.
-3. Optionally create a Cloudflare TURN app and run `npx wrangler secret put TURN_KEY_ID` and `npx wrangler secret put TURN_API_TOKEN`. Never put these values in Java code, public configuration or Git.
-4. Update the mod's public API URL and rebuild. Credentials embedded in old clients must be revoked separately; source removal does not revoke issued keys.
 
 ## Links and license
 
