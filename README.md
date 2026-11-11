@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/logo.png" alt="RandomRun" width="384"></p>
 
-<p align="center"><a href="README.ru.md">Русская версия</a> · <a href="https://t.me/randomrunmod">Telegram</a> · <a href="CHANGELOG.md">Changelog</a></p>
+<p align="center"><a href="README.ru.md">Русская версия</a> · <a href="https://t.me/rrmnetwork">Telegram</a> · <a href="CHANGELOG.md">Changelog</a></p>
 
 A Fabric client mod for Minecraft **26.3**, Java **25+**, mod version **27.1**. Obtain a random item as quickly as possible, alone or in a room with friends.
 
@@ -70,4 +70,4 @@ The Upgrader catalog is regenerated with `python tools/upgrader/generate_values.
 
 ## Links and license
 
-[Telegram](https://t.me/randomrunmod). Copyright (c) 2026 Stanislav Kholod. All rights reserved. Source is published for reference; modification and redistribution of modified versions are not permitted. Modpack use is allowed with attribution. See [LICENSE](LICENSE).
+[Telegram](https://t.me/rrmnetwork). Copyright (c) 2026 Stanislav Kholod. All rights reserved. Source is published for reference; modification and redistribution of modified versions are not permitted. Modpack use is allowed with attribution. See [LICENSE](LICENSE).

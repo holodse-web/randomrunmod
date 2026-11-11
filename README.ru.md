@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/logo.png" alt="RandomRun" width="384"></p>
 
-<p align="center"><a href="README.md">English version</a> · <a href="https://t.me/randomrunmod">Telegram</a> · <a href="CHANGELOG.md">Список изменений</a></p>
+<p align="center"><a href="README.md">English version</a> · <a href="https://t.me/rrmnetwork">Telegram</a> · <a href="CHANGELOG.md">Список изменений</a></p>
 
 Клиентский мод Fabric для Minecraft **26.3**, Java **25+**, версия **27.1**. Добывайте случайный предмет на время — в одиночку или в комнате с друзьями.
 
@@ -70,4 +70,4 @@ npm run dev
 
 ## Ссылки и лицензия
 
-[Telegram](https://t.me/randomrunmod). Copyright (c) 2026 Stanislav Kholod. Все права защищены. Исходники опубликованы для ознакомления; изменение и распространение изменённых версий запрещены. Использование в модпаках разрешено с указанием авторства. См. [LICENSE](LICENSE).
+[Telegram](https://t.me/rrmnetwork). Copyright (c) 2026 Stanislav Kholod. Все права защищены. Исходники опубликованы для ознакомления; изменение и распространение изменённых версий запрещены. Использование в модпаках разрешено с указанием авторства. См. [LICENSE](LICENSE).
