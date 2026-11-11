@@ -3,7 +3,6 @@ package com.randomrun.core.session;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.util.CompactLogger;
 import java.util.Objects;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 
 public class RunSession {
@@ -12,8 +11,6 @@ public class RunSession {
     private final String targetId;
     private final TargetType targetType;
     private final Item targetItem;
-    private final EntityType<?> targetMob;
-    private final String mobVariant;
     
     private long startTime;
     private long elapsedTime;
@@ -46,67 +43,20 @@ public class RunSession {
 
     public RunSession(Item targetItem, boolean isBattle,
                       String battleRoomId, String customSeed, String worldName, boolean upgrader) {
-        Objects.requireNonNull(targetItem, "targetItem не может быть null");
-        Objects.requireNonNull(worldName, "worldName не может быть null");
+        Objects.requireNonNull(targetItem, "targetItem must not be null");
+        Objects.requireNonNull(worldName, "worldName must not be null");
         
         if (worldName.isEmpty()) {
             throw new IllegalArgumentException("worldName не может быть пустым");
         }
         
         this.targetItem = targetItem;
-        this.targetMob = null;
-        this.mobVariant = null;
         this.targetId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(targetItem).toString();
         this.targetType = TargetType.ITEM;
         
         this.startTime = 0;
         this.elapsedTime = 0;
-        this.worldLoadTime = 0;
-        
-        this.status = RunStatus.FROZEN;
-        this.paused = false;
-        this.pauseStartTime = 0;
-        this.totalPausedTime = 0;
-        
-        this.worldName = worldName;
-        this.worldSeed = null;
-        
-        this.isBattle = isBattle;
-        this.battleRoomId = battleRoomId;
-        this.customSeed = customSeed;
-        
-        this.modVersion = RandomRunMod.MOD_VERSION;
-        this.isHardcore = RandomRunMod.getInstance().getConfig().isHardcoreModeEnabled();
-        this.isUpgrader = upgrader;
-        this.isRandomDrop = false;
-    }
-    
-    public RunSession(EntityType<?> targetMob, String mobVariant, boolean isBattle,
-                     String battleRoomId, String customSeed, String worldName) {
-        this(targetMob, mobVariant, isBattle, battleRoomId, customSeed, worldName,
-            !isBattle && RandomRunMod.getInstance().getConfig().isUpgraderEnabled());
-    }
-
-    public RunSession(EntityType<?> targetMob, String mobVariant, boolean isBattle,
-                      String battleRoomId, String customSeed, String worldName, boolean upgrader) {
-        Objects.requireNonNull(targetMob, "targetMob не может быть null");
-        Objects.requireNonNull(worldName, "worldName не может быть null");
-        
-        if (worldName.isEmpty()) {
-            throw new IllegalArgumentException("worldName не может быть пустым");
-        }
-        
-        this.targetItem = null;
-        this.targetMob = targetMob;
-        this.mobVariant = mobVariant;
-        
-        String baseId = net.minecraft.world.entity.EntityType.getKey(targetMob).toString();
-        this.targetId = mobVariant != null ? baseId + ":" + mobVariant : baseId;
-        this.targetType = TargetType.MOB;
-        
-        this.startTime = 0;
-        this.elapsedTime = 0;
-        this.worldLoadTime = 0;
+        this.worldLoadTime = System.currentTimeMillis();
         
         this.status = RunStatus.FROZEN;
         this.paused = false;
@@ -129,7 +79,6 @@ public class RunSession {
     public void start() {
         if (status == RunStatus.FROZEN) {
             this.startTime = System.currentTimeMillis();
-            this.worldLoadTime = System.currentTimeMillis();
             this.status = RunStatus.RUNNING;
             
             try {
@@ -248,8 +197,8 @@ public class RunSession {
     public String getTargetId() { return targetId; }
     public TargetType getTargetType() { return targetType; }
     public Item getTargetItem() { return targetItem; }
-    public EntityType<?> getTargetMob() { return targetMob; }
-    public String getMobVariant() { return mobVariant; }
+
+
     public RunStatus getStatus() { return status; }
     public boolean isPaused() { return paused; }
     public String getWorldName() { return worldName; }

@@ -14,7 +14,6 @@
     "security.AntiCheatMixin$GameModeProtection",
     "security.AntiCheatMixin$ClientCommand",
     "security.GameModeTrackerMixin",
-    "ui.E4mcDomainCaptureMixin",
     "RandomDropMixin"
   ],
   "client": [
@@ -24,7 +23,6 @@
     "world.WorldCreationAndSpawnMixin$ScreenAccessor",
     "gameplay.FreezeMechanicsMixin$ClientInput",
     "ui.GameMenuScreenMixin",
-    "progression.AdvancementUpdateMixin",
     "security.AntiCheatMixin$GameModeSwitch",
     "security.AntiCheatMixin$LanRestriction",
     "world.WorldSelectionAutoClickMixin",
@@ -32,7 +30,16 @@
     "ui.LevelLoadingScreenMixin",
     "ui.EndgameHudHiderMixin",
     "ui.GameMenuScreenMixin$Disconnect",
-    "gameplay.FrozenKeyboardInputMixin"
+    "gameplay.FrozenKeyboardInputMixin",
+    "network.WebRtcSecurityMixin$Bind",
+    "network.WebRtcSecurityMixin$Identity",
+    "ui.GuiOverlayMixin",
+    "ui.GuiGraphicsAccessor",
+    "ui.TooltipStyleMixin",
+    "ui.ScreenTransitionMixin",
+    "world.LevelLoadTrackerMixin",
+    "network.PlayerConnectionMixin",
+    "network.PlayerDisconnectMixin"
   ],
   "injectors": {
     "defaultRequire": 1

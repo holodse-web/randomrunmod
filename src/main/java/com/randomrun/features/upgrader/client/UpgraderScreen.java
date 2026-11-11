@@ -1,11 +1,21 @@
 package com.randomrun.features.upgrader.client;
 
+
+
+import com.randomrun.ui.util.Previews.ItemPreviewRenderer;
+import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderPalette;
+import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderPixelMesh;
+import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderRingRaster;
+import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderScreenLayout;
+import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderSearch;
+import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderSelection;
+import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderWheel;
+import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderWheelGeometry;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.randomrun.features.upgrader.UpgraderMath;
 import com.randomrun.features.upgrader.UpgraderTransaction;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.util.LanguageManager;
-import com.randomrun.ui.util.ItemPreviewRenderer;
 import com.randomrun.ui.util.GuiQuadBatch;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -36,26 +46,55 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 public final class UpgraderScreen extends Screen {
-    private static final int GOLD = UpgraderPalette.GOLD;
-    private static final int TEXT = UpgraderPalette.TEXT;
-    private static final int MUTED = UpgraderPalette.MUTED;
-    private static final int PANEL = UpgraderPalette.PANEL;
-    private static final int EDGE = UpgraderPalette.EDGE;
+    private static int GOLD, TEXT, MUTED, PANEL, EDGE;
     private static final int GREEN = UpgraderPalette.GREEN;
     private static final int RED = UpgraderPalette.RED;
+    private int targetCount = 1;
+    private com.randomrun.ui.widget.styled.AbstractStyledButton minusButton, plusButton;
+
+    private static void applyPalette() {
+        UpgraderPalette.refresh();
+        GOLD = UpgraderPalette.GOLD;
+        TEXT = UpgraderPalette.TEXT;
+        MUTED = UpgraderPalette.MUTED;
+        PANEL = UpgraderPalette.PANEL;
+        EDGE = UpgraderPalette.EDGE;
+    }
+
+    static {
+        applyPalette();
+    }
+
+    private int maxTargetCount() {
+        return com.randomrun.features.upgrader.UpgraderServer.maxTargetCount(target);
+    }
+
+    private long targetValue() {
+        return target == null ? 0 : UpgraderClient.unitValue(target) * targetCount;
+    }
+
+    private void changeTargetCount(int delta) {
+        if (rolling || target == null || UpgraderClient.isAnimating()) return;
+        int next = Math.clamp(targetCount + delta, 1, maxTargetCount());
+        if (next == targetCount) return;
+        targetCount = next;
+        revealed = false;
+        message = "";
+        updateControls();
+    }
     private static final double TAU = Math.PI * 2;
 
     private final Map<Integer, Integer> selected = new LinkedHashMap<>();
     private final Map<Integer, UpgraderClient.Offer> offers = new HashMap<>();
     private final Map<Item, ItemStack> previews = new HashMap<>();
-    private final List<PixelButton> selectionButtons = new ArrayList<>();
+    private final List<com.randomrun.ui.widget.styled.AbstractStyledButton> selectionButtons = new ArrayList<>();
     private final List<SlotButton> inventoryButtons = new ArrayList<>();
     private final List<SlotButton> targetButtons = new ArrayList<>();
     private List<Item> allTargets = List.of();
     private List<Item> filteredTargets = List.of();
     private final ItemStack[] inventory = new ItemStack[36];
-    private EditBox search;
-    private PixelButton upgradeButton;
+    private com.randomrun.ui.widget.styled.TextFieldStyled search;
+    private com.randomrun.ui.widget.styled.AbstractStyledButton upgradeButton;
     private Item target;
     private CompletableFuture<UpgraderClient.RollResult> pending;
     private CompletableFuture<Boolean> settlement;
@@ -105,6 +144,8 @@ public final class UpgraderScreen extends Screen {
 
     @Override
     protected void init() {
+        applyPalette();
+        buttonIndex = 0;
         opened = System.nanoTime();
         UpgraderClient.onScreenOpened();
         layout = UpgraderScreenLayout.fit(width, height);
@@ -136,41 +177,55 @@ public final class UpgraderScreen extends Screen {
             .toList();
         filterTargets();
 
-        addRenderableWidget(new PixelButton(layout.windowX() + layout.windowWidth() - 21,
+        addRenderableWidget(button(layout.windowX() + layout.windowWidth() - 21,
             layout.windowY() + 5, 16, 16,
-            Component.literal("x"), button -> onClose(), false));
-        PixelButton clear = new PixelButton(x, layout.actionY(), sideWidth, layout.actionHeight(),
+            Component.literal("×"), button -> onClose(), false).icon(com.randomrun.ui.util.Icons.SMALL_CROSS));
+        var clear = button(x, layout.actionY(), sideWidth, layout.actionHeight(),
             Component.literal(tr("Сбросить", "Clear stake")), button -> {
                 selected.clear();
                 selectionChanged();
             }, false);
         clear.setTooltip(Tooltip.create(Component.literal(tr("Убрать выбранные предметы из ставки", "Clear the selected stake"))));
         selectionButtons.add(addRenderableWidget(clear));
-        upgradeButton = addRenderableWidget(new PixelButton(x + sideWidth + 8, layout.actionY(),
+        upgradeButton = addRenderableWidget(button(x + sideWidth + 8, layout.actionY(),
             centerWidth, layout.actionHeight(), Component.literal(tr("УЛУЧШИТЬ", "UPGRADE")), button -> beginRoll(), true));
         upgradeButton.setTooltip(Tooltip.create(Component.literal(tr(
-            "Шанс до 75%.\nНеудача — потеря ставки.",
+            "Шанс до 75%.\nПри неудаче ставка сгорает.",
             "Chance up to 75%.\nA loss consumes the stake."))));
+
+        int countY = top + heroHeight - 20;
+        minusButton = addRenderableWidget(button(layout.targetPanelX() + 4, countY, 14, 14,
+            Component.literal("-"), button -> changeTargetCount(minecraft.hasShiftDown() ? -10 : -1), false).icon(com.randomrun.ui.util.Icons.MINUS));
+        plusButton = addRenderableWidget(button(layout.targetPanelX() + sideWidth - 18, countY, 14, 14,
+            Component.literal("+"), button -> changeTargetCount(minecraft.hasShiftDown() ? 10 : 1), false).icon(com.randomrun.ui.util.Icons.PLUS));
+        minusButton.setTooltip(Tooltip.create(Component.literal(tr("Меньше предметов на выходе (Shift: −10)", "Fewer output items (Shift: −10)"))));
+        plusButton.setTooltip(Tooltip.create(Component.literal(tr("Больше предметов на выходе (Shift: +10)", "More output items (Shift: +10)"))));
 
         String[] presets = {"x2", "x4", "x10", "30%", "50%", "75%"};
         double[] ratios = {2, 4, 10, 1 / .30, 1 / .50, 1 / .75};
         for (int i = 0; i < presets.length; i++) {
             final double ratio = ratios[i];
-            PixelButton preset = new PixelButton(layout.presetX(i % 3),
+            var preset = new com.randomrun.ui.widget.styled.Buttons.ButtonMenu(layout.presetX(i % 3),
                 layout.actionY() + (i / 3) * 14, layout.presetWidth(i % 3), 12,
-                Component.literal(presets[i]), button -> choosePreset(ratio), false);
+                Component.literal(presets[i]), button -> choosePreset(ratio), 0, 0.04f * Math.min(12, buttonIndex++)) {
+                @Override
+                protected void renderText(GuiGraphicsExtractor context, int bx, int by, float alpha) {
+                    int color = Math.max(4, (int) (alpha * 255)) << 24 | (active ? 0xFFFFFF : 0x9A9AA2);
+                    context.pose().pushMatrix();
+                    context.pose().translate(bx + getWidth() / 2f, by + getHeight() / 2f - 2.6f);
+                    context.pose().scale(.68f, .68f);
+                    context.text(font, getMessage(), -font.width(getMessage()) / 2, 0, color, false);
+                    context.pose().popMatrix();
+                }
+            };
             preset.setTooltip(Tooltip.create(Component.literal(tr("Ближайшая доступная цель: ", "Nearest available target: ") + presets[i])));
             selectionButtons.add(addRenderableWidget(preset));
         }
 
-        search = new EditBox(font, rightX + 10, lowerY + 7, rightWidth - 50, 9,
-            Component.literal(tr("Поиск предмета", "Search items")));
-        search.setBordered(false);
-        search.setTextColor(TEXT);
-        search.setTextColorUneditable(MUTED);
+        search = new com.randomrun.ui.widget.styled.TextFieldStyled(font, rightX + 5, lowerY + 4, rightWidth - 44, 16,
+            Component.literal(tr("Поиск предмета", "Search items")), 0.1f);
         search.setMaxLength(80);
-        search.setHint(Component.literal(tr("Имя или ценность…", "Name or value…"))
-            .withStyle(style -> style.withColor(MUTED & 0xFFFFFF)));
+        search.setCenteredPlaceholder(Component.literal(tr("Имя или ценность…", "Name or value…")));
         search.setTooltip(Tooltip.create(Component.literal(tr(
             "Название или ID предмета. Число (например, 580) покажет ближайшие по ценности цели.",
             "Search an item name or ID. A number, such as 580, shows the nearest target values."))));
@@ -181,10 +236,10 @@ public final class UpgraderScreen extends Screen {
             filterTargets();
         });
         addRenderableWidget(search);
-        addRenderableWidget(new PixelButton(rightX + rightWidth - 32, lowerY + 4, 12, 15,
-            Component.literal("<"), button -> scrollTargets(-targetRows), false));
-        addRenderableWidget(new PixelButton(rightX + rightWidth - 18, lowerY + 4, 12, 15,
-            Component.literal(">"), button -> scrollTargets(targetRows), false));
+        addRenderableWidget(button(rightX + rightWidth - 37, lowerY + 4, 16, 16,
+            Component.literal("<"), button -> scrollTargets(-targetRows), false).icon(com.randomrun.ui.util.Icons.CHEVRON_LEFT));
+        addRenderableWidget(button(rightX + rightWidth - 20, lowerY + 4, 16, 16,
+            Component.literal(">"), button -> scrollTargets(targetRows), false).icon(com.randomrun.ui.util.Icons.CHEVRON_RIGHT));
 
         for (int row = 0; row < 4; row++) {
             for (int col = 0; col < 9; col++) {
@@ -202,8 +257,72 @@ public final class UpgraderScreen extends Screen {
         updateControls();
     }
 
+    private static final java.util.Map<String, String> UKRAINIAN = java.util.Map.ofEntries(
+        java.util.Map.entry("Сбросить", "Скинути"),
+        java.util.Map.entry("БОНУС! Удвоение ×2 — шанс 50%", "БОНУС! Подвоєння ×2 — шанс 50%"),
+        java.util.Map.entry("Бонус! В инвентаре: ", "Бонус! В інвентарі: "),
+        java.util.Map.entry("Меньше предметов на выходе (Shift: −10)", "Менше предметів на виході (Shift: −10)"),
+        java.util.Map.entry("Больше предметов на выходе (Shift: +10)", "Більше предметів на виході (Shift: +10)"),
+        java.util.Map.entry("ЛКМ +1 / ПКМ −1 / Shift: до 10 • колёсико на цели: количество • ", "ЛКМ +1 / ПКМ −1 / Shift: до 10 • коліщатко на цілі: кількість • "),
+        java.util.Map.entry("Убрать выбранные предметы из ставки", "Прибрати вибрані предмети зі ставки"),
+        java.util.Map.entry("УЛУЧШИТЬ", "ПОКРАЩИТИ"),
+        java.util.Map.entry("Шанс до 75%.\nПри неудаче ставка сгорает.", "Шанс до 75%.\nУ разі невдачі ставка згорає."),
+        java.util.Map.entry("Ближайшая доступная цель: ", "Найближча доступна ціль: "),
+        java.util.Map.entry("Поиск предмета", "Пошук предмета"),
+        java.util.Map.entry("Имя или ценность…", "Назва або цінність…"),
+        java.util.Map.entry("Название или ID предмета. Число (например, 580) покажет ближайшие по ценности цели.", "Назва або ID предмета. Число (наприклад, 580) покаже найближчі за цінністю цілі."),
+        java.util.Map.entry("Завершение апгрейда…", "Завершення апгрейду…"),
+        java.util.Map.entry("Успех! Предмет уже в инвентаре.", "Успіх! Предмет уже в інвентарі."),
+        java.util.Map.entry("Неудача. Предметы ставки потеряны.", "Невдача. Предмети ставки втрачено."),
+        java.util.Map.entry("Неудача. Утешение: ", "Невдача. Втіха: "),
+        java.util.Map.entry("Не удалось завершить апгрейд.", "Не вдалося завершити апгрейд."),
+        java.util.Map.entry("Не удалось выполнить апгрейд.", "Не вдалося виконати апгрейд."),
+        java.util.Map.entry("Выберите доступный предмет.", "Оберіть доступний предмет."),
+        java.util.Map.entry("Инвентарь изменился. Выберите ставку заново.", "Інвентар змінився. Оберіть ставку заново."),
+        java.util.Map.entry("Освободите место для награды.", "Звільніть місце для нагороди."),
+        java.util.Map.entry("Этот предмет нельзя использовать.", "Цей предмет не можна використати."),
+        java.util.Map.entry("Выберите предметы из инвентаря.", "Оберіть предмети з інвентаря."),
+        java.util.Map.entry("В ставке может быть до 10 предметов.", "У ставці може бути до 10 предметів."),
+        java.util.Map.entry("Можно выбрать до 3 разных типов предметов.", "Можна обрати до 3 різних типів предметів."),
+        java.util.Map.entry("Нужен активный забег с включённым апгрейдером.", "Потрібен активний забіг з увімкненим апгрейдером."),
+        java.util.Map.entry("АПГРЕЙД…", "АПГРЕЙД…"),
+        java.util.Map.entry("Проверка ставки…", "Перевірка ставки…"),
+        java.util.Map.entry("Колесо вращается…", "Колесо обертається…"),
+        java.util.Map.entry("Нужен активный забег с апгрейдером", "Потрібен активний забіг з апгрейдером"),
+        java.util.Map.entry("Предыдущий апгрейд завершается…", "Попередній апгрейд завершується…"),
+        java.util.Map.entry("Шанс = ставка / цель • до 75% • неудача сжигает ставку", "Шанс = ставка / ціль • до 75% • невдача спалює ставку"),
+        java.util.Map.entry("Инвентарь", "Інвентар"),
+        java.util.Map.entry(" типа", " типи"),
+        java.util.Map.entry("Нет подходящих предметов", "Немає відповідних предметів"),
+        java.util.Map.entry("ЛКМ +1 / ПКМ −1 / Shift: до 10 • 3 типа • ", "ЛКМ +1 / ПКМ −1 / Shift: до 10 • 3 типи • "),
+        java.util.Map.entry(" / Esc: закрыть", " / Esc: закрити"),
+        java.util.Map.entry("ВАША СТАВКА", "ВАША СТАВКА"),
+        java.util.Map.entry("Выберите предметы ниже", "Оберіть предмети нижче"),
+        java.util.Map.entry(" типа • ", " типи • "),
+        java.util.Map.entry(" шт.", " шт."),
+        java.util.Map.entry("ед.", "од."),
+        java.util.Map.entry("УТЕШИТЕЛЬНЫЙ ПРЕДМЕТ", "ВТІШНИЙ ПРЕДМЕТ"),
+        java.util.Map.entry("ПРЕДМЕТ НА ВЫХОДЕ", "ПРЕДМЕТ НА ВИХОДІ"),
+        java.util.Map.entry("Ближайшая ценность", "Найближча цінність"),
+        java.util.Map.entry("Выберите цель ниже", "Оберіть ціль нижче"),
+        java.util.Map.entry("УСПЕХ", "УСПІХ"),
+        java.util.Map.entry("НЕУДАЧА", "НЕВДАЧА"),
+        java.util.Map.entry("шанс успеха", "шанс успіху"),
+        java.util.Map.entry("Ценность: ", "Цінність: "),
+        java.util.Map.entry(" ед. / шт.", " од. / шт."),
+        java.util.Map.entry("Не используется в апгрейдере", "Не використовується в апгрейдері"),
+        java.util.Map.entry("В ставке: ", "У ставці: "),
+        java.util.Map.entry("ЛКМ +1 / ПКМ −1 / Shift: до 10", "ЛКМ +1 / ПКМ −1 / Shift: до 10"),
+        java.util.Map.entry(" ед. • 1 предмет", " од. • 1 предмет"),
+        java.util.Map.entry("Шанс: ", "Шанс: "),
+        java.util.Map.entry("ценность ", "цінність ")
+    );
+
     private static String tr(String russian, String english) {
-        return LanguageManager.getCurrentLanguage().startsWith("ru") ? russian : english;
+        String language = LanguageManager.getCurrentLanguage();
+        if (language.startsWith("ru")) return russian;
+        if (language.startsWith("uk")) return UKRAINIAN.getOrDefault(russian, english);
+        return english;
     }
 
     private boolean animations() {
@@ -287,7 +406,7 @@ public final class UpgraderScreen extends Screen {
     }
 
     private double chance() {
-        return rolling ? rollingChance : target == null ? 0 : UpgraderMath.chance(stake, UpgraderClient.unitValue(target));
+        return rolling ? rollingChance : target == null ? 0 : UpgraderMath.chance(stake, targetValue());
     }
 
     private void selectionChanged() {
@@ -304,6 +423,7 @@ public final class UpgraderScreen extends Screen {
         target = allTargets.stream().filter(item -> UpgraderClient.unitValue(item) > 0)
             .min(Comparator.comparingDouble(item -> Math.abs(UpgraderClient.unitValue(item) - desired)))
             .orElse(null);
+        targetCount = 1;
         if (target != null) {
             search.setValue("");
             targetRow = Math.clamp(filteredTargets.indexOf(target) / targetColumns, 0, maxTargetRow());
@@ -340,13 +460,14 @@ public final class UpgraderScreen extends Screen {
         visualRoll = 0;
         settlement = null;
         celebrationStarted = 0;
+        bonusFlashAt = 0;
         revealed = false;
         rolling = true;
         skipSignalled = false;
         message = "";
         rollStarted = 0;
         lastTickSound = -1;
-        pending = UpgraderClient.upgrade(Map.copyOf(selected), target);
+        pending = UpgraderClient.upgrade(Map.copyOf(selected), target, targetCount);
         sound(SoundEvents.ENCHANTMENT_TABLE_USE, 1.1f, .6f);
         updateControls();
     }
@@ -377,7 +498,8 @@ public final class UpgraderScreen extends Screen {
                 settleChance(rollingChance);
             }
         }
-        if (rolling && result != null && elapsedMillis() >= UpgraderMath.SPIN_MILLIS) {
+        if (rolling && result != null && result.accepted() && result.bonusHit()) streakEffects();
+        if (rolling && result != null && elapsedMillis() >= totalMillis()) {
             if (settlement == null) {
                 revealed = true;
                 message = tr("Завершение апгрейда…", "Completing the upgrade…");
@@ -391,7 +513,9 @@ public final class UpgraderScreen extends Screen {
                 rolling = false;
                 if (completed) {
                     selected.clear();
-                    message = result.success() ? tr("Успех! Предмет уже в инвентаре.", "Success! The item is in your inventory.")
+                    message = result.success() ? (result.bonusHit()
+                            ? tr("Бонус! В инвентаре: ", "Bonus! Added: ") + result.reward().getHoverName().getString() + " x" + result.finalCount()
+                            : tr("Успех! Предмет уже в инвентаре.", "Success! The item is in your inventory."))
                         : result.reward().isEmpty() ? tr("Неудача. Предметы ставки потеряны.", "Unlucky. The staked items were consumed.")
                         : tr("Неудача. Утешение: ", "Lost. Consolation: ") + result.reward().getHoverName().getString()
                             + (result.reward().getCount() > 1 ? " x" + result.reward().getCount() : "");
@@ -413,7 +537,7 @@ public final class UpgraderScreen extends Screen {
             if (previous != stake) filterTargets();
         }
         if (rolling && result != null && result.accepted() && animations()) {
-            long segment = (long) (Math.abs(needleTurns()) * 16);
+            long segment = (long) (Math.abs(needleTurns()) * 16) + (inStreak() ? 100000L * (streakStep() + 1) : 0);
             if (segment != lastTickSound) {
                 lastTickSound = segment;
                 sound(SoundEvents.NOTE_BLOCK_HAT.value(), 1.0f + (float) rollProgress() * .6f, .13f);
@@ -449,9 +573,15 @@ public final class UpgraderScreen extends Screen {
             upgradeButton.setMessage(Component.literal(rolling ? tr("АПГРЕЙД…", "UPGRADING…")
                 : tr("УЛУЧШИТЬ", "UPGRADE")));
         }
-        for (PixelButton button : selectionButtons) button.active = editable;
+        for (var button : selectionButtons) button.active = editable;
         for (SlotButton button : inventoryButtons) button.active = editable && offers.containsKey(button.slot);
         for (SlotButton button : targetButtons) button.active = editable && visibleTarget(button.index) != null;
+        boolean countable = editable && target != null && maxTargetCount() > 1;
+        if (minusButton != null) {
+            minusButton.visible = plusButton.visible = target != null && maxTargetCount() > 1;
+            minusButton.active = countable && targetCount > 1;
+            plusButton.active = countable && targetCount < maxTargetCount();
+        }
     }
 
     private long elapsedMillis() {
@@ -465,9 +595,91 @@ public final class UpgraderScreen extends Screen {
 
     private double needleTurns() {
         if (result == null || !result.accepted()) return rolling ? needleStartTurn : restingNeedleTurn;
+        if (rolling && inStreak()) return streakNeedle();
         if (rolling && animations()) return UpgraderWheel.spinTurns(rollProgress(), visualRoll, result.chance(), needleStartTurn);
+        if (!rolling && result != null && result.accepted() && result.bonusHit() && result.flips() > 0) return streakLanding(result.flips() - 1);
         return rolling && !revealed ? needleStartTurn : restingNeedleTurn;
     }
+
+    private static final int BONUS = 0xFF4ADE80;
+
+    private long totalMillis() {
+        return result == null ? UpgraderMath.SPIN_MILLIS : UpgraderMath.totalMillis(result.flips());
+    }
+
+    private boolean inStreak() {
+        return rolling && result != null && result.accepted() && result.bonusHit() && result.flips() > 0
+            && animations() && elapsedMillis() >= UpgraderMath.SPIN_MILLIS;
+    }
+
+    private int streakStep() {
+        long into = Math.max(0, elapsedMillis() - UpgraderMath.SPIN_MILLIS);
+        return (int) Math.min(result.flips() - 1, into / UpgraderMath.STREAK_STEP_MILLIS);
+    }
+
+    private double streakStepProgress() {
+        long into = Math.max(0, elapsedMillis() - UpgraderMath.SPIN_MILLIS);
+        if (into / UpgraderMath.STREAK_STEP_MILLIS >= result.flips()) return 1;
+        return (into % UpgraderMath.STREAK_STEP_MILLIS) / (double) UpgraderMath.STREAK_STEP_MILLIS;
+    }
+
+    private boolean stepWins(int step) {
+        return step < result.streak();
+    }
+
+    private double streakLanding(int step) {
+        double jitter = ((Long.hashCode(Double.doubleToLongBits(result.roll()) * 31 + step) & 1023) / 1023.0 - .5) * .36;
+        return UpgraderWheel.wrap01(stepWins(step) ? jitter : .5 + jitter);
+    }
+
+    private double streakNeedle() {
+        int step = streakStep();
+        double start = step == 0 ? UpgraderWheel.stoppedTurn(visualRoll, result.chance()) : streakLanding(step - 1);
+        double end = streakLanding(step);
+        double t = Math.clamp((streakStepProgress() - .12) / .58, 0, 1);
+        double eased = 1 - Math.pow(1 - t, 3);
+        return start + (2 + UpgraderWheel.wrap01(end - start)) * eased;
+    }
+
+    private boolean stepLanded() {
+        return streakStepProgress() >= .70;
+    }
+
+    private int streakCount() {
+        if (result == null || !result.bonusHit()) return targetCount;
+        int base = result.reward().getCount();
+        if (!rolling) return revealed ? result.finalCount() : targetCount;
+        if (!inStreak()) return base;
+        int step = streakStep();
+        int wins = Math.min(step, result.streak()) + (stepLanded() && stepWins(step) ? 1 : 0);
+        return base << wins;
+    }
+
+    private int lastStreakSound = -1;
+
+    private void streakEffects() {
+        if (!animations()) return;
+        int marker;
+        if (!inStreak()) {
+            if (elapsedMillis() < UpgraderMath.SPIN_MILLIS - 60) { lastStreakSound = -1; return; }
+            marker = 0;
+        } else marker = 1 + streakStep() * 2 + (stepLanded() ? 1 : 0);
+        if (marker == lastStreakSound) return;
+        lastStreakSound = marker;
+        if (marker == 0) {
+            sound(SoundEvents.PLAYER_LEVELUP, 1.4f, .45f);
+            startCelebration();
+        } else if (marker % 2 == 0) {
+            int step = (marker - 2) / 2;
+            if (stepWins(step)) {
+                sound(SoundEvents.EXPERIENCE_ORB_PICKUP, 0.9f + step * .15f, .5f);
+                sound(SoundEvents.NOTE_BLOCK_CHIME.value(), 1.2f + step * .12f, .35f);
+                countPop = System.nanoTime();
+            } else sound(SoundEvents.NOTE_BLOCK_BASS.value(), .7f, .5f);
+        }
+    }
+
+    private long countPop;
 
     private void settleChance(double value) {
         displayedChance = chanceFrom = chanceTarget = value;
@@ -475,7 +687,8 @@ public final class UpgraderScreen extends Screen {
     }
 
     private double animatedChance() {
-        double desired = revealed && result != null ? result.chance() : chance();
+        double desired = inStreak() || (revealed && result != null && result.bonusHit()) ? .5
+            : revealed && result != null ? result.chance() : chance();
         if (!animations()) {
             settleChance(desired);
             return desired;
@@ -495,36 +708,44 @@ public final class UpgraderScreen extends Screen {
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         extractBlurredBackground(graphics);
-        graphics.fill(0, 0, width, height, 0x500A100B);
+        graphics.fill(0, 0, width, height, com.randomrun.ui.util.Ui.argb(UpgraderPalette.BACKDROP & 0xFFFFFF, ((UpgraderPalette.BACKDROP >>> 24) / 255f) * appearProgress()));
     }
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        double entrance = animations() ? Math.clamp((System.nanoTime() - opened) / 220_000_000.0, 0, 1) : 1;
-        graphics.fill(layout.windowX() + 4, layout.windowY() + 4,
-            layout.windowX() + layout.windowWidth() + 4, layout.windowY() + layout.windowHeight() + 4, 0x65000000);
-        panel(graphics, layout.windowX(), layout.windowY(), layout.windowWidth(), layout.windowHeight(),
-            UpgraderPalette.WINDOW, UpgraderPalette.WINDOW_EDGE);
-        int accentHalf = (int) ((layout.windowWidth() - 10) / 2.0 * (1 - Math.pow(1 - entrance, 3)));
-        graphics.fill(width / 2 - accentHalf, layout.windowY() + 1,
-            width / 2 + accentHalf, layout.windowY() + 2, GOLD);
-        int titleY = layout.windowY() + 6;
-        chevron(graphics, width / 2 - font.width(title) / 2 - 16, titleY, GOLD);
-        graphics.centeredText(font, title, width / 2, titleY, GOLD);
+        float appear = appearProgress();
+        if (closingAt != 0 && appear <= 0f) {
+            finishClose();
+            return;
+        }
+        float eased = com.randomrun.ui.util.Ui.easeOut(appear);
+        float scale = 0.94f + 0.06f * eased;
+        int wx = layout.windowX(), wy = layout.windowY(), ww = layout.windowWidth(), wh = layout.windowHeight();
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(wx + ww / 2f, wy + wh / 2f + (1f - eased) * 10f);
+        graphics.pose().scale(scale, scale);
+        graphics.pose().translate(-(wx + ww / 2f), -(wy + wh / 2f));
+        com.randomrun.ui.theme.Theme theme = com.randomrun.ui.theme.Theme.current();
+        com.randomrun.ui.util.Ui.panel(graphics, wx, wy, wx + ww, wy + wh, theme.panel, theme.border, 1f);
+        com.randomrun.ui.util.Ui.glowBorder(graphics, wx, wy, wx + ww, wy + wh, 2, 0xFFFFFF);
+        String heading = tr("Апгрейдер", "Upgrader");
+        graphics.centeredText(font, heading, width / 2, wy + 7, TEXT);
+        com.randomrun.ui.util.Ui.divider(graphics, wx + 30, wx + ww - 30, wy + 17, theme.accent, 1f);
         String status = message;
         int color = messageColor;
         if (status.isEmpty()) {
             color = MUTED;
-            if (rolling) status = result == null ? tr("Проверка ставки…", "Checking the stake…")
-                : tr("Колесо вращается…", "The wheel is spinning…");
+            if (inStreak()) {
+                status = tr("БОНУС! Удвоение ×2 — шанс 50%", "BONUS! Double up ×2 — 50% chance");
+                color = BONUS;
+            } else if (rolling) status = result == null ? tr("Проверка ставки…", "Checking the stake…") : "";
             else if (!UpgraderClient.available()) {
                 status = tr("Нужен активный забег с апгрейдером", "Start a run with the Upgrader enabled");
                 color = RED;
             } else if (UpgraderClient.isAnimating()) status = tr("Предыдущий апгрейд завершается…", "The previous upgrade is finishing…");
-            else status = tr("Шанс = ставка / цель • до 75% • неудача сжигает ставку",
-                "Chance = stake / target • 75% cap • losing consumes the stake");
+
         }
-        scaledCentered(graphics, status, width / 2, layout.windowY() + 18,
+        scaledCentered(graphics, status, width / 2, layout.windowY() + 19,
             .65f, color, panelWidth - 24);
 
         drawStake(graphics);
@@ -532,14 +753,12 @@ public final class UpgraderScreen extends Screen {
         drawTarget(graphics);
         panel(graphics, x, lowerY, leftWidth, lowerHeight, PANEL, EDGE);
         panel(graphics, rightX, lowerY, rightWidth, lowerHeight, PANEL, EDGE);
-        graphics.fill(x + 3, lowerY + 3, x + leftWidth - 3, lowerY + 20, UpgraderPalette.HEADER);
-        graphics.fill(rightX + 3, lowerY + 3, rightX + rightWidth - 3, lowerY + 20, UpgraderPalette.HEADER);
+        graphics.fill(x + 4, lowerY + 20, x + leftWidth - 4, lowerY + 21, com.randomrun.ui.util.Ui.argb(0xFFFFFF, 0.08f));
+        graphics.fill(rightX + 4, lowerY + 21, rightX + rightWidth - 4, lowerY + 22, com.randomrun.ui.util.Ui.argb(0xFFFFFF, 0.08f));
         graphics.text(font, tr("Инвентарь", "Inventory"), x + 7, lowerY + 7, TEXT, false);
         String picked = selectedCount + "/" + UpgraderTransaction.MAX_SELECTED_ITEMS + " • "
             + selectedTypes.size() + "/" + UpgraderTransaction.MAX_SELECTED_TYPES + tr(" типа", " types");
         scaledRight(graphics, picked, x + leftWidth - 6, lowerY + 7, .7f, MUTED);
-        panel(graphics, rightX + 6, lowerY + 4, rightWidth - 42, 15, UpgraderPalette.INK,
-            search.isFocused() ? UpgraderPalette.TEAL : UpgraderPalette.EDGE);
         if (filteredTargets.isEmpty()) {
             scaledCentered(graphics, tr("Нет подходящих предметов", "No matching items"), rightX + rightWidth / 2,
                 gridY + slotSize, .7f, MUTED, rightWidth - 12);
@@ -547,11 +766,29 @@ public final class UpgraderScreen extends Screen {
         drawScrollbar(graphics);
         super.extractRenderState(graphics, mouseX, mouseY, delta);
         drawCelebration(graphics);
-        String hint = tr("ЛКМ +1 / ПКМ −1 / Shift: до 10 • 3 типа • ", "Left +1 / Right −1 / Shift: up to 10 • 3 types • ")
+        String hint = tr("ЛКМ +1 / ПКМ −1 / Shift: до 10 • колёсико на цели: количество • ", "Left +1 / Right −1 / Shift: up to 10 • scroll on target: amount • ")
             + UpgraderClient.keyName().getString() + tr(" / Esc: закрыть", " / Esc: close");
         scaledCentered(graphics, hint, width / 2, layout.windowY() + layout.windowHeight() - 10,
             .63f, MUTED, panelWidth - 4);
-        itemTooltips(graphics, mouseX, mouseY);
+        float hide = 1f - eased;
+        if (hide > 0.01f) graphics.fill(wx, wy, wx + ww, wy + wh, com.randomrun.ui.util.Ui.argb(UpgraderPalette.WINDOW, hide));
+        graphics.pose().popMatrix();
+        if (appear >= 1f) itemTooltips(graphics, mouseX, mouseY);
+    }
+
+    private long closingAt;
+    private long appearStart;
+
+    private float appearProgress() {
+        if (!animations()) return closingAt != 0 ? 0f : 1f;
+        long now = System.currentTimeMillis();
+        if (appearStart == 0) appearStart = now;
+        if (closingAt != 0) return Math.max(0f, 1f - (now - closingAt) / 170f) * Math.min(1f, (closingAt - appearStart) / 260f);
+        return Math.min(1f, (now - appearStart) / 260f);
+    }
+
+    private void finishClose() {
+        super.onClose();
     }
 
     private void drawStake(GuiGraphicsExtractor graphics) {
@@ -639,6 +876,9 @@ public final class UpgraderScreen extends Screen {
         } else {
             bigItem(graphics, shown, targetPanelX + sideWidth / 2, itemY + 7,
                 consolation ? heroHeight < 90 ? 1f : 1.3f : heroHeight < 90 ? 1.25f : 2f);
+            int shownCount = consolation ? shown.getCount() : streakCount();
+            if (shownCount > 1) scaledRight(graphics, "x" + shownCount,
+                targetPanelX + sideWidth / 2 + (heroHeight < 90 ? 14 : 22), itemY + (heroHeight < 90 ? 15 : 20), 1f, TEXT);
         }
         boolean nearest = shown.isEmpty() && !filteredTargets.isEmpty() && UpgraderSearch.numericValue(searchText).isPresent();
         if (heroHeight >= 100) scaledCentered(graphics, nearest ? tr("Ближайшая ценность", "Nearest target value")
@@ -647,19 +887,82 @@ public final class UpgraderScreen extends Screen {
             top + heroHeight - 35, .8f, TEXT, sideWidth - 12);
         scaledCentered(graphics, nearest ? "≈ " + number(UpgraderClient.unitValue(filteredTargets.getFirst())) + " " + tr("ед.", "pts")
             : shown.isEmpty() ? "—" : number(consolation ? UpgraderClient.value(shown)
-                : UpgraderClient.unitValue(target)) + " " + tr("ед.", "pts"),
+                : UpgraderClient.unitValue(target) * streakCount()) + " " + tr("ед.", "pts"),
             targetPanelX + sideWidth / 2, top + heroHeight - 15, .9f,
             consolation ? TEXT : UpgraderPalette.TEAL, sideWidth - 12);
     }
 
+    private static final double BONUS_APPEAR_AT = .14;
+    private long bonusFlashAt;
+
+    private double bonusAppear() {
+        if (result == null || !result.accepted() || result.bonus() <= 0) return 0;
+        if (!rolling) return result.bonusHit() && revealed ? 1 : 0;
+        if (!animations()) return 1;
+        return Math.clamp((rollProgress() - BONUS_APPEAR_AT) / .06, 0, 1);
+    }
+
+    private float bonusFlash() {
+        if (bonusFlashAt == 0) return 0;
+        double age = (System.nanoTime() - bonusFlashAt) / 1_000_000_000.0;
+        return age >= .5 ? 0 : (float) (1 - age / .5);
+    }
+
+    private void triggerBonusFlash() {
+        if (bonusFlashAt != 0 || !rolling || bonusAppear() <= 0 || !animations()) return;
+        bonusFlashAt = System.nanoTime();
+        for (int index = 0; index < bonusSparkX.length; index++) {
+            double angle = Math.PI / 2 + (index / (double) bonusSparkX.length - .5) * Math.PI * 1.6 + (index % 3) * .07;
+            bonusSparkX[index] = (float) Math.cos(angle);
+            bonusSparkY[index] = (float) Math.sin(angle);
+            bonusSparkSpeed[index] = 14 + index % 6 * 4;
+        }
+        sound(SoundEvents.FIREWORK_ROCKET_TWINKLE, 1.3f, .35f);
+        sound(SoundEvents.AMETHYST_BLOCK_CHIME, 1.6f, .7f);
+        sound(SoundEvents.NOTE_BLOCK_PLING.value(), 1.9f, .4f);
+    }
+
+    private final float[] bonusSparkX = new float[28];
+    private final float[] bonusSparkY = new float[28];
+    private final float[] bonusSparkSpeed = new float[28];
+
+    private void drawBonusSparks(GuiGraphicsExtractor graphics, int cx, int cy, int radius) {
+        if (bonusFlashAt == 0 || !animations()) return;
+        double elapsed = (System.nanoTime() - bonusFlashAt) / 1_000_000_000.0;
+        if (elapsed >= .9) return;
+        GuiQuadBatch.Builder sparks = new GuiQuadBatch.Builder(bonusSparkX.length);
+        int ox = cx, oy = cy + radius - 2;
+        for (int index = 0; index < bonusSparkX.length; index++) {
+            double age = elapsed - (index % 4) * .03;
+            if (age < 0) continue;
+            double distance = bonusSparkSpeed[index] * (1 - Math.exp(-age * 5));
+            int px = ox + (int) Math.round(bonusSparkX[index] * distance);
+            int py = oy + (int) Math.round(bonusSparkY[index] * distance + age * age * 22);
+            int size = index % 5 == 0 ? 2 : 1;
+            int alpha = (int) (255 * Math.max(0, 1 - age / .9));
+            int color = index % 3 == 0 ? 0xFFFFFF : index % 3 == 1 ? BONUS : 0xBBF7D0;
+            sparks.fill(px, py, px + size, py + size, alpha << 24 | color & 0xFFFFFF);
+        }
+        sparks.build().extract(graphics);
+    }
+
     private void drawWheel(GuiGraphicsExtractor graphics) {
-        int cx = x + sideWidth + 8 + centerWidth / 2;
-        int cy = top + heroHeight / 2;
+        triggerBonusFlash();
+        float flash = bonusFlash();
+        double shakeTime = bonusFlashAt == 0 ? 0 : (System.nanoTime() - bonusFlashAt) / 1_000_000_000.0;
+        int shakeX = flash > 0 ? (int) Math.round(Math.sin(shakeTime * 95) * 3 * flash * flash) : 0;
+        int shakeY = flash > 0 ? (int) Math.round(Math.cos(shakeTime * 77) * 2 * flash * flash) : 0;
+        int cx = x + sideWidth + 8 + centerWidth / 2 + shakeX;
+        int cy = top + heroHeight / 2 + shakeY;
         int radius = layout.wheelRadius();
         double winChance = animatedChance();
-        int outcome = revealed ? result.success() ? GREEN : RED : GOLD;
+        boolean streak = inStreak();
+        boolean bonusWin = result != null && result.accepted() && result.bonusHit();
+        int outcome = revealed ? result.success() ? GREEN : RED : streak ? BONUS : GOLD;
         int fill = revealed ? result.success() ? UpgraderPalette.SUCCESS_FILL : UpgraderPalette.FAILURE_FILL
             : UpgraderPalette.DISC;
+        double time = System.nanoTime() / 1_000_000_000.0;
+        float pulse = animations() ? (float) (.5 + .5 * Math.sin(time * (rolling ? 7 : 2.4))) : .5f;
         int scale = Math.max(1, minecraft.getWindow().getGuiScale());
         UpgraderWheelGeometry wheel = new UpgraderWheelGeometry(radius, scale);
         cacheWheel(wheel);
@@ -667,19 +970,62 @@ public final class UpgraderScreen extends Screen {
         graphics.pose().translate(cx, cy);
         graphics.pose().scale(wheel.rasterToGui(), wheel.rasterToGui());
         graphics.pose().translate(-.5f, -.5f);
+        int glowColor = revealed || streak ? outcome : GOLD;
+        float glowAlpha = revealed || streak ? .22f + .2f * pulse : rolling ? .10f + .14f * pulse : .06f + .05f * pulse;
+        glowMesh.extract(graphics, com.randomrun.ui.util.Ui.argb(glowColor, glowAlpha), 0);
         discMesh.extract(graphics, fill, fill);
+        int shade = com.randomrun.ui.util.Ui.argb(0xFFFFFF, .035f);
+        innerShadeMesh.extract(graphics, shade, shade);
         outlineMesh.extract(graphics, UpgraderPalette.RING_EDGE, UpgraderPalette.RING_EDGE);
+        int ringColor = rolling && !revealed && !streak
+            ? com.randomrun.ui.util.Ui.lerp(GOLD, 0xFFFFFFFF, .18f * pulse) : streak ? BONUS : outcome;
         chanceRing(graphics, wheel.coloredOuter(), wheel.coloredInner(), winChance,
-            outcome, UpgraderPalette.RING_TRACK);
+            ringColor, streak ? 0xFF7F1D1D : UpgraderPalette.RING_TRACK);
+        double bonus = result != null && result.accepted() ? result.bonus() : 0;
+        double appear = streak ? 0 : bonusAppear();
+        if (bonus > 0 && appear > 0) {
+            double overshoot = appear < 1 ? 1 + .45 * Math.sin(appear * Math.PI) : 1 + .25 * flash;
+            double shown = Math.max(.004, Math.min(bonus * 1.6, bonus * appear * overshoot));
+            int arcColor = flash > 0 ? com.randomrun.ui.util.Ui.lerp(BONUS, 0xFFFFFFFF, flash * .7f) : BONUS;
+            bonusArc(graphics, wheel, shown, com.randomrun.ui.util.Ui.argb(arcColor & 0xFFFFFF, (float) appear * (.8f + .2f * pulse)));
+        }
         int accent = revealed ? outcome : UpgraderPalette.EDGE;
         accentMesh.extract(graphics, accent, accent);
         tickMesh.extract(graphics, UpgraderPalette.TEAL, UpgraderPalette.RING_EDGE);
         graphics.pose().translate(.5f, .5f);
         graphics.pose().rotate((float) (TAU * UpgraderWheel.wrap01(needleTurns())));
         graphics.pose().translate(-.5f, -.5f);
-        needleMesh.extract(graphics, UpgraderPalette.INK, outcome);
+        needleMesh.extract(graphics, UpgraderPalette.INK, 0xFFFFFFFF);
         graphics.pose().popMatrix();
+        if (bonus > 0 && appear > 0) {
+            float badgeScale = (float) (Math.min(1, appear) * (1 + .5 * flash));
+            int badgeY = cy + Math.round(radius * .6f);
+            String badge = "x2";
+            int badgeWidth = font.width(badge) + 5;
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(cx, badgeY + 4);
+            graphics.pose().scale(.75f * badgeScale, .75f * badgeScale);
+            graphics.fill(-badgeWidth / 2 - 1, -6, badgeWidth / 2 + 1, 6, com.randomrun.ui.util.Ui.argb(0x052E16, .9f * (float) appear));
+            graphics.outline(-badgeWidth / 2 - 1, -6, badgeWidth + 2, 12, com.randomrun.ui.util.Ui.argb(BONUS & 0xFFFFFF, (float) appear));
+            graphics.text(font, badge, -font.width(badge) / 2, -4, com.randomrun.ui.util.Ui.argb(BONUS & 0xFFFFFF, (float) appear), false);
+            graphics.pose().popMatrix();
+        }
+        drawBonusSparks(graphics, cx, cy, radius);
+        if (flash > 0) {
+            graphics.fill(x + sideWidth + 8, top, x + sideWidth + 8 + centerWidth, top + heroHeight,
+                com.randomrun.ui.util.Ui.argb(BONUS & 0xFFFFFF, .10f * flash));
+        }
         float textScale = radius >= 53 ? 1.6f : radius >= 35 ? 1.15f : .83f;
+        if (streak || (bonusWin && revealed)) {
+            int count = streakCount();
+            float pop = countPop == 0 ? 1f : (float) Math.clamp((System.nanoTime() - countPop) / 220_000_000.0, 0, 1);
+            float bump = 1f + .35f * (1f - pop) * (1f - pop);
+            scaledCentered(graphics, "x" + count, cx, cy - (radius > 35 ? 9 : 4), textScale * bump,
+                revealed ? GREEN : BONUS, radius * 2 - 15);
+            if (radius > 35) scaledCentered(graphics, revealed ? tr("БОНУС", "BONUS") : tr("x2 • 50%", "x2 • 50%"),
+                cx, cy + 10, .7f, revealed ? GREEN : TEXT, radius * 2 - 18);
+            return;
+        }
         String center = revealed ? result.success() ? tr("УСПЕХ", "SUCCESS") : tr("НЕУДАЧА", "LOST") : percent(winChance);
         int percentageColor = UpgraderPalette.chanceColor(winChance);
         scaledCentered(graphics, center, cx, cy - (radius > 35 ? 8 : 3), textScale,
@@ -722,6 +1068,16 @@ public final class UpgraderScreen extends Screen {
             }
         }
         tickMesh = ticks.build();
+        UpgraderPixelMesh.Builder glow = new UpgraderPixelMesh.Builder();
+        uniformRing(glow, wheel.radius() + wheel.units(6), wheel.radius() + wheel.units(3) + 1);
+        glowMesh = glow.build();
+        UpgraderPixelMesh.Builder shade = new UpgraderPixelMesh.Builder();
+        int shadeRadius = Math.max(2, (wheel.coloredInner() - wheel.units(1)) * 7 / 10);
+        for (int y = -shadeRadius; y <= shadeRadius; y++) {
+            int extent = (int) Math.sqrt((long) shadeRadius * shadeRadius - (long) y * y);
+            shade.fill(-extent, y, extent + 1, y + 1, 0);
+        }
+        innerShadeMesh = shade.build();
         UpgraderPixelMesh.Builder needle = new UpgraderPixelMesh.Builder();
         rotatingNeedle(needle, wheel);
         needleMesh = needle.build();
@@ -743,6 +1099,39 @@ public final class UpgraderScreen extends Screen {
             int headHalf = row * half / (length - 1);
             mesh.fill(-headHalf, tip + row, headHalf + 1, tip + row + 1, 1);
         }
+    }
+
+    private UpgraderPixelMesh bonusMesh, glowMesh, innerShadeMesh;
+    private double bonusMeshSize = -1;
+    private UpgraderWheelGeometry bonusMeshWheel;
+
+    private static double bottomDistance(double angle) {
+        double turn = (angle / (Math.PI * 2) - .25 + 1) % 1;
+        return Math.min(turn, 1 - turn);
+    }
+
+    private void bonusArc(GuiGraphicsExtractor graphics, UpgraderWheelGeometry wheel, double size, int color) {
+        if (bonusMesh == null || bonusMeshSize != size || !wheel.equals(bonusMeshWheel)) {
+            bonusMeshSize = size;
+            bonusMeshWheel = wheel;
+            UpgraderPixelMesh.Builder mesh = new UpgraderPixelMesh.Builder();
+            int outer = wheel.coloredOuter() + wheel.units(1), inner = wheel.coloredInner() - wheel.units(1);
+            long outside = (long) outer * outer, inside = (long) inner * inner;
+            for (int y = 0; y <= outer; y++) {
+                int extent = (int) Math.sqrt(outside - (long) y * y);
+                for (int x = -extent; x <= extent; x++) {
+                    if ((long) x * x + (long) y * y < inside) continue;
+                    double turn = (Math.atan2(y, x) / (Math.PI * 2) - .25 + 1) % 1;
+                    if (Math.min(turn, 1 - turn) >= size / 2) continue;
+                    int start = x;
+                    while (x + 1 <= extent && (long) (x + 1) * (x + 1) + (long) y * y >= inside
+                        && bottomDistance(Math.atan2(y, x + 1)) < size / 2) x++;
+                    mesh.fill(start, y, x + 1, y + 1, 0);
+                }
+            }
+            bonusMesh = mesh.build();
+        }
+        bonusMesh.extract(graphics, color, color);
     }
 
     private void chanceRing(GuiGraphicsExtractor graphics, int outer, int inner,
@@ -807,25 +1196,15 @@ public final class UpgraderScreen extends Screen {
     }
 
     private static void panel(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int fill, int border) {
-        graphics.fill(x, y, x + width, y + height, UpgraderPalette.INK);
-        graphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, border);
-        graphics.fill(x + 2, y + 2, x + width - 2, y + height - 2, fill);
-        graphics.fill(x + 2, y + 2, x + width - 2, y + 3, bevel(fill, border));
-        graphics.fill(x + 2, y + height - 3, x + width - 2, y + height - 2, UpgraderPalette.INK);
-    }
-
-    private static int bevel(int fill, int border) {
-        int red = ((fill >> 16 & 255) * 3 + (border >> 16 & 255)) / 4;
-        int green = ((fill >> 8 & 255) * 3 + (border >> 8 & 255)) / 4;
-        int blue = ((fill & 255) * 3 + (border & 255)) / 4;
-        return 0xFF000000 | red << 16 | green << 8 | blue;
+        graphics.fill(x, y, x + width, y + height, com.randomrun.ui.util.Ui.argb(0x000000, 0.42f));
+        graphics.fill(x, y, x + width, y + height, com.randomrun.ui.util.Ui.argb(fill, 0.22f));
+        com.randomrun.ui.util.Ui.border(graphics, x, y, x + width, y + height, 1, com.randomrun.ui.util.Ui.argb(0xFFFFFF, 0.07f));
+        graphics.fill(x + 1, y, x + width - 1, y + 1, com.randomrun.ui.util.Ui.argb(border, 0.9f));
     }
 
     private static void emptySlot(GuiGraphicsExtractor graphics, int x, int y, int size) {
-        graphics.fill(x, y, x + size, y + size, UpgraderPalette.INK);
-        graphics.fill(x + 1, y + 1, x + size - 1, y + size - 1, UpgraderPalette.SLOT);
-        graphics.fill(x + 1, y + size - 2, x + size - 1, y + size - 1, UpgraderPalette.SLOT_EDGE);
-        graphics.fill(x + size - 2, y + 1, x + size - 1, y + size - 1, UpgraderPalette.SLOT_EDGE);
+        graphics.fill(x, y, x + size, y + size, com.randomrun.ui.util.Ui.argb(0x000000, 0.38f));
+        com.randomrun.ui.util.Ui.border(graphics, x, y, x + size, y + size, 1, com.randomrun.ui.util.Ui.argb(0xFFFFFF, 0.06f));
     }
 
     private static void chevron(GuiGraphicsExtractor graphics, int x, int y, int color) {
@@ -891,6 +1270,11 @@ public final class UpgraderScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
+        int targetPanelX = layout.targetPanelX();
+        if (mouseX >= targetPanelX && mouseX < targetPanelX + sideWidth && mouseY >= top && mouseY < top + heroHeight) {
+            changeTargetCount((int) Math.signum(vertical) * (minecraft.hasShiftDown() ? 10 : 1));
+            return true;
+        }
         if (mouseX >= rightX && mouseX < rightX + rightWidth && mouseY >= lowerY && mouseY < lowerY + lowerHeight) {
             scrollTargets((int) -Math.signum(vertical) * 2);
             return true;
@@ -924,7 +1308,11 @@ public final class UpgraderScreen extends Screen {
     @Override
     public void onClose() {
         skipPendingAnimation();
-        super.onClose();
+        if (!animations() || closingAt != 0) {
+            super.onClose();
+            return;
+        }
+        closingAt = System.currentTimeMillis();
     }
 
     @Override
@@ -949,38 +1337,16 @@ public final class UpgraderScreen extends Screen {
         minecraft.getSoundManager().play(SimpleSoundInstance.forUI(event, pitch, volume * config.getSoundVolume() / 100f));
     }
 
-    private final class PixelButton extends Button {
-        private final boolean gold;
-        private double hover;
-        private long lastFrame = System.nanoTime();
+    private int buttonIndex;
 
-        private PixelButton(int x, int y, int width, int height, Component message, OnPress action, boolean gold) {
-            super(x, y, width, height, message, action, DEFAULT_NARRATION);
-            this.gold = gold;
+    private com.randomrun.ui.widget.styled.AbstractStyledButton button(int x, int y, int width, int height, Component message, Button.OnPress action, boolean primary) {
+        float delay = 0.04f * Math.min(12, buttonIndex++);
+        if (primary) {
+            com.randomrun.ui.widget.styled.Buttons.ButtonRainbow rainbow = new com.randomrun.ui.widget.styled.Buttons.ButtonRainbow(x, y, width, height, message, action, 0, delay);
+            rainbow.setAnimationDirection(com.randomrun.ui.widget.styled.Buttons.ButtonRainbow.AnimationDirection.VERTICAL_UP);
+            return rainbow;
         }
-
-        @Override
-        protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-            long now = System.nanoTime();
-            double blend = animations() ? 1 - Math.exp(-(now - lastFrame) / 65_000_000.0) : 1;
-            lastFrame = now;
-            hover += ((isHoveredOrFocused() && active ? 1 : 0) - hover) * blend;
-            int base = gold ? active ? UpgraderPalette.PRIMARY : UpgraderPalette.PRIMARY_DISABLED
-                : active ? UpgraderPalette.BUTTON : UpgraderPalette.BUTTON_DISABLED;
-            int light = gold ? active ? GOLD : UpgraderPalette.PRIMARY_DISABLED_EDGE
-                : active ? UpgraderPalette.BUTTON_EDGE : UpgraderPalette.BUTTON_DISABLED_EDGE;
-            panel(graphics, getX(), getY(), getWidth(), getHeight(), base, light);
-            if (hover > .01) graphics.fill(getX() + 2, getY() + 2, getRight() - 2, getBottom() - 2,
-                ((int) (hover * 26) << 24) | 0xFFF2B9);
-            if (isFocused()) graphics.outline(getX(), getY(), getWidth(), getHeight(), GOLD);
-            scaledCentered(graphics, getMessage().getString(), getX() + getWidth() / 2,
-                getY() + (getHeight() < 15 ? 3 : (getHeight() - 8) / 2),
-                getHeight() < 15 ? .75f : 1f, gold && active ? UpgraderPalette.INK : active || gold ? TEXT : MUTED,
-                getWidth() - 5);
-        }
-
-        @Override
-        public void playDownSound(SoundManager soundManager) { sound(SoundEvents.UI_BUTTON_CLICK.value(), 1f, .35f); }
+        return new com.randomrun.ui.widget.styled.Buttons.ButtonMenu(x, y, width, height, message, action, 0, delay);
     }
 
     private final class SlotButton extends Button {
@@ -1015,7 +1381,7 @@ public final class UpgraderScreen extends Screen {
                 }
                 return;
             }
-            float itemOffset = (slotSize - 1 - 16) / 2f;
+            int itemOffset = (slotSize - 1 - 16) / 2;
             graphics.pose().pushMatrix();
             graphics.pose().translate(getX() + itemOffset, getY() + itemOffset);
             graphics.item(stack, 0, 0);
@@ -1062,6 +1428,7 @@ public final class UpgraderScreen extends Screen {
         private void selectTarget() {
             Item visible = visibleTarget(index);
             if (visible == null || rolling) return;
+            if (target != visible) targetCount = 1;
             target = visible;
             revealed = false;
             UpgraderScreen.this.message = "";

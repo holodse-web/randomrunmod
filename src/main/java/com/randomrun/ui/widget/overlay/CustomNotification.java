@@ -19,9 +19,6 @@ public class CustomNotification implements HudElement {
     private static final long DISPLAY_DURATION = 4000;
     private static final long ANIMATION_DURATION = 500;
     
-    private static final int COLOR_BORDER = 0xFF8B5CF6;
-    private static final int COLOR_BACKGROUND = 0xFF2E1065;
-    private static final int COLOR_TITLE = 0xFFA78BFA;
     private static final int COLOR_TEXT = 0xFFFFFFFF;
     
     private static class Notification {
@@ -29,12 +26,13 @@ public class CustomNotification implements HudElement {
         String description;
         ItemStack icon;
         long startTime;
+        boolean error;
         
         Notification(String title, String description, String iconId) {
             this.title = title;
             this.description = description;
             try {
-                this.icon = com.randomrun.ui.util.PreviewItems.stack(BuiltInRegistries.ITEM.getValue(Identifier.parse(iconId)));
+                this.icon = iconId == null ? ItemStack.EMPTY : com.randomrun.ui.util.Previews.PreviewItems.stack(BuiltInRegistries.ITEM.getValue(Identifier.parse(iconId)));
             } catch (Exception e) {
                 this.icon = ItemStack.EMPTY;
             }
@@ -44,8 +42,19 @@ public class CustomNotification implements HudElement {
     
     private static final java.util.List<Notification> activeNotifications = new java.util.ArrayList<>();
     
+    public static void show(String title) {
+        show(title, "", null);
+    }
+
     public static void show(String title, String description, String iconId) {
         activeNotifications.add(new Notification(title, description, iconId));
+    }
+
+    public static void showError(String title, String description) {
+        activeNotifications.removeIf(n -> n.error && n.title.equals(title));
+        Notification notification = new Notification(title, description, null);
+        notification.error = true;
+        activeNotifications.add(notification);
     }
     
     public static void renderOverlay(GuiGraphicsExtractor context) {
@@ -93,21 +102,29 @@ public class CustomNotification implements HudElement {
         int x = (int)(startX + (targetX - startX) * easeOutCubic(slideAnimation));
         int y = TOP_OFFSET + (index * (NOTIFICATION_HEIGHT + NOTIFICATION_SPACING));
         
-        drawRoundedBorder(context, x, y, NOTIFICATION_WIDTH, NOTIFICATION_HEIGHT, COLOR_BORDER);
-        drawRoundedBackground(context, x, y, NOTIFICATION_WIDTH, NOTIFICATION_HEIGHT, COLOR_BACKGROUND);
+        com.randomrun.ui.theme.Theme theme = com.randomrun.ui.theme.Theme.current();
+        boolean compact = notification.description == null || notification.description.isEmpty();
+        int height = compact ? 22 : NOTIFICATION_HEIGHT;
+        drawRoundedBorder(context, x, y, NOTIFICATION_WIDTH, height, notification.error ? 0xFFDC2626 : 0xFF000000 | theme.buttonHover);
+        drawRoundedBackground(context, x, y, NOTIFICATION_WIDTH, height, 0xF0000000 | theme.panel);
         
         if (notification.icon != null && !notification.icon.isEmpty()) {
             context.item(notification.icon, x + 8, y + 8);
         }
         
-        com.randomrun.ui.util.GuiText.text(context, client.font, Component.literal(notification.title), x + 30, y + 6, COLOR_TITLE, false);
+        int textX = notification.icon != null && !notification.icon.isEmpty() ? x + 30 : x + 8;
+        if (compact) {
+            com.randomrun.ui.util.GuiText.text(context, client.font, com.randomrun.ui.util.Ui.ellipsize(client.font, notification.title, NOTIFICATION_WIDTH - (textX - x) - 6), textX, y + 7, COLOR_TEXT, false);
+            return;
+        }
+        com.randomrun.ui.util.GuiText.text(context, client.font, Component.literal(notification.title), textX, y + 6, notification.error ? 0xFFF87171 : 0xFF000000 | theme.accent, false);
         
         String desc = notification.description;
         int maxWidth = NOTIFICATION_WIDTH - 35;
         if (client.font.width(desc) > maxWidth) {
             desc = client.font.plainSubstrByWidth(desc, maxWidth - 10) + "...";
         }
-        com.randomrun.ui.util.GuiText.text(context, client.font, desc, x + 30, y + 16, COLOR_TEXT, false);
+        com.randomrun.ui.util.GuiText.text(context, client.font, desc, textX, y + 16, COLOR_TEXT, false);
     }
     
     private float calculateSlideAnimation(long elapsed) {

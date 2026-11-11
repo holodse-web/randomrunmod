@@ -1,6 +1,7 @@
 package com.randomrun.ui.widget.styled;
 
 import com.randomrun.infrastructure.RandomRunMod;
+import com.randomrun.ui.theme.ButtonPalette;
 import com.randomrun.ui.util.GuiQuadBatch;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -33,6 +34,36 @@ public abstract class AbstractStyledButton extends Button {
     protected float borderAnimation = 0f;
     protected float borderAnimationAlpha = 0f;
     protected boolean wasHovered = false;
+    private ButtonPalette palette;
+
+    public AbstractStyledButton setPalette(ButtonPalette palette) {
+        this.palette = palette;
+        return this;
+    }
+
+    protected ButtonPalette palette() {
+        return palette != null ? palette : defaultPalette();
+    }
+
+    protected ButtonPalette defaultPalette() {
+        return ButtonPalette.theme();
+    }
+
+    protected void extractStyled(GuiGraphicsExtractor context, int x, int y, float alpha) {
+        ButtonPalette colors = palette();
+        int bgColor = lerpColor(colors.base(), colors.hover(), hoverProgress);
+        if (!active) bgColor = lerpColor(bgColor, 0x202020, 0.55f);
+        extractBackground(context, x, y, bgColor, alpha);
+        renderBorderWithCursorEffect(context, x, y, x + width, y + height, active ? colors.border() : 0x505050, 0xFFFFFF, alpha);
+        renderText(context, x, y, active ? alpha : alpha * 0.55f);
+        if (active) renderHoverOverlay(context, x, y, colors.overlay(), alpha);
+    }
+
+    protected void handleHoverSound(boolean allowed) {
+        boolean hovered = isHovered() && active;
+        if (hovered && !wasHovered && allowed) playHoverSound();
+        wasHovered = hovered;
+    }
     
     protected AbstractStyledButton(int x, int y, int width, int height, Component message, OnPress onPress) {
         super(x, y, width, height, message, onPress, DEFAULT_NARRATION);
@@ -71,10 +102,21 @@ public abstract class AbstractStyledButton extends Button {
         context.fill(x, y, x + width, y + height, finalBgColor);
     }
     
+    private com.randomrun.ui.util.Icons icon;
+
+    public AbstractStyledButton icon(com.randomrun.ui.util.Icons value) {
+        icon = value;
+        return this;
+    }
+
     protected void renderText(GuiGraphicsExtractor context, int x, int y, float alpha) {
         Minecraft client = Minecraft.getInstance();
-        int textAlpha = (int) (alpha * 255);
+        int textAlpha = Math.max(4, (int) (alpha * 255));
         int textColor = (textAlpha << 24) | 0xFFFFFF;
+        if (icon != null) {
+            icon.drawCentered(context, x, y, width, height, textColor);
+            return;
+        }
         
         com.randomrun.ui.util.GuiText.centeredText(context, 
             client.font,

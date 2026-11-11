@@ -1,55 +1,29 @@
 package com.randomrun.ui.screen.loading;
 
-import com.randomrun.infrastructure.RandomRunMod;
-import java.util.Random;
-import net.minecraft.client.resources.language.I18n;
+import com.randomrun.infrastructure.util.LanguageManager;
+import java.util.concurrent.ThreadLocalRandom;
 
-public class LoadingTips {
-    private static final Random RANDOM = new Random();
-    private static final int TIP_COUNT = 15;
+public final class LoadingTips {
+    private static final int TIP_COUNT = 24;
     private static final long TIP_REFRESH_INTERVAL = 8000;
-    
     private static String currentTip = "";
-    private static long lastChangeTime = 0;
-    
+    private static long lastChangeTime;
+    private static int lastIndex = -1;
+
+    private LoadingTips() {}
+
     public static void refreshTip() {
-        int index = 1 + RANDOM.nextInt(TIP_COUNT);
-        
+        int index;
+        do index = 1 + ThreadLocalRandom.current().nextInt(TIP_COUNT); while (index == lastIndex && TIP_COUNT > 1);
+        lastIndex = index;
         String key = "randomrun.loading.tip." + index;
-        String prefixKey = "randomrun.loading.tip.prefix";
-        
-        try {
-            String prefix = translateSafe(prefixKey, "Tip:");
-            String text = translateSafe(key, "Loading...");
-            currentTip = prefix + " §f" + text;
-            lastChangeTime = System.currentTimeMillis();
-        } catch (Exception e) {
-            RandomRunMod.LOGGER.error("[LoadingTips] Ошибка загрузки - {}", e.getMessage());
-            currentTip = "Loading...";
-        }
+        String text = LanguageManager.translate(key);
+        currentTip = text.equals(key) ? "" : LanguageManager.translate("randomrun.loading.tip.prefix") + " §f" + text;
+        lastChangeTime = System.currentTimeMillis();
     }
-    
-    private static String translateSafe(String key, String fallback) {
-        try {
-            String translated = I18n.get(key);
-            if (translated.equals(key) || translated.contains("Format error")) {
-                return fallback;
-            }
-            return translated;
-        } catch (Exception e) {
-            return fallback;
-        }
-    }
-    
+
     public static String getCurrentTip() {
-        if (shouldRefresh()) {
-            refreshTip();
-        }
+        if (currentTip.isEmpty() || System.currentTimeMillis() - lastChangeTime > TIP_REFRESH_INTERVAL) refreshTip();
         return currentTip;
-    }
-    
-    private static boolean shouldRefresh() {
-        return currentTip.isEmpty() || 
-               System.currentTimeMillis() - lastChangeTime > TIP_REFRESH_INTERVAL;
     }
 }

@@ -1,5 +1,7 @@
 package com.randomrun.features.upgrader.client;
 
+
+import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderWheel;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.randomrun.core.session.RunSession;
 import com.randomrun.core.session.RunSessionManager;
@@ -57,7 +59,17 @@ public final class UpgraderClient {
 
     public record Offer(int slot, ItemStack stack, long value) {}
     public record RollResult(boolean accepted, boolean success, double chance, double roll,
-                             String message, ItemStack reward) {}
+                             String message, ItemStack reward, double bonus, boolean bonusHit, int streak, int flips) {
+        public RollResult(boolean accepted, boolean success, double chance, double roll, String message, ItemStack reward) {
+            this(accepted, success, chance, roll, message, reward, 0, false, 0, 0);
+        }
+
+        public int finalCount() {
+            return reward.isEmpty() ? 0 : reward.getCount() << (bonusHit ? streak : 0);
+        }
+    }
+
+    private static long animationMillis = UpgraderMath.SPIN_MILLIS;
 
     private UpgraderClient() {}
 
@@ -124,7 +136,7 @@ public final class UpgraderClient {
         Attempt attempt = active;
         if (attempt == null || attempt.skipped) return 0;
         long end = !attempt.settled.isDone() && animationStartedNanos > 0
-            ? animationStartedNanos + (UpgraderMath.SPIN_MILLIS + UpgraderMath.RESULT_HOLD_MILLIS) * 1_000_000L : busyUntil;
+            ? animationStartedNanos + (animationMillis + UpgraderMath.RESULT_HOLD_MILLIS) * 1_000_000L : busyUntil;
         return Math.max(0, (end - System.nanoTime()) / 1_000_000L);
     }
     public static long animationStartedNanos() { return animationStartedNanos; }
@@ -152,7 +164,7 @@ public final class UpgraderClient {
     public static long value(ItemStack stack) { return UpgraderValues.value(stack); }
     public static long unitValue(Item item) { return UpgraderValues.unitValue(item); }
 
-    public static CompletableFuture<RollResult> upgrade(Map<Integer, Integer> amounts, Item target) {
+    public static CompletableFuture<RollResult> upgrade(Map<Integer, Integer> amounts, Item target, int targetCount) {
         Minecraft client = Minecraft.getInstance();
         if (!available() || isAnimating() || target == null) return CompletableFuture.completedFuture(failure("unavailable"));
         final Map<Integer, Integer> selection;
@@ -179,14 +191,14 @@ public final class UpgraderClient {
         if (attempt.server != null) {
             var playerId = client.player.getUUID();
             attempt.server.execute(() -> UpgraderServer.request(attempt.server,
-                attempt.server.getPlayerList().getPlayer(playerId), attempt.id, room, selection, expected, target,
+                attempt.server.getPlayerList().getPlayer(playerId), attempt.id, room, selection, expected, target, targetCount,
                 result -> client.execute(() -> receiveResult(attempt.id, result)),
                 completed -> client.execute(() -> receiveSettled(attempt.id, completed))));
         } else {
             List<UpgraderPackets.Slot> slots = selection.entrySet().stream()
                 .map(entry -> new UpgraderPackets.Slot(entry.getKey(), entry.getValue(), expected.get(entry.getKey())))
                 .toList();
-            UpgraderNetwork.send(new UpgraderPackets.Roll(attempt.id, room, BuiltInRegistries.ITEM.getKey(target).toString(), slots));
+            UpgraderNetwork.send(new UpgraderPackets.Roll(attempt.id, room, BuiltInRegistries.ITEM.getKey(target).toString(), targetCount, slots));
         }
         return attempt.result;
     }
@@ -200,7 +212,8 @@ public final class UpgraderClient {
             return;
         }
         if (result.accepted()) {
-            attempt.visualRoll = UpgraderWheel.presentationRoll(result.roll(), result.chance(), ThreadLocalRandom.current().nextDouble());
+            attempt.visualRoll = UpgraderWheel.presentationRoll(result.roll(), result.chance(), result.bonus(), ThreadLocalRandom.current().nextDouble());
+            animationMillis = UpgraderMath.totalMillis(result.flips());
             if (RunSessionManager.getInstance().getCurrentSession() == attempt.session) {
                 restingNeedleTurn();
                 restingNeedleTurn = UpgraderWheel.stoppedTurn(attempt.visualRoll, result.chance());

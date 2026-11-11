@@ -1,9 +1,9 @@
 package com.randomrun.infrastructure;
 
+
+import com.randomrun.features.battle.manager.BattleSupport.BattleCleanupHandler;
 import com.randomrun.infrastructure.config.ModConfig;
-import com.randomrun.features.battle.manager.BattleCleanupHandler;
 import com.randomrun.features.battle.manager.BattleManager;
-import com.randomrun.features.battle.util.advancement.OpponentAchievementHud;
 import com.randomrun.features.challenges.classic.data.ItemDifficulty;
 import com.randomrun.features.challenges.classic.hud.HudRenderer;
 import com.randomrun.infrastructure.command.GoCommand;
@@ -14,7 +14,6 @@ import com.randomrun.infrastructure.util.LanguageManager;
 import com.randomrun.infrastructure.version.VersionChecker;
 import com.randomrun.core.init.CoreInitializer;
 import com.randomrun.infrastructure.data.RunDataManager;
-import com.randomrun.infrastructure.data.GlobalStatsManager;
 import com.randomrun.ui.widget.overlay.CustomNotification;
 
 import net.fabricmc.api.ClientModInitializer;
@@ -29,7 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class RandomRunMod implements ClientModInitializer {
     public static final String MOD_ID = "randomrun";
-    public static final String MOD_VERSION = "27.0";
+    public static final String MOD_VERSION = "27.1";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     private static RandomRunMod instance;
@@ -71,7 +70,8 @@ public class RandomRunMod implements ClientModInitializer {
     }
 
     private void initializeVersion() {
-        VersionChecker.getInstance().checkVersion();
+        com.randomrun.network.ModIntegrity.fingerprint();
+        if (config.isOnlineMode()) com.randomrun.infrastructure.version.VersionGate.start(false);
     }
     
     private void initializeSecurity() {
@@ -97,17 +97,15 @@ public class RandomRunMod implements ClientModInitializer {
     }
 
     private void registerHudElements() {
-        com.randomrun.ui.util.ItemPreviewRenderer.register();
+        com.randomrun.ui.util.Previews.ItemPreviewRenderer.register();
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath(MOD_ID, "run_hud"), new HudRenderer());
-        HudElementRegistry.attachElementAfter(Identifier.fromNamespaceAndPath(MOD_ID, "run_hud"),
-            Identifier.fromNamespaceAndPath(MOD_ID, "opponent_hud"), new OpponentAchievementHud());
-        HudElementRegistry.attachElementAfter(Identifier.fromNamespaceAndPath(MOD_ID, "opponent_hud"),
-            Identifier.fromNamespaceAndPath(MOD_ID, "notifications"), new CustomNotification());
     }
 
     private void registerHandlers() {
         TickHandler.register();
+        com.randomrun.ui.overlay.LoadingCurtain.register();
+        com.randomrun.infrastructure.version.VersionGate.register();
         com.randomrun.features.upgrader.client.UpgraderClient.register();
         BattleCleanupHandler.register();
     }
@@ -115,7 +113,7 @@ public class RandomRunMod implements ClientModInitializer {
     private void registerConnectionEvents() {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             try {
-                String playerName = client.getUser().getName();
+                String playerName = com.randomrun.network.BackendSession.playerName();
                 CoreInitializer.initialize(playerName);
             } catch (Exception e) {
                 CompactLogger.error("Core initialization failed", e);
@@ -133,11 +131,12 @@ public class RandomRunMod implements ClientModInitializer {
             return;
         }
         stopResource("battle", () -> BattleManager.getInstance().shutdown());
+        stopResource("realtime", () -> com.randomrun.network.RealtimeClient.getInstance().disconnect());
+        stopResource("WebRTC", () -> com.randomrun.network.WebRtcTransport.getInstance().shutdown());
         stopResource("battle cleanup", BattleCleanupHandler::shutdown);
         if (runDataManager != null) {
             stopResource("run history", runDataManager::shutdown);
         }
-        stopResource("global stats", GlobalStatsManager::shutdown);
     }
 
     private void stopResource(String name, Runnable action) {

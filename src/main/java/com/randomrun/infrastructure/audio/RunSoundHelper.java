@@ -45,7 +45,6 @@ public class RunSoundHelper {
             float volume = getVolume();
             player.playSound(SOUND_ERROR, volume * 0.5f, 1.0f);
         } catch (Exception e) {
-            RandomRunMod.LOGGER.debug("{} Ошибка воспроизведения звука ошибки", LOG_TAG, e);
         }
     }
     

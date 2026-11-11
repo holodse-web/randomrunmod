@@ -1,7 +1,8 @@
 package com.randomrun.mixin.ui;
 
+
+import com.randomrun.ui.widget.styled.Buttons.ButtonMenu;
 import com.randomrun.ui.screen.main.MainModScreen;
-import com.randomrun.ui.widget.styled.ButtonMenu;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.Component;

@@ -1,7 +1,6 @@
 package com.randomrun.features.battle.manager;
 
 import com.google.gson.annotations.SerializedName;
-import com.randomrun.infrastructure.util.PasswordHasher;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -61,8 +60,6 @@ public class BattleRoom {
     @SerializedName("pr")
     private Boolean isPrivate;
 
-    @SerializedName("pwd")
-    private String password;
 
     @SerializedName("cm")
     private String creationMode = "sw";
@@ -138,13 +135,8 @@ public class BattleRoom {
         this.targetItem = targetItem;
         this.roomCode = roomCode;
         this.isPrivate = isPrivate;
-        if (password != null && !password.isEmpty()) {
-            this.password = PasswordHasher.hash(password);
-        } else {
-            this.password = null;
-        }
         this.maxPlayers = maxPlayers;
-        this.creationMode = creationMode != null ? creationMode : (isSharedWorld ? "radmin" : "sw");
+        this.creationMode = creationMode != null ? creationMode : (isSharedWorld ? "webrtc" : "sw");
         this.gameMode = GameMode.fromBoolean(randomDrop).getId();
         this.upgrader = upgrader;
         this.status = RoomStatus.WAITING;
@@ -156,12 +148,18 @@ public class BattleRoom {
     }
 
     public BattleRoom(String hostName, String seed, String targetItem, String roomCode, boolean isPrivate, String password, boolean isSharedWorld, int maxPlayers) {
-        this(hostName, seed, targetItem, roomCode, isPrivate, password, isSharedWorld, maxPlayers, isSharedWorld ? "radmin" : "sw");
+        this(hostName, seed, targetItem, roomCode, isPrivate, password, isSharedWorld, maxPlayers, isSharedWorld ? "webrtc" : "sw");
     }
 
     public BattleRoom(String hostName, String seed, String targetItem, String roomCode, boolean isPrivate, boolean isSharedWorld, int maxPlayers) {
-        this(hostName, seed, targetItem, roomCode, isPrivate, null, isSharedWorld, maxPlayers, isSharedWorld ? "radmin" : "sw");
+        this(hostName, seed, targetItem, roomCode, isPrivate, null, isSharedWorld, maxPlayers, isSharedWorld ? "webrtc" : "sw");
     }
+
+    private String hostId;
+    private java.util.List<Member> members = new java.util.ArrayList<>();
+    private static class Member { String uid; String name; }
+    public String getHostId() { return hostId; }
+    public String memberName(String uid) { return members == null ? null : members.stream().filter(member -> uid.equals(member.uid)).map(member -> member.name).findFirst().orElse(null); }
 
     public String getHost() {
         if (host != null && !host.isEmpty()) {
@@ -232,8 +230,8 @@ public class BattleRoom {
     public boolean isPrivate() { return Boolean.TRUE.equals(isPrivate); }
     public void setPrivate(boolean isPrivate) { this.isPrivate = isPrivate; }
 
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
+
+
 
     public boolean isSharedWorld() {
         if (creationMode != null) {
@@ -244,7 +242,7 @@ public class BattleRoom {
 
     public void setSharedWorld(boolean sharedWorld) {
         if (this.creationMode == null || "sw".equals(this.creationMode)) {
-            this.creationMode = sharedWorld ? "radmin" : "sw";
+            this.creationMode = sharedWorld ? "webrtc" : "sw";
         }
     }
 

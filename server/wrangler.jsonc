@@ -1,0 +1,33 @@
+{
+  "name": "randomrun-api",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-07-01",
+  "workers_dev": true,
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "HUB",
+        "class_name": "RandomRunHub"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "RandomRunHub"
+      ]
+    }
+  ],
+  "vars": {
+    "MOD_VERSION": "27.1",
+    "MIN_MOD_VERSION": "27.1"
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "invocation_logs": false
+    }
+  },
+  "account_id": "a564ff83b7911e18643f01241475392a"
+}

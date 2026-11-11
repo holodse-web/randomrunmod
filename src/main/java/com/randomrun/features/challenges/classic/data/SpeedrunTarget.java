@@ -49,7 +49,7 @@ public class SpeedrunTarget {
     }
 
     public ItemStack getDisplayStack() {
-        return com.randomrun.ui.util.PreviewItems.stack(item);
+        return com.randomrun.ui.util.Previews.PreviewItems.stack(item);
     }
 
     public ItemStack getPreviewStack() {

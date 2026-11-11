@@ -1,12 +1,15 @@
 package com.randomrun.features.battle.screen.room;
 
+
+
+
+import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
+import com.randomrun.features.battle.manager.BattleSupport.RoomJoinResult;
+import com.randomrun.features.battle.screen.lobby.LobbyRender.UIColors;
 import com.randomrun.features.battle.screen.room.RoomWaitingScreen;
-import com.randomrun.features.battle.screen.lobby.util.helper.UIColors;
 import com.randomrun.features.battle.manager.BattleManager;
 import com.randomrun.features.battle.manager.BattleRoom;
-import com.randomrun.features.battle.manager.RoomJoinResult;
 import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
-import com.randomrun.ui.widget.styled.ButtonDefault;
 import com.randomrun.ui.widget.styled.TextFieldStyled;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -49,6 +52,7 @@ public class PasswordInputScreen extends AbstractRandomRunScreen {
         passwordField = new TextFieldStyled(font, centerX - 100, centerY - 15, 170, 20, 
             com.randomrun.infrastructure.util.LanguageManager.text("randomrun.battle.password"), 0.05f);
         passwordField.setMaxLength(32);
+        passwordField.setMasked(!showPassword);
         passwordField.setCenteredPlaceholder(
             com.randomrun.infrastructure.util.LanguageManager.text("randomrun.battle.enter_password_placeholder"));
         addRenderableWidget(passwordField);
@@ -59,11 +63,13 @@ public class PasswordInputScreen extends AbstractRandomRunScreen {
             Component.literal(showPassword ? "👁" : "🔒"),
             button -> {
                 showPassword = !showPassword;
-                button.setMessage(Component.literal(showPassword ? "👁" : "🔒"));
+                passwordField.setMasked(!showPassword);
+                showPasswordButton.icon(showPassword ? com.randomrun.ui.util.Icons.EYE : com.randomrun.ui.util.Icons.LOCK);
                 playSound(SoundEvents.UI_BUTTON_CLICK.value());
             },
             0, 0.05f
         );
+        showPasswordButton.icon(showPassword ? com.randomrun.ui.util.Icons.EYE : com.randomrun.ui.util.Icons.LOCK);
         addRenderableWidget(showPasswordButton);
         
         joinButton = new ButtonDefault(
@@ -75,7 +81,7 @@ public class PasswordInputScreen extends AbstractRandomRunScreen {
         addRenderableWidget(joinButton);
         
         addRenderableWidget(new ButtonDefault(
-            centerX - 100, centerY + 50, 200, 20,
+            centerX - 100, height - 30, 200, 20,
             com.randomrun.infrastructure.util.LanguageManager.text("randomrun.button.cancel"),
             button -> onClose(),
             1, 0.15f
@@ -94,7 +100,7 @@ public class PasswordInputScreen extends AbstractRandomRunScreen {
         joinStarted = System.currentTimeMillis();
         
         String password = passwordField.getValue().trim();
-        String playerName = minecraft.getUser().getName();
+        String playerName = com.randomrun.network.BackendSession.playerName();
         
         CompletableFuture<RoomJoinResult> joinFuture = BattleManager.getInstance()
             .joinRoomDetailed(playerName, room.getRoomCode(), password);
@@ -142,20 +148,9 @@ public class PasswordInputScreen extends AbstractRandomRunScreen {
         
         super.extractRenderState(context, mouseX, mouseY, delta);
         
-        renderPasswordField(context);
         renderError(context);
         renderLoadingIndicator(context);
         renderRetryHint(context);
-    }
-    
-    private void renderPasswordField(GuiGraphicsExtractor context) {
-        if (!showPassword && !passwordField.getValue().isEmpty()) {
-            int centerX = width / 2;
-            int centerY = height / 2;
-            String masked = "•".repeat(passwordField.getValue().length());
-            context.fill(centerX - 98, centerY - 13, centerX + 68, centerY + 3, UIColors.BG_NORMAL);
-            com.randomrun.ui.util.GuiText.text(context, font, masked, centerX - 95, centerY - 11, UIColors.TEXT_WHITE);
-        }
     }
     
     private void renderError(GuiGraphicsExtractor context) {
@@ -178,7 +173,7 @@ public class PasswordInputScreen extends AbstractRandomRunScreen {
             long time = System.currentTimeMillis();
             String dots = ".".repeat((int)((time / 300) % 4));
             com.randomrun.ui.util.GuiText.centeredText(context, font, 
-                Component.literal((time - joinStarted >= CONNECTION_TIMEOUT ? "Ожидание ответа" : "Подключение") + dots),
+                com.randomrun.infrastructure.util.LanguageManager.text(time - joinStarted >= CONNECTION_TIMEOUT ? "randomrun.join.waiting_reply" : "randomrun.join.connecting").append(dots),
                 width / 2, height / 2 + 80, UIColors.TEXT_GRAY);
         }
     }
@@ -186,7 +181,7 @@ public class PasswordInputScreen extends AbstractRandomRunScreen {
     private void renderRetryHint(GuiGraphicsExtractor context) {
         if (retryCount > 0 && !joining) {
             com.randomrun.ui.util.GuiText.centeredText(context, font, 
-                Component.literal("§7Нажмите Enter для повтора"), 
+                com.randomrun.infrastructure.util.LanguageManager.text("randomrun.join.retry_hint"),
                 width / 2, height / 2 + 95, UIColors.TEXT_GRAY);
         }
     }

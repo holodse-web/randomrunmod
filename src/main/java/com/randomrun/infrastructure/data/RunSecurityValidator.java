@@ -45,7 +45,7 @@ public class RunSecurityValidator {
     );
 
     private static final Map<String, Integer> commandAttempts = new ConcurrentHashMap<>();
-    private static final long RATE_LIMIT_MS = 1000;
+
     private static final int MAX_ATTEMPTS_PER_MINUTE = 10;
 
     public static String generateSecureHash(String data) {

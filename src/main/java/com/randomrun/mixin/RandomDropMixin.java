@@ -25,8 +25,7 @@ import net.minecraft.world.level.block.state.BlockState;
 public class RandomDropMixin {
     private static final Random RANDOM = new Random();
     private static List<Item> ALL_ITEMS = null;
-    private static final float SILK_TOUCH_CHANCE = 0.15f;
-    
+
     @Inject(method = "getDrops(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/entity/BlockEntity;Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/item/ItemInstance;)Ljava/util/List;", 
             at = @At("RETURN"), 
             cancellable = true)
@@ -37,9 +36,9 @@ public class RandomDropMixin {
         if (!(entity instanceof ServerPlayer player)) {
             return;
         }
-        
+
         boolean isRandomDropActive = false;
-        
+
         BattleManager battleManager = BattleManager.getInstance();
         if (battleManager.isInBattle()) {
             BattleRoom room = battleManager.getCurrentRoom();
@@ -55,11 +54,11 @@ public class RandomDropMixin {
                 }
             }
         }
-        
+
         if (!isRandomDropActive) {
             return;
         }
-        
+
         boolean hasSilkTouch = false;
         try {
             String enchantmentsStr = tool.getOrDefault(net.minecraft.core.component.DataComponents.ENCHANTMENTS,
@@ -67,46 +66,25 @@ public class RandomDropMixin {
             hasSilkTouch = enchantmentsStr.contains("silk_touch");
         } catch (Exception e) {
         }
-        
+
         if (hasSilkTouch) {
             return;
         }
-        
+
         if (ALL_ITEMS == null) {
             initializeItemList();
         }
-        
+
         if (ALL_ITEMS.isEmpty()) {
             return;
         }
-        
+
         Item randomItem = ALL_ITEMS.get(RANDOM.nextInt(ALL_ITEMS.size()));
         ItemStack randomStack = new ItemStack(randomItem, 1);
-        
+
         cir.setReturnValue(Collections.singletonList(randomStack));
     }
-    
-    private static boolean canHaveSilkTouch(Item item) {
-        String itemId = BuiltInRegistries.ITEM.getKey(item).toString();
-        
-        if (itemId.contains("pickaxe") || itemId.contains("axe") || itemId.contains("shovel") || 
-            itemId.contains("hoe") || itemId.contains("shears")) {
-            return true;
-        }
-        
-        if (itemId.contains("sword") || itemId.contains("bow") || itemId.contains("crossbow") ||
-            itemId.contains("trident")) {
-            return true;
-        }
-        
-        if (itemId.contains("helmet") || itemId.contains("chestplate") || 
-            itemId.contains("leggings") || itemId.contains("boots")) {
-            return true;
-        }
-        
-        return false;
-    }
-    
+
     private static void initializeItemList() {
         ALL_ITEMS = new ArrayList<>();
         for (Item item : BuiltInRegistries.ITEM) {

@@ -10,7 +10,6 @@ import com.randomrun.core.storage.CloudStorage;
 import com.randomrun.core.storage.LocalStorage;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.util.CompactLogger;
-import com.randomrun.infrastructure.data.GlobalStatsManager;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -30,8 +29,6 @@ public class RunCompletionService {
     private final CloudStorage cloudStorage;
     private final LeaderboardService leaderboardService;
 
-    private final Queue<Run> saveQueue = new ConcurrentLinkedQueue<>();
-
     private RunCompletionService() {
         this.sessionManager = RunSessionManager.getInstance();
         this.runHistory = RunHistory.getInstance();
@@ -49,6 +46,10 @@ public class RunCompletionService {
     }
 
     public CompletableFuture<Run> completeRun(RunResult result) {
+        return completeRun(result, false);
+    }
+
+    private CompletableFuture<Run> completeRun(RunResult result, boolean survivor) {
         if (result == null) {
             CompactLogger.error("{} Result cannot be null", LOG_TAG);
             return CompletableFuture.completedFuture(null);
@@ -62,13 +63,18 @@ public class RunCompletionService {
 
         com.randomrun.infrastructure.security.ModScannerService scanner =
             com.randomrun.infrastructure.security.ModScannerService.getInstance();
+        scanner.refreshPacks();
         boolean isUntrusted = !scanner.isTrusted();
 
         if (isUntrusted) {
             CompactLogger.warn("{} Untrusted mode - result will not be submitted to leaderboard", LOG_TAG);
         }
 
+        var owner = com.randomrun.network.BackendSession.current();
+        String ownerName = getPlayerName();
+        boolean online = isOnlineMode();
         return CompletableFuture.supplyAsync(() -> {
+            if (online && owner != com.randomrun.network.BackendSession.current()) return null;
             Run savedRecord = null;
 
             try {
@@ -80,9 +86,9 @@ public class RunCompletionService {
                     currentSession.fail();
                 }
 
-                String playerName = getPlayerName();
+                String playerName = ownerName;
                 int attemptNumber = runHistory.getAttemptCount(currentSession.getTargetId(), currentSession.isUpgrader()) + 1;
-                boolean onlineMode = isOnlineMode();
+                boolean onlineMode = online && owner != null;
 
                 Run record = new Run.Builder()
                     .targetId(currentSession.getTargetId())
@@ -99,8 +105,8 @@ public class RunCompletionService {
                     .modVersion(currentSession.getModVersion())
                     .attemptNumber(attemptNumber)
                     .targetType(currentSession.getTargetType())
-                    .mobVariant(currentSession.getMobVariant())
                     .build();
+                if (!currentSession.isBattle()) com.randomrun.network.RunVerifier.finished(currentSession.getTargetId().replace("minecraft:", ""), record.getTimestamp(), currentSession.getRtaTime());
 
                 com.randomrun.infrastructure.security.RunIntegrityChecker.IntegrityReport integrityReport =
                     com.randomrun.infrastructure.security.RunIntegrityChecker.checkRunIntegrity(
@@ -128,47 +134,33 @@ public class RunCompletionService {
                             .modVersion(record.getModVersion())
                             .attemptNumber(record.getAttemptNumber())
                             .targetType(record.getTargetType())
-                            .mobVariant(record.getMobVariant())
                             .build();
                     }
                 }
 
-                runHistory.addRecord(record);
-
-                runHistory.markAsStale();
-
-                com.randomrun.core.profile.PlayerProfile profile = com.randomrun.core.profile.PlayerProfile.get();
-                if (profile != null && !record.isUpgrader()) {
-                    profile.incrementTotalRuns();
+                if (survivor) record.markSurvivor();
+                synchronized (com.randomrun.network.BackendSession.class) {
+                    if (online && owner != com.randomrun.network.BackendSession.current()) return null;
+                    runHistory.addRecord(record);
+                    runHistory.markAsStale();
+                    com.randomrun.core.profile.PlayerProfile profile = com.randomrun.core.profile.PlayerProfile.get();
+                    if (profile != null && !record.isUpgrader()) profile.incrementTotalRuns();
+                    if (!onlineMode) updateTrustScore(result, record, isUntrusted);
                 }
-
-                updateTrustScore(result, record, isUntrusted);
-
-                checkBanStatus();
 
                 boolean saveSuccess = false;
                 if (onlineMode && !record.isUpgrader()) {
-                    saveSuccess = saveToCloudWithRetry(playerName, record);
+                    saveSuccess = saveToCloudWithRetry(playerName, record, owner);
 
-                    if (saveSuccess && !saveQueue.isEmpty()) {
-                        CompletableFuture.runAsync(() -> processFailedSaves(playerName));
-                    }
                 } else {
                     CompletableFuture<Boolean> localSave = localStorage.saveRecord(playerName, record);
                     saveSuccess = record.isUpgrader()
                         ? localSave.get(SAVE_TIMEOUT_SECONDS, TimeUnit.SECONDS) : true;
                 }
 
-                if (onlineMode && record.isEligibleForLeaderboard()) {
-                    leaderboardService.submitRecord(record, playerName).thenAccept(success -> {
-                    }).exceptionally(ex -> {
-                        CompactLogger.error("{} Leaderboard error: {}", LOG_TAG, ex.getMessage());
-                        return null;
-                    });
-                }
-
-                if (onlineMode && !record.isUpgrader()) {
-                    GlobalStatsManager.incrementRun();
+                if (saveSuccess && onlineMode && owner == com.randomrun.network.BackendSession.current()) {
+                    leaderboardService.clearCache();
+                    com.randomrun.core.profile.PlayerProfile.load(playerName);
                 }
 
                 if (sessionManager.getCurrentSession() == currentSession) {
@@ -192,8 +184,9 @@ public class RunCompletionService {
         });
     }
 
-    private boolean saveToCloudWithRetry(String playerName, Run record) {
+    private boolean saveToCloudWithRetry(String playerName, Run record, com.randomrun.network.BackendSession.Session owner) {
         for (int attempt = 0; attempt < MAX_SAVE_RETRIES; attempt++) {
+            if (owner != com.randomrun.network.BackendSession.current()) break;
             try {
                 CompletableFuture<Boolean> saveFuture = cloudStorage.saveRecord(playerName, record);
                 boolean success = saveFuture.get(SAVE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
@@ -221,45 +214,15 @@ public class RunCompletionService {
 
         CompactLogger.warn("{} All {} attempts failed - falling back to local storage", LOG_TAG, MAX_SAVE_RETRIES);
         localStorage.saveRecord(playerName, record);
-        saveQueue.offer(record);
         return false;
-    }
-
-    private void processFailedSaves(String playerName) {
-        if (saveQueue.isEmpty()) return;
-
-        int processed = 0;
-        int failed = 0;
-
-        while (!saveQueue.isEmpty() && processed < 10) {
-            Run record = saveQueue.poll();
-            if (record != null) {
-                try {
-                    boolean success = cloudStorage.saveRecord(playerName, record)
-                        .get(SAVE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-
-                    if (success) {
-                        processed++;
-                    } else {
-                        saveQueue.offer(record);
-                        failed++;
-                        break;
-                    }
-                } catch (Exception e) {
-                    saveQueue.offer(record);
-                    failed++;
-                    break;
-                }
-            }
-        }
-
-        if (failed > 0) {
-            CompactLogger.warn("{} Failed to process {} records", LOG_TAG, failed);
-        }
     }
 
     public CompletableFuture<Run> completeWithVictory() {
         return completeRun(RunResult.VICTORY);
+    }
+
+    public CompletableFuture<Run> completeWithSurvivorVictory() {
+        return completeRun(RunResult.VICTORY, true);
     }
 
     public CompletableFuture<Run> completeWithDeath() {
@@ -272,10 +235,6 @@ public class RunCompletionService {
 
     public CompletableFuture<Run> completeWithTimeout() {
         return completeRun(RunResult.TIMEOUT);
-    }
-
-    public int getSaveQueueSize() {
-        return saveQueue.size();
     }
 
     private void updateTrustScore(RunResult result, Run record, boolean isUntrusted) {
@@ -308,7 +267,7 @@ public class RunCompletionService {
         if (client.player != null) {
             return client.player.getName().getString();
         } else if (client.getUser() != null) {
-            return client.getUser().getName();
+            return com.randomrun.network.BackendSession.playerName();
         }
         return "Unknown";
     }
@@ -317,30 +276,4 @@ public class RunCompletionService {
         return RandomRunMod.getInstance().getConfig().isOnlineMode();
     }
 
-    public CompletableFuture<Run> handleMobKill(net.minecraft.world.entity.player.Player player,
-                                                net.minecraft.world.entity.EntityType<?> mobType,
-                                                String mobVariant) {
-        if (!sessionManager.hasActiveRun() || sessionManager.getTargetType() != com.randomrun.core.session.TargetType.MOB) {
-            CompactLogger.warn("{} No active mob run", LOG_TAG);
-            return CompletableFuture.completedFuture(null);
-        }
-
-        net.minecraft.world.entity.EntityType<?> targetMob = sessionManager.getTargetMob();
-        String targetVariant = sessionManager.getMobVariant();
-
-        if (mobType != targetMob) {
-            CompactLogger.warn("{} Wrong mob killed", LOG_TAG);
-            return CompletableFuture.completedFuture(null);
-        }
-
-        if (targetVariant != null && !targetVariant.equals(mobVariant)) {
-            CompactLogger.warn("{} Wrong mob variant killed", LOG_TAG);
-            return CompletableFuture.completedFuture(null);
-        }
-
-        return completeRun(RunResult.VICTORY);
-    }
-
-    private void checkBanStatus() {
-    }
 }

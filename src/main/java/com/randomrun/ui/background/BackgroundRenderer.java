@@ -1,50 +1,42 @@
 package com.randomrun.ui.background;
 
+import com.randomrun.ui.theme.Theme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-public class BackgroundRenderer {
-    private static BackgroundRenderer instance;
-    
-    private static final int COLOR_TOP = 0xFF000000;
-    private static final int COLOR_MID = 0xFF4B0082;
-    private static final int COLOR_BOTTOM = 0xFF3A0066;
-    
-    private BackgroundRenderer() {
-    }
-    
+public final class BackgroundRenderer {
+    private static final BackgroundRenderer INSTANCE = new BackgroundRenderer();
+
+    private BackgroundRenderer() {}
+
     public static BackgroundRenderer getInstance() {
-        if (instance == null) {
-            instance = new BackgroundRenderer();
-        }
-        return instance;
+        return INSTANCE;
     }
-    
+
     public void extractBackground(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        Minecraft mc = Minecraft.getInstance();
-        int screenWidth = mc.getWindow().getGuiScaledWidth();
-        int screenHeight = mc.getWindow().getGuiScaledHeight();
-        
-        renderGradient(context, screenWidth, screenHeight);
-        renderTopGradient(context, screenWidth, screenHeight);
+        renderBackgroundOnly(context);
     }
-    
+
+    public void renderVeil(GuiGraphicsExtractor context, float alpha) {
+        if (alpha <= 0.004f) return;
+        Minecraft mc = Minecraft.getInstance();
+        int width = mc.getWindow().getGuiScaledWidth();
+        int height = mc.getWindow().getGuiScaledHeight();
+        Theme theme = Theme.current();
+        int a = Math.round(Math.min(1f, alpha) * 255) << 24;
+        int middle = height / 2;
+        context.fillGradient(0, 0, width, middle, a | theme.bgTop, a | theme.bgMid);
+        context.fillGradient(0, middle, width, height, a | theme.bgMid, a | theme.bgBottom);
+    }
+
     public void renderBackgroundOnly(GuiGraphicsExtractor context) {
         Minecraft mc = Minecraft.getInstance();
-        int screenWidth = mc.getWindow().getGuiScaledWidth();
-        int screenHeight = mc.getWindow().getGuiScaledHeight();
-        
-        renderGradient(context, screenWidth, screenHeight);
-        renderTopGradient(context, screenWidth, screenHeight);
-    }
-    
-    private void renderTopGradient(GuiGraphicsExtractor context, int screenWidth, int screenHeight) {
-        context.fillGradient(0, 0, screenWidth, Math.min(60, screenHeight), 0xFF000000, 0x00000000);
-    }
-    
-    private void renderGradient(GuiGraphicsExtractor context, int screenWidth, int screenHeight) {
-        int middle = screenHeight / 2;
-        context.fillGradient(0, 0, screenWidth, middle, COLOR_TOP, COLOR_MID);
-        context.fillGradient(0, middle, screenWidth, screenHeight, COLOR_MID, COLOR_BOTTOM);
+        int width = mc.getWindow().getGuiScaledWidth();
+        int height = mc.getWindow().getGuiScaledHeight();
+        Theme theme = Theme.current();
+        int middle = height / 2;
+        context.fillGradient(0, 0, width, middle, 0xFF000000 | theme.bgTop, 0xFF000000 | theme.bgMid);
+        context.fillGradient(0, middle, width, height, 0xFF000000 | theme.bgMid, 0xFF000000 | theme.bgBottom);
+        context.fillGradient(0, 0, width, Math.min(60, height), 0xFF000000, 0x00000000);
     }
 }

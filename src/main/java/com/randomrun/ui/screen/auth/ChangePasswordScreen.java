@@ -1,9 +1,10 @@
 package com.randomrun.ui.screen.auth;
 
+
+import com.randomrun.ui.widget.styled.Buttons.ButtonMenu;
+import com.randomrun.ui.widget.styled.Buttons.ButtonRainbow;
 import com.randomrun.infrastructure.util.LanguageManager;
 import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
-import com.randomrun.ui.widget.styled.ButtonMenu;
-import com.randomrun.ui.widget.styled.ButtonRainbow;
 import com.randomrun.ui.widget.styled.TextFieldStyled;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -59,6 +60,7 @@ public class ChangePasswordScreen extends AbstractRandomRunScreen {
             0f
         );
         currentPasswordField.setMaxLength(32);
+        currentPasswordField.masked();
         currentPasswordField.setCenteredPlaceholder(com.randomrun.infrastructure.util.LanguageManager.text("randomrun.changepassword.current.placeholder"));
         addRenderableWidget(currentPasswordField);
         
@@ -72,6 +74,7 @@ public class ChangePasswordScreen extends AbstractRandomRunScreen {
             0.05f
         );
         newPasswordField.setMaxLength(32);
+        newPasswordField.masked();
         newPasswordField.setCenteredPlaceholder(com.randomrun.infrastructure.util.LanguageManager.text("randomrun.changepassword.new.placeholder"));
         addRenderableWidget(newPasswordField);
         
@@ -85,6 +88,7 @@ public class ChangePasswordScreen extends AbstractRandomRunScreen {
             0.1f
         );
         confirmPasswordField.setMaxLength(32);
+        confirmPasswordField.masked();
         confirmPasswordField.setCenteredPlaceholder(com.randomrun.infrastructure.util.LanguageManager.text("randomrun.changepassword.confirm.placeholder"));
         addRenderableWidget(confirmPasswordField);
         
@@ -113,7 +117,7 @@ public class ChangePasswordScreen extends AbstractRandomRunScreen {
         );
         addRenderableWidget(cancelButton);
         
-        addRenderableWidget(new com.randomrun.ui.widget.overlay.LanguageDropdownWidget(
+        addRenderableWidget(new com.randomrun.ui.widget.overlay.OverlayWidgets.LanguageDropdownWidget(
             10, height - 30,
             this, 0.25f
         ));
@@ -121,53 +125,17 @@ public class ChangePasswordScreen extends AbstractRandomRunScreen {
     
     private void changePassword() {
         if (isChanging) return;
-        
-        String currentPassword = currentPasswordField.getValue().trim();
-        String newPassword = newPasswordField.getValue().trim();
-        String confirmPassword = confirmPasswordField.getValue().trim();
-        
-        if (!validatePasswords(currentPassword, newPassword, confirmPassword)) return;
-        
+        String currentPassword = currentPasswordField.getValue();
+        String nextPassword = newPasswordField.getValue();
+        if (!validatePasswords(currentPassword, nextPassword, confirmPasswordField.getValue())) return;
         isChanging = true;
-        
-        java.util.concurrent.CompletableFuture.runAsync(() -> {
-            try {
-                boolean currentValid = checkCurrentPassword(currentPassword);
-                
-                if (!currentValid) {
-                    Minecraft.getInstance().execute(() -> {
-                        showError(com.randomrun.infrastructure.util.LanguageManager.text("randomrun.changepassword.error.wrong").getString());
-                        isChanging = false;
-                    });
-                    return;
-                }
-                
-                String newPasswordHash = com.randomrun.infrastructure.util.PasswordHasher.hash(newPassword);
-                boolean changed = updatePassword(newPasswordHash);
-                
-                Minecraft.getInstance().execute(() -> {
-                    if (changed) {
-                        com.randomrun.core.profile.PlayerProfile profile = com.randomrun.core.profile.PlayerProfile.get();
-                        if (profile != null) {
-                            profile.setPasswordHash(newPasswordHash);
-                            profile.setNeedsPasswordChange(false);
-                            com.randomrun.core.profile.PlayerProfile.save();
-                        }
-                        
-                        Minecraft client = Minecraft.getInstance();
-                        client.gui.setScreen(new com.randomrun.ui.screen.main.MainModScreen(null));
-                    } else {
-                        showError("Не удалось изменить пароль. Попробуйте еще раз.");
-                        isChanging = false;
-                    }
-                });
-            } catch (Exception e) {
-                Minecraft.getInstance().execute(() -> {
-                    showError(com.randomrun.infrastructure.util.LanguageManager.text("randomrun.auth.error.generic", e.getMessage()).getString());
-                    isChanging = false;
-                });
-            }
-        });
+        com.randomrun.network.BackendSession.changePassword(currentPassword, nextPassword)
+            .whenComplete((success, error) -> Minecraft.getInstance().execute(() -> {
+                if (Minecraft.getInstance().gui.screen() != this) return;
+                isChanging = false;
+                if (error != null) { showError(com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.password.change_failed")); return; }
+                Minecraft.getInstance().gui.setScreen(new com.randomrun.ui.screen.main.MainModScreen(null));
+            }));
     }
     
     private boolean validatePasswords(String currentPassword, String newPassword, String confirmPassword) {
@@ -181,7 +149,7 @@ public class ChangePasswordScreen extends AbstractRandomRunScreen {
             return false;
         }
         
-        if (newPassword.length() < 4) {
+        if (newPassword.length() < 8) {
             showError(com.randomrun.infrastructure.util.LanguageManager.text("randomrun.auth.error.short").getString());
             return false;
         }
@@ -198,43 +166,7 @@ public class ChangePasswordScreen extends AbstractRandomRunScreen {
         
         return true;
     }
-    
-    private boolean checkCurrentPassword(String password) {
-        try {
-            com.randomrun.core.profile.PlayerProfile profile = com.randomrun.core.profile.PlayerProfile.get();
-            if (profile == null) return false;
-            
-            String storedHash = profile.getPasswordHash();
-            if (storedHash == null) return false;
-            
-            return com.randomrun.infrastructure.util.PasswordHasher.verify(password, storedHash);
-        } catch (Exception e) {
-            com.randomrun.infrastructure.RandomRunMod.LOGGER.error("[ChangePassword] Ошибка проверки пароля: {}", e.getMessage());
-            return false;
-        }
-    }
-    
-    private boolean updatePassword(String newPasswordHash) {
-        try {
-            com.randomrun.core.profile.PlayerProfile profile = com.randomrun.core.profile.PlayerProfile.get();
-            if (profile == null) return false;
-            
-            profile.setPasswordHash(newPasswordHash);
-            
-            boolean success = com.randomrun.network.HttpClient.getInstance()
-                .put("/profiles/" + playerName + "/profile", profile).join();
-            
-            if (!success) {
-                com.randomrun.infrastructure.RandomRunMod.LOGGER.error("[ChangePassword] Не удалось изменить пароль");
-            }
-            
-            return success;
-        } catch (Exception e) {
-            com.randomrun.infrastructure.RandomRunMod.LOGGER.error("[ChangePassword] Ошибка изменения пароля: {}", e.getMessage());
-            return false;
-        }
-    }
-    
+
     private void showError(String message) {
         this.errorMessage = message;
         this.errorTicks = 60;
@@ -286,8 +218,8 @@ public class ChangePasswordScreen extends AbstractRandomRunScreen {
     }
     
     private void renderPanelBorders(GuiGraphicsExtractor context, int panelX, int panelY) {
-        com.randomrun.ui.screen.main.MainModScreen.renderStaticBorder(context, panelX, panelY, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, 2);
-        com.randomrun.ui.screen.main.MainModScreen.renderAnimatedBorder(context, panelX, panelY, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, 2);
+        com.randomrun.ui.util.Ui.border(context, panelX, panelY, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, 2, 0xFF000000 | com.randomrun.ui.theme.Theme.current().border);
+        com.randomrun.ui.util.Ui.glowBorder(context, panelX, panelY, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, 2, 0xFFFFFF);
     }
     
     private void renderPanelText(GuiGraphicsExtractor context, int centerX, int panelY) {

@@ -15,8 +15,6 @@ public class LatestRunEntry {
     @SerializedName("tt")
     private String targetType;
     
-    @SerializedName("mv")
-    private String mobVariant;
     
     private transient String playerName;
 
@@ -29,20 +27,14 @@ public class LatestRunEntry {
         this.timestamp = timestamp;
     }
     
-    public LatestRunEntry(String targetId, long duration, long timestamp, String targetType, String mobVariant) {
-        this.targetId = targetId;
-        this.duration = duration;
-        this.timestamp = timestamp;
-        this.targetType = targetType;
-        this.mobVariant = mobVariant;
-    }
+
 
     public String getTargetId() { return targetId; }
     public long getDuration() { return duration; }
     public long getTimestamp() { return timestamp; }
     public String getPlayerName() { return playerName; }
     public String getTargetType() { return targetType; }
-    public String getMobVariant() { return mobVariant; }
+
     
     public void setPlayerName(String playerName) { this.playerName = playerName; }
     

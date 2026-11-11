@@ -1,191 +1,143 @@
 package com.randomrun.ui.screen.info;
 
+
+import com.randomrun.ui.widget.styled.Buttons.ButtonMenu;
+import com.randomrun.ui.widget.styled.Buttons.ButtonRainbow;
 import com.randomrun.infrastructure.security.ModScannerService;
-import com.randomrun.ui.widget.GlobalParticleSystem;
+import com.randomrun.infrastructure.util.LanguageManager;
+import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
+import com.randomrun.ui.theme.Theme;
+import com.randomrun.ui.util.GuiText;
+import com.randomrun.ui.util.Ui;
+import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.Minecraft;
+import java.util.Map;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.util.FormattedCharSequence;
 
-public class ModBlockScreen extends Screen {
-    private static final int COLOR_BG = 0xFF0f0518;
-    private static final int COLOR_PANEL_BG = 0xE0101020;
-    private static final int COLOR_BORDER = 0xFFFF6B35;
-    private static final int COLOR_TITLE = 0xFFFF6B35;
-    private static final int COLOR_WARNING = 0xFFFFAA00;
-    private static final int COLOR_TEXT = 0xFFCCCCCC;
-    private static final int COLOR_GRAY = 0xFF888888;
-    private static final int COLOR_WHITE = 0xFFFFFFFF;
-    
-    private static final Identifier LOGO_TEXTURE = Identifier.fromNamespaceAndPath("randomrun", "textures/gui/logo.png");
-    private static final int LOGO_WIDTH = 128;
-    private static final int LOGO_HEIGHT = 32;
+public class ModBlockScreen extends AbstractRandomRunScreen {
+    private static final int PANEL_WIDTH = 300;
+    private static final int ROW = 20;
+    private static final int MAX_ROWS = 5;
+    private static final int ORANGE = 0xFB923C;
 
     private final Screen parent;
-    private final List<String> suspiciousMods;
-    private final List<String> suspiciousPacks;
+    private final List<Map.Entry<String, ModScannerService.Reason>> findings;
+    private final boolean hasMods;
+    private long openTime;
 
     public ModBlockScreen(Screen parent) {
-        super(Component.literal("Предупреждение о модах"));
+        super(LanguageManager.text("randomrun.modblock.title"));
         this.parent = parent;
         ModScannerService scanner = ModScannerService.getInstance();
-        this.suspiciousMods = scanner.getSuspiciousMods();
-        this.suspiciousPacks = scanner.getSuspiciousResourcePacks();
+        this.findings = new ArrayList<>(scanner.findings().entrySet());
+        this.hasMods = scanner.hasSuspiciousMods();
     }
 
     @Override
     protected void init() {
         super.init();
-        
-        int buttonY = height - 50;
-        int buttonWidth = 200;
-        int buttonHeight = 20;
-        
-        addRenderableWidget(new com.randomrun.ui.widget.styled.ButtonMenu(
-            width / 2 - buttonWidth - 5, buttonY, buttonWidth, buttonHeight,
-            Component.literal("Продолжить (Untrusted)"),
-            button -> Minecraft.getInstance().gui.setScreen(parent),
-            6, 0.35f
-        ));
-        
-        addRenderableWidget(new com.randomrun.ui.widget.styled.ButtonMenu(
-            width / 2 + 5, buttonY, buttonWidth, buttonHeight,
-            Component.literal("Выйти"),
-            button -> Minecraft.getInstance().gui.setScreen(parent),
-            6, 0.35f
-        ));
+        openTime = System.currentTimeMillis();
+        int bottom = panelBottom();
+        int cx = width / 2;
+        ButtonMenu folder = new ButtonMenu(cx - 152, bottom + 10, 148, 20,
+            LanguageManager.text(hasMods ? "randomrun.modblock.open_mods" : "randomrun.modblock.open_packs"),
+            button -> openFolder(), 0, 0.1f);
+        addRenderableWidget(folder);
+        ButtonRainbow proceed = new ButtonRainbow(cx + 4, bottom + 10, 148, 20,
+            LanguageManager.text("randomrun.modblock.continue"), button -> onClose(), 1, 0.15f);
+        proceed.setAnimationDirection(ButtonRainbow.AnimationDirection.HORIZONTAL_LEFT);
+        addRenderableWidget(proceed);
+    }
+
+    private void openFolder() {
+        var dir = FabricLoader.getInstance().getGameDir().resolve(hasMods ? "mods" : "resourcepacks");
+        try {
+            com.mojang.blaze3d.Blaze3D.openPath(dir);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private int visibleRows() {
+        return Math.min(findings.size(), MAX_ROWS) + (findings.size() > MAX_ROWS ? 1 : 0);
+    }
+
+    private List<FormattedCharSequence> intro() {
+        return font.split(LanguageManager.text("randomrun.modblock.detected"), PANEL_WIDTH - 32);
+    }
+
+    private int panelHeight() {
+        return 40 + intro().size() * 10 + 8 + visibleRows() * ROW + 14 + 3 * 11 + 10;
+    }
+
+    private int panelTop() {
+        return Math.max(12, height / 2 - panelHeight() / 2 - 18);
+    }
+
+    private int panelBottom() {
+        return panelTop() + panelHeight();
     }
 
     @Override
     public void extractBackground(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        context.fill(0, 0, width, height, COLOR_BG);
-        
-        GlobalParticleSystem particles = GlobalParticleSystem.getInstance();
-        particles.updateScreenSize(width, height);
-        particles.updateMousePosition(mouseX, mouseY);
-        particles.update(delta);
-        particles.extractRenderState(context);
+        super.extractBackground(context, mouseX, mouseY, delta);
+        float fade = Math.min(1f, (System.currentTimeMillis() - openTime) / 300f);
+        Theme theme = Theme.current();
+        int left = width / 2 - PANEL_WIDTH / 2, right = left + PANEL_WIDTH;
+        int top = panelTop(), bottom = panelBottom();
+        Ui.panel(context, left, top, right, bottom, theme.panel, ORANGE, fade);
+        Ui.glowBorder(context, left, top, right, bottom, 2, 0xFFE08A);
+
+        float pulse = 0.75f + 0.25f * (float) Math.sin(System.currentTimeMillis() / 260.0);
+        GuiText.centeredText(context, font, LanguageManager.text("randomrun.modblock.warning"), width / 2, top + 11, Ui.argb(Ui.lerp(0xFFFB923C, 0xFFFFE08A, pulse) & 0xFFFFFF, fade));
+        Ui.divider(context, left + 12, right - 12, top + 25, ORANGE, fade);
+
+        int y = top + 33;
+        for (FormattedCharSequence line : intro()) {
+            GuiText.centeredText(context, font, line, width / 2, y, Ui.argb(0xD4D4D8, fade));
+            y += 10;
+        }
+        y += 8;
+
+        for (int i = 0; i < Math.min(findings.size(), MAX_ROWS); i++) {
+            var entry = findings.get(i);
+            boolean pack = entry.getValue() == ModScannerService.Reason.XRAY_PACK;
+            int rowLeft = left + 12, rowRight = right - 12;
+            Ui.card(context, rowLeft, y, rowRight, y + ROW - 3, pack ? 0x67E8F9 : 0xF87171, fade);
+            int badge = pack ? 0xFF0E7490 : 0xFF991B1B;
+            context.fill(rowLeft + 3, y + 3, rowLeft + 14, y + 14, Ui.argb(badge, fade));
+            GuiText.centeredText(context, font, Component.literal(pack ? "R" : "M"), rowLeft + 9, y + 5, Ui.argb(0xFFFFFF, fade));
+            int textLeft = rowLeft + 19;
+            Component reason = LanguageManager.text(entry.getValue().key);
+            int reasonWidth = font.width(reason);
+            GuiText.text(context, font, Ui.ellipsize(font, entry.getKey(), rowRight - textLeft - reasonWidth - 10), textLeft, y + 5, Ui.argb(0xFFFFFF, fade), false);
+            GuiText.text(context, font, reason, rowRight - reasonWidth - 5, y + 5, Ui.argb(pack ? 0x67E8F9 : 0xF87171, fade), false);
+            y += ROW;
+        }
+        if (findings.size() > MAX_ROWS) {
+            GuiText.centeredText(context, font, LanguageManager.text("randomrun.modblock.more", findings.size() - MAX_ROWS), width / 2, y + 4, Ui.argb(0x8A8A93, fade));
+            y += ROW;
+        }
+
+        y += 6;
+        Ui.divider(context, left + 12, right - 12, y, theme.border, fade * 0.6f);
+        y += 8;
+        for (String key : List.of("randomrun.modblock.untrusted.1", "randomrun.modblock.untrusted.2", "randomrun.modblock.untrusted.3")) {
+            GuiText.text(context, font, LanguageManager.text(key), left + 16, y, Ui.argb(0xA1A1AA, fade), false);
+            y += 11;
+        }
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        extractBackground(context, mouseX, mouseY, delta);
-
-        int centerX = width / 2;
-        int panelWidth = 500;
-        int panelHeight = 400;
-        int panelLeft = centerX - panelWidth / 2;
-        int panelTop = height / 2 - panelHeight / 2 - 20;
-        int panelRight = panelLeft + panelWidth;
-        int panelBottom = panelTop + panelHeight;
-        
-        renderPanel(context, panelLeft, panelTop, panelRight, panelBottom);
-        
-        int logoX = centerX - LOGO_WIDTH / 2;
-        int logoY = panelTop + 15;
-        renderLogo(context, logoX, logoY);
-        
-        int y = logoY + LOGO_HEIGHT + 20;
-        
-        com.randomrun.ui.util.GuiText.centeredText(context, font,
-            Component.literal("§6§l⚠ ПРЕДУПРЕЖДЕНИЕ ⚠"), centerX, y, COLOR_TITLE);
-        y += 25;
-        
-        com.randomrun.ui.util.GuiText.centeredText(context, font,
-            Component.literal("§eОбнаружены подозрительные моды или ресурспаки"), centerX, y, COLOR_WARNING);
-        y += 20;
-        
-        drawWrappedText(context, "§7В режиме Untrusted:", centerX, y, panelWidth - 40);
-        y += 12;
-        drawWrappedText(context, "§c• Trust Score не будет начисляться", centerX, y, panelWidth - 40);
-        y += 12;
-        drawWrappedText(context, "§c• Результаты не попадут в таблицу лидеров", centerX, y, panelWidth - 40);
-        y += 12;
-        drawWrappedText(context, "§c• Некоторые функции могут быть недоступны", centerX, y, panelWidth - 40);
-        y += 20;
-
-        if (!suspiciousMods.isEmpty()) {
-            com.randomrun.ui.util.GuiText.centeredText(context, font,
-                Component.literal("§6Подозрительные моды:"), centerX, y, COLOR_WARNING);
-            y += 14;
-
-            int maxDisplay = Math.min(suspiciousMods.size(), 5);
-            for (int i = 0; i < maxDisplay; i++) {
-                String mod = suspiciousMods.get(i);
-                if (mod.length() > 50) mod = mod.substring(0, 47) + "...";
-                com.randomrun.ui.util.GuiText.centeredText(context, font,
-                    Component.literal("§f• " + mod), centerX, y, COLOR_WHITE);
-                y += 11;
-            }
-            
-            if (suspiciousMods.size() > 5) {
-                com.randomrun.ui.util.GuiText.centeredText(context, font,
-                    Component.literal("§7... и ещё " + (suspiciousMods.size() - 5)), centerX, y, COLOR_GRAY);
-                y += 11;
-            }
-            y += 6;
-        }
-
-        if (!suspiciousPacks.isEmpty()) {
-            com.randomrun.ui.util.GuiText.centeredText(context, font,
-                Component.literal("§6Подозрительные ресурспаки:"), centerX, y, COLOR_WARNING);
-            y += 14;
-
-            int maxDisplay = Math.min(suspiciousPacks.size(), 3);
-            for (int i = 0; i < maxDisplay; i++) {
-                String pack = suspiciousPacks.get(i);
-                if (pack.length() > 50) pack = pack.substring(0, 47) + "...";
-                com.randomrun.ui.util.GuiText.centeredText(context, font,
-                    Component.literal("§f• " + pack), centerX, y, COLOR_WHITE);
-                y += 11;
-            }
-            
-            if (suspiciousPacks.size() > 3) {
-                com.randomrun.ui.util.GuiText.centeredText(context, font,
-                    Component.literal("§7... и ещё " + (suspiciousPacks.size() - 3)), centerX, y, COLOR_GRAY);
-            }
-        }
-
-        super.extractRenderState(context, mouseX, mouseY, delta);
-    }
-    
-    private void renderPanel(GuiGraphicsExtractor context, int left, int top, int right, int bottom) {
-        context.fill(left, top, right, bottom, COLOR_PANEL_BG);
-        
-        renderAnimatedBorder(context, left, top, right, bottom);
-    }
-    
-    private void renderLogo(GuiGraphicsExtractor context, int x, int y) {
-        context.blit(
-            net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
-            LOGO_TEXTURE, 
-            x, y, 
-            0, 0, 
-            LOGO_WIDTH, LOGO_HEIGHT, 
-            LOGO_WIDTH, LOGO_HEIGHT
-        );
-    }
-    
-    private void renderAnimatedBorder(GuiGraphicsExtractor context, int left, int top, int right, int bottom) {
-        int borderWidth = 2;
-        
-        int color1 = COLOR_BORDER;
-        int color2 = 0xFF8B4513;
-        
-        context.fillGradient(left, top, right, top + borderWidth, color1, color2);
-        context.fillGradient(left, bottom - borderWidth, right, bottom, color2, color1);
-        context.fillGradient(left, top, left + borderWidth, bottom, color1, color2);
-        context.fillGradient(right - borderWidth, top, right, bottom, color2, color1);
-    }
-    
-    private void drawWrappedText(GuiGraphicsExtractor context, String text, int centerX, int y, int maxWidth) {
-        com.randomrun.ui.util.GuiText.centeredText(context, font, Component.literal(text), centerX, y, COLOR_TEXT);
+    public void onClose() {
+        minecraft.gui.setScreen(parent);
     }
 
     @Override
-    public boolean shouldCloseOnEsc() {
-        return true;
+    public boolean isPauseScreen() {
+        return false;
     }
 }

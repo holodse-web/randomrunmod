@@ -18,6 +18,7 @@ public class WorldCreator {
     private volatile boolean lastCreatedRandomDrop = false;
     private volatile String lastCreatedSeed = null;
     private volatile boolean isManualSeed = false;
+    private volatile boolean serverSeed = false;
     private volatile boolean isSpeedrunLoading = false;
     private volatile boolean creationTriggered = false;
     private volatile long creationStartTime = 0;
@@ -53,13 +54,11 @@ public class WorldCreator {
             }
         }
         
-        Minecraft client = Minecraft.getInstance();
-        
         com.randomrun.ui.screen.main.ResultsScreen.clearCache();
-        
+
         creationLocked = true;
         creationStartTime = System.currentTimeMillis();
-        
+
         pendingTargetItem = request.getTargetItem();
         pendingSeed = request.getSeed();
         pendingRandomDrop = request.isRandomDrop();
@@ -68,15 +67,29 @@ public class WorldCreator {
         lastCreatedRandomDrop = request.isRandomDrop();
         isSpeedrunLoading = true;
         creationTriggered = false;
-        
-        logCreationStart(request);
-        
-        try {
-            client.gui.setScreen(new net.minecraft.client.gui.screens.worldselection.SelectWorldScreen(null));
-        } catch (Exception e) {
-            logError("Ошибка открытия SelectWorldScreen");
-            unlockCreation();
-        }
+
+        var battle = com.randomrun.features.battle.manager.BattleManager.getInstance();
+        var mode = battle.isInBattle() && battle.isHost()
+            ? com.randomrun.ui.overlay.LoadingCurtain.Mode.HOST : com.randomrun.ui.overlay.LoadingCurtain.Mode.WORLD;
+        serverSeed = false;
+        boolean verify = !battle.isInBattle() && (pendingSeed == null || pendingSeed.isBlank()) && !request.isUpgrader();
+        java.util.concurrent.CompletableFuture<com.randomrun.network.RunVerifier.Ticket> ticket = verify
+            ? com.randomrun.network.RunVerifier.begin(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(pendingTargetItem).getPath())
+            : java.util.concurrent.CompletableFuture.completedFuture(null);
+        com.randomrun.ui.overlay.LoadingCurtain.close(mode, () -> ticket.completeOnTimeout(null, 4, java.util.concurrent.TimeUnit.SECONDS).thenAccept(issued -> Minecraft.getInstance().execute(() -> {
+            if (!isSpeedrunLoading) return;
+            com.randomrun.network.RunVerifier.prepare(issued);
+            if (issued != null) {
+                pendingSeed = issued.seed();
+                serverSeed = true;
+            }
+            try {
+                Minecraft.getInstance().gui.setScreen(new net.minecraft.client.gui.screens.worldselection.SelectWorldScreen(null));
+            } catch (Exception e) {
+                logError("Ошибка открытия SelectWorldScreen");
+                unlockCreation();
+            }
+        })));
     }
     
     @Deprecated
@@ -111,7 +124,6 @@ public class WorldCreator {
     }
     
     public void cancelCreation() {
-        logInfo("Создание мира отменено");
         clearPendingData();
         unlockCreation();
     }
@@ -128,8 +140,6 @@ public class WorldCreator {
         if (worldHistory.size() > MAX_HISTORY_SIZE) {
             worldHistory.remove(worldHistory.size() - 1);
         }
-        
-        logInfo("Добавлено в историю: " + entry.getItemName());
     }
     
     public List<WorldHistoryEntry> getWorldHistory() {
@@ -156,6 +166,10 @@ public class WorldCreator {
         return getInstance().lastCreatedSeed;
     }
     
+    public static boolean isServerSeed() {
+        return getInstance().serverSeed;
+    }
+
     public static boolean isManualSeed() {
         return getInstance().isManualSeed;
     }
@@ -184,7 +198,6 @@ public class WorldCreator {
         WorldCreator instance = getInstance();
         instance.lastCreatedSeed = seed != null ? seed.trim() : null;
         instance.isManualSeed = manual;
-        instance.logInfo("Сид сохранен" + (manual ? " (ручной)" : " (авто)"));
         instance.unlockCreation();
     }
     
@@ -201,8 +214,8 @@ public class WorldCreator {
         instance.isSpeedrunLoading = false;
         instance.creationTriggered = false;
         instance.isManualSeed = false;
+        instance.serverSeed = false;
         instance.unlockCreation();
-        instance.logInfo("Данные очищены");
     }
     
     @Deprecated
@@ -212,25 +225,6 @@ public class WorldCreator {
     
     private static WorldMode getWorldMode() {
         return WorldMode.STANDARD;
-    }
-    
-    private void logCreationStart(WorldCreationRequest request) {
-        String targetName = request.getTargetItem() != null 
-            ? net.minecraft.network.chat.Component.translatable(request.getTargetItem().getDescriptionId()).getString() 
-            : "MOB";
-        StringBuilder log = new StringBuilder(LOG_PREFIX).append(targetName);
-        
-        if (request.getSeed() != null) {
-            log.append(" | seed=").append(request.getSeed());
-        }
-        
-        log.append(" | ").append(request.getMode().getDisplayName());
-        
-        com.randomrun.infrastructure.util.CompactLogger.core(log.toString());
-    }
-    
-    private void logInfo(String message) {
-        com.randomrun.infrastructure.util.CompactLogger.core(LOG_PREFIX + message);
     }
     
     private void logWarn(String message) {

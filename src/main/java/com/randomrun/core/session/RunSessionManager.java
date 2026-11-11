@@ -1,7 +1,6 @@
 package com.randomrun.core.session;
 
 import com.randomrun.infrastructure.util.CompactLogger;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 
 public class RunSessionManager {
@@ -43,29 +42,10 @@ public class RunSessionManager {
         }
     }
     
-    public synchronized void startMobRun(EntityType<?> targetMob, String mobVariant, 
-                           boolean isBattle, String battleRoomId, String customSeed, String worldName) {
-        startMobRun(targetMob, mobVariant, isBattle, battleRoomId, customSeed, worldName,
-            !isBattle && com.randomrun.infrastructure.RandomRunMod.getInstance().getConfig().isUpgraderEnabled());
-    }
-
-    public synchronized void startMobRun(EntityType<?> targetMob, String mobVariant,
-                           boolean isBattle, String battleRoomId, String customSeed, String worldName, boolean upgrader) {
-        if (!canStartRun()) {
-            CompactLogger.warn("{} Невозможно запустить", LOG_TAG);
-            return;
-        }
-        
-        try {
-            currentSession = new RunSession(targetMob, mobVariant, isBattle, battleRoomId, customSeed, worldName, upgrader);
-        } catch (Exception e) {
-            CompactLogger.error("{} Ошибка создания: {}", LOG_TAG, e.getMessage());
-        }
-    }
-    
     public void unfreezeRun() {
         if (currentSession != null) {
             currentSession.start();
+            if (!currentSession.isBattle()) com.randomrun.network.RunVerifier.timerStarted(currentSession.getTargetId().replace("minecraft:", ""));
         }
     }
     
@@ -82,6 +62,7 @@ public class RunSessionManager {
     }
     
     public synchronized void cancelRun() {
+        com.randomrun.network.RunVerifier.cancel();
         if (currentSession != null) {
             currentSession = null;
         }
@@ -141,13 +122,9 @@ public class RunSessionManager {
         return currentSession != null ? currentSession.getTargetItem() : null;
     }
     
-    public EntityType<?> getTargetMob() {
-        return currentSession != null ? currentSession.getTargetMob() : null;
-    }
+
     
-    public String getMobVariant() {
-        return currentSession != null ? currentSession.getMobVariant() : null;
-    }
+
     
     public RunStatus getRunStatus() {
         return currentSession != null ? currentSession.getStatus() : RunStatus.INACTIVE;

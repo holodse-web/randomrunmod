@@ -149,7 +149,6 @@ public class DisconnectCleanupMixin {
                         path.toFile().setWritable(true);
                         Files.deleteIfExists(path);
                     } catch (IOException e) {
-                        RandomRunMod.LOGGER.debug("[Cleanup] Не удалось удалить: " + path.getFileName());
                     }
                 });
             

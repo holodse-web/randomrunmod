@@ -1,144 +1,76 @@
 package com.randomrun.ui.screen.settings;
 
+
+import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.config.ModConfig;
-import com.randomrun.ui.widget.styled.ButtonDefault;
-import net.minecraft.client.Minecraft;
+import com.randomrun.infrastructure.util.LanguageManager;
+import com.randomrun.ui.theme.Theme;
+import com.randomrun.ui.widget.styled.OptionRow;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 public class InterfaceSettingsScreen extends AnimatedSettingsScreen {
-    private static final int BUTTON_WIDTH = 300;
-    private static final int BUTTON_HEIGHT = 20;
-    private static final int BUTTON_SPACING = 25;
-    private static final int PENCIL_BUTTON_WIDTH = 25;
-    
-    private final ModConfig config;
-    
+    private final ModConfig config = RandomRunMod.getInstance().getConfig();
+    private ButtonDefault editButton;
+
     public InterfaceSettingsScreen(Screen parent) {
-        this(parent, false);
+        super(parent, false, LanguageManager.text("randomrun.screen.interface_settings.title"));
     }
-    
-    public InterfaceSettingsScreen(Screen parent, boolean isRefreshing) {
-        super(parent, isRefreshing, 
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.screen.interface_settings.title"));
-        this.config = RandomRunMod.getInstance().getConfig();
-    }
-    
+
     @Override
     protected void initContent() {
-        int widgetY = getWidgetY();
-        int centerX = width / 2;
-        int startY = widgetY + 50;
-        int buttonIndex = 0;
-        
-        boolean isCustom = config.getHudPosition() == ModConfig.HudPosition.CUSTOM;
-        int positionButtonWidth = isCustom ? BUTTON_WIDTH - PENCIL_BUTTON_WIDTH - 5 : BUTTON_WIDTH;
-        
-        addRenderableWidget(new ButtonDefault(
-            centerX - BUTTON_WIDTH / 2, startY,
-            positionButtonWidth, BUTTON_HEIGHT,
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.settings.hud_position", 
-                formatPositionText(config.getHudPosition())),
-            button -> {
-                cycleHudPosition();
-                refreshScreen();
-            },
-            buttonIndex++, 0.15f, isRefreshing
-        ));
-        
-        if (isCustom) {
-            addRenderableWidget(new ButtonDefault(
-                centerX + BUTTON_WIDTH / 2 - PENCIL_BUTTON_WIDTH, startY,
-                PENCIL_BUTTON_WIDTH, BUTTON_HEIGHT,
-                Component.literal("✏️"),
-                button -> Minecraft.getInstance().gui.setScreen(new HudPositionEditorScreen(this)),
-                buttonIndex++, 0.15f, isRefreshing
-            ));
-        }
-        
-        addRenderableWidget(new ButtonDefault(
-            centerX - BUTTON_WIDTH / 2, startY + BUTTON_SPACING,
-            BUTTON_WIDTH, BUTTON_HEIGHT,
-            Component.literal("Стиль HUD: " + formatHudStyleText(config.getHudStyle())),
-            button -> {
-                cycleHudStyle();
-                refreshScreen();
-            },
-            buttonIndex++, 0.18f, isRefreshing
-        ));
-        
-        addRenderableWidget(new ButtonDefault(
-            centerX - BUTTON_WIDTH / 2, startY + BUTTON_SPACING * 2,
-            BUTTON_WIDTH, BUTTON_HEIGHT,
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.settings.ui_style", 
-                formatUIStyleText(config.getUIStyle())),
-            button -> {
-                toggleUIStyle();
-                refreshScreen();
-            },
-            buttonIndex++, 0.2f, isRefreshing
-        ));
+        int editWidth = 24;
+        addRenderableWidget(new OptionRow(rowX(), rowY(0), rowWidth() - editWidth - 4, LanguageManager.text("randomrun.settings.hud_position.label"),
+            () -> Component.literal(positionText(config.getHudPosition())).withStyle(s -> s.withColor(0xFACC15)), button -> {
+                ModConfig.HudPosition[] values = ModConfig.HudPosition.values();
+                config.setHudPosition(values[(config.getHudPosition().ordinal() + 1) % values.length]);
+                RandomRunMod.getInstance().saveConfig();
+                editButton.active = config.getHudPosition() == ModConfig.HudPosition.CUSTOM;
+            }, 0.05f));
+        editButton = addRenderableWidget(new ButtonDefault(rowX() + rowWidth() - editWidth, rowY(0), editWidth, 20, Component.literal("✎"),
+            button -> minecraft.gui.setScreen(new HudPositionEditorScreen(this)), 0, 0.05f));
+        editButton.icon(com.randomrun.ui.util.Icons.PENCIL);
+        editButton.setTooltip(Tooltip.create(LanguageManager.text("randomrun.settings.hud_position.edit")));
+        editButton.active = config.getHudPosition() == ModConfig.HudPosition.CUSTOM;
 
-        addRenderableWidget(new ButtonDefault(
-            centerX - BUTTON_WIDTH / 2, widgetY + WIDGET_HEIGHT - 40,
-            BUTTON_WIDTH, BUTTON_HEIGHT,
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.button.back"),
-            button -> startClosing(),
-            buttonIndex, 0.3f, isRefreshing
-        ));
+        addRenderableWidget(new OptionRow(rowX(), rowY(1), rowWidth(), LanguageManager.text("randomrun.settings.hud_style.label"),
+            () -> LanguageManager.text(config.getHudStyle() == ModConfig.HudStyle.PROFESSIONAL ? "randomrun.settings.hud_style.professional" : "randomrun.settings.hud_style.pleasant")
+                .withStyle(s -> s.withColor(config.getHudStyle() == ModConfig.HudStyle.PROFESSIONAL ? 0x67E8F9 : 0x4ADE80)),
+            button -> {
+                ModConfig.HudStyle[] values = ModConfig.HudStyle.values();
+                config.setHudStyle(values[(config.getHudStyle().ordinal() + 1) % values.length]);
+                RandomRunMod.getInstance().saveConfig();
+            }, 0.08f));
+
+        OptionRow animations = addRenderableWidget(new OptionRow(rowX(), rowY(2), rowWidth(), LanguageManager.text("randomrun.settings.ui_style.label"),
+            () -> LanguageManager.text(config.getUIStyle() == ModConfig.UIStyle.DETAILED ? "randomrun.settings.ui_style.detailed" : "randomrun.settings.ui_style.simplified")
+                .withStyle(s -> s.withColor(config.getUIStyle() == ModConfig.UIStyle.DETAILED ? 0x4ADE80 : 0xFACC15)),
+            button -> {
+                config.setUIStyle(config.getUIStyle() == ModConfig.UIStyle.DETAILED ? ModConfig.UIStyle.SIMPLIFIED : ModConfig.UIStyle.DETAILED);
+                RandomRunMod.getInstance().saveConfig();
+            }, 0.11f));
+        animations.setTooltip(Tooltip.create(LanguageManager.text("randomrun.settings.ui_style.tooltip")));
+
+        addRenderableWidget(new OptionRow(rowX(), rowY(3), rowWidth(), LanguageManager.text("randomrun.settings.theme.label"),
+            () -> LanguageManager.text(Theme.current().nameKey()).withStyle(s -> s.withColor(Theme.current().accent)),
+            button -> {
+                config.setTheme(Theme.current().next().id);
+                RandomRunMod.getInstance().saveConfig();
+            }, 0.14f));
+
+        addRenderableWidget(new OptionRow(rowX(), rowY(4), rowWidth(), LanguageManager.text("randomrun.settings.language.label"),
+            () -> Component.literal(LanguageManager.getCurrentLanguageEnum().getDisplayName()), button -> LanguageManager.cycleLanguage(), 0.17f));
+        addBackButton(6);
     }
-    
-    private void cycleHudPosition() {
-        ModConfig.HudPosition[] positions = ModConfig.HudPosition.values();
-        int currentIndex = config.getHudPosition().ordinal();
-        int nextIndex = (currentIndex + 1) % positions.length;
-        config.setHudPosition(positions[nextIndex]);
-        RandomRunMod.getInstance().saveConfig();
-    }
-    
-    private void cycleHudStyle() {
-        ModConfig.HudStyle[] styles = ModConfig.HudStyle.values();
-        int currentIndex = config.getHudStyle().ordinal();
-        int nextIndex = (currentIndex + 1) % styles.length;
-        config.setHudStyle(styles[nextIndex]);
-        RandomRunMod.getInstance().saveConfig();
-    }
-    
-    private void toggleUIStyle() {
-        ModConfig.UIStyle newStyle = config.getUIStyle() == ModConfig.UIStyle.DETAILED 
-            ? ModConfig.UIStyle.SIMPLIFIED 
-            : ModConfig.UIStyle.DETAILED;
-        config.setUIStyle(newStyle);
-        RandomRunMod.getInstance().saveConfig();
-    }
-    
-    private String formatPositionText(ModConfig.HudPosition position) {
-        String text = switch (position) {
-            case TOP_LEFT -> com.randomrun.infrastructure.util.LanguageManager.text("randomrun.settings.hud_position.top_left").getString();
-            case TOP_RIGHT -> com.randomrun.infrastructure.util.LanguageManager.text("randomrun.settings.hud_position.top_right").getString();
-            case TOP_CENTER -> com.randomrun.infrastructure.util.LanguageManager.text("randomrun.settings.hud_position.top_center").getString();
-            case CUSTOM -> com.randomrun.infrastructure.util.LanguageManager.text("randomrun.settings.hud_position.custom").getString();
-        };
-        return "§e" + text;
-    }
-    
-    private String formatUIStyleText(ModConfig.UIStyle style) {
-        String text = style == ModConfig.UIStyle.DETAILED
-            ? com.randomrun.infrastructure.util.LanguageManager.text("randomrun.settings.ui_style.detailed").getString()
-            : com.randomrun.infrastructure.util.LanguageManager.text("randomrun.settings.ui_style.simplified").getString();
-        String color = style == ModConfig.UIStyle.DETAILED ? "§a" : "§e";
-        return color + text;
-    }
-    
-    private String formatHudStyleText(ModConfig.HudStyle style) {
-        return switch (style) {
-            case PROFESSIONAL -> "§bПрофессиональный";
-            case PLEASANT -> "§aПриятный";
-        };
-    }
-    
-    private void refreshScreen() {
-        Minecraft.getInstance().gui.setScreen(new InterfaceSettingsScreen(parent, true));
+
+    private String positionText(ModConfig.HudPosition position) {
+        return LanguageManager.translate(switch (position) {
+            case TOP_LEFT -> "randomrun.settings.hud_position.top_left";
+            case TOP_RIGHT -> "randomrun.settings.hud_position.top_right";
+            case TOP_CENTER -> "randomrun.settings.hud_position.top_center";
+            case CUSTOM -> "randomrun.settings.hud_position.custom";
+        });
     }
 }

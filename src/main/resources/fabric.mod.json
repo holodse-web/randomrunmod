@@ -3,7 +3,7 @@
   "id": "randomrun",
   "version": "${version}",
   "name": "RandomRun Mod",
-  "description": "Random item and advancement speedruns with solo, battle and shared-world modes.",
+  "description": "Random item speedruns with solo and peer-hosted WebRTC rooms.",
   "authors": [
     "RRM Network"
   ],
@@ -22,9 +22,6 @@
   "mixins": [
     "randomrun.mixins.json"
   ],
-  "suggests": {
-    "e4mc": "*"
-  },
   "depends": {
     "fabricloader": ">=0.19.5",
     "fabric-api": "*",

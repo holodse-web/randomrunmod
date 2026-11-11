@@ -1,13 +1,13 @@
 package com.randomrun.features.challenges.classic.screen;
 
+
+import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
+import com.randomrun.ui.widget.styled.Buttons.ButtonRainbow;
 import com.randomrun.features.challenges.classic.data.SpeedrunTarget;
 import com.randomrun.features.challenges.classic.data.SpeedrunTargetProvider;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
-import com.randomrun.ui.widget.styled.ButtonDefault;
-import com.randomrun.ui.widget.styled.ButtonRainbow;
 import com.randomrun.ui.widget.RevealAnimationWidget;
-import com.randomrun.features.challenges.classic.screen.util.CompactSlotMachineAnimator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -15,7 +15,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 
@@ -32,11 +31,11 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
     private static final int BORDER_WIDTH = 2;
     private static final int SEPARATOR_HEIGHT = 2;
 
-    private static final int COLOR_PANEL_BORDER = 0xFF6930c3;
+    private static int COLOR_PANEL_BORDER() { return 0xFF000000 | com.randomrun.ui.theme.Theme.current().buttonHover; }
     private static final int COLOR_TITLE = 0xFFFFFFFF;
-    private static final int COLOR_SEPARATOR = 0xFF6930c3;
-    private static final int COLOR_ITEM_SELECTED = 0xFF6930c3;
-    private static final int COLOR_ITEM_HOVER = 0xFF4A2080;
+    private static int COLOR_SEPARATOR() { return 0xFF000000 | com.randomrun.ui.theme.Theme.current().buttonHover; }
+    private static int COLOR_ITEM_SELECTED() { return 0xFF000000 | com.randomrun.ui.theme.Theme.current().buttonHover; }
+    private static int COLOR_ITEM_HOVER() { return 0xFF000000 | com.randomrun.ui.theme.Theme.current().buttonBase; }
 
     private final Screen parent;
 
@@ -49,14 +48,17 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
 
     private boolean randomDropEnabled = false;
     private Item selectedItem = null;
-    private Item namedItem;
-    private Language nameLanguage;
-    private Component selectedName = Component.empty();
 
-    private CompactSlotMachineAnimator slotAnimator = null;
+    private com.randomrun.ui.widget.ItemRoulette slotAnimator = null;
     private boolean slotMachineActive = false;
 
     private RevealAnimationWidget itemWidget = null;
+    private long selectedAt;
+    private static final int CARD_HEIGHT = 46;
+
+    private static int cardTop() {
+        return 60 + 60 + VISIBLE_ROWS * (ITEM_SIZE + 2) + 6;
+    }
 
     private List<SpeedrunTarget> allTargets = new ArrayList<>();
     private List<SpeedrunTarget> filteredTargets = new ArrayList<>();
@@ -72,7 +74,6 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
     @Override
     protected void init() {
         super.init();
-        nameLanguage = null;
 
         var config = RandomRunMod.getInstance().getConfig();
         allTargets = SpeedrunTargetProvider.getAllTargets(config.isAllowUnobtainableItems());
@@ -150,37 +151,37 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
 
         seedField = new com.randomrun.ui.widget.styled.TextFieldStyled(
             font, fieldX, currentY, BUTTON_WIDTH_NARROW, 20,
-            Component.literal("Сид"), 0.2f
+            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.speedrun.seed"), 0.2f
         );
-        seedField.setCenteredPlaceholder(Component.literal("Сид..."));
+        seedField.setCenteredPlaceholder(com.randomrun.infrastructure.util.LanguageManager.text("randomrun.speedrun.seed.placeholder"));
         seedField.setMaxLength(50);
         seedField.setValue(config.getCustomSeed() != null ? config.getCustomSeed() : "");
         seedField.setResponder(text -> {
             config.setCustomSeed(text.isEmpty() ? null : text);
             RandomRunMod.getInstance().saveConfig();
         });
-        seedField.setTooltip(Tooltip.create(Component.literal("§7Кастомный сид\n§cЗабег не попадет в таблицу лидеров")));
+        seedField.setTooltip(Tooltip.create(com.randomrun.infrastructure.util.LanguageManager.text("randomrun.speedrun.seed.tooltip")));
         addRenderableWidget(seedField);
     }
 
     private void updateUnobtainableTooltip(ButtonDefault button, boolean enabled) {
         String tooltip = enabled
-            ? "§aВКЛ §7- Включены недобываемые предметы\n§7(командные блоки, барьеры и т.д.)"
-            : "§cВЫКЛ §7- Только добываемые предметы";
+            ? com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.speedrun.unobtainable.on")
+            : com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.speedrun.unobtainable.off");
         button.setTooltip(Tooltip.create(Component.literal(tooltip)));
     }
 
     private void updateDeleteWorldsTooltip(ButtonDefault button, boolean enabled) {
         String tooltip = enabled
-            ? "§aВКЛ §7- Миры удаляются после забега"
-            : "§cВЫКЛ §7- Миры сохраняются";
+            ? com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.speedrun.delete_worlds.on")
+            : com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.speedrun.delete_worlds.off");
         button.setTooltip(Tooltip.create(Component.literal(tooltip)));
     }
 
     private void updateHardcoreTooltip(ButtonDefault button, boolean enabled) {
         String tooltip = enabled
-            ? "§aВКЛ §7- Режим хардкор"
-            : "§cВЫКЛ §7- Обычный режим\n§cЗабег не попадет в таблицу лидеров";
+            ? com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.speedrun.hardcore.on")
+            : com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.speedrun.hardcore.off");
         button.setTooltip(Tooltip.create(Component.literal(tooltip)));
     }
 
@@ -190,18 +191,18 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         int fieldX = x + PANEL_PADDING;
 
         searchField = new com.randomrun.ui.widget.styled.TextFieldStyled(font, fieldX, y + 15, fieldWidth, 20,
-            Component.literal("Поиск"), 0.05f);
-        searchField.setCenteredPlaceholder(Component.literal("Поиск..."));
+            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.search"), 0.05f);
+        searchField.setCenteredPlaceholder(com.randomrun.infrastructure.util.LanguageManager.text("randomrun.search.placeholder"));
         searchField.setResponder(this::onSearchChanged);
         addRenderableWidget(searchField);
 
         randomItemButton = new ButtonDefault(
             fieldX + fieldWidth + 5, y + 15, fieldWidth, 20,
-            Component.literal("Случайный"),
+            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.speedrun.random"),
             button -> startRandomSelection(),
             0, 0.05f
         );
-        randomItemButton.setTooltip(Tooltip.create(Component.literal("Выбрать случайный предмет")));
+        randomItemButton.setTooltip(Tooltip.create(com.randomrun.infrastructure.util.LanguageManager.text("randomrun.speedrun.random.tooltip")));
         addRenderableWidget(randomItemButton);
     }
 
@@ -256,27 +257,24 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
     }
 
     private Component getRandomDropText() {
-        return Component.literal(randomDropEnabled ? "Random Drop: §aВКЛ" : "Random Drop: §cВЫКЛ");
+        return com.randomrun.infrastructure.util.LanguageManager.text(randomDropEnabled ? "randomrun.mode.random_drop.on" : "randomrun.mode.random_drop.off");
     }
 
     private void updateRandomDropTooltip() {
         String tooltip = randomDropEnabled
-            ? "Random Drop: §aВКЛ\n§7Выпадают случайные предметы\n§cЗабег не попадет в таблицу лидеров"
-            : "Random Drop: §cВЫКЛ\n§7Обычный режим";
+            ? com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.mode.random_drop.tooltip_on")
+            : com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.mode.random_drop.tooltip_off");
         randomDropButton.setTooltip(Tooltip.create(Component.literal(tooltip)));
     }
 
     private Component getUpgraderText() {
         return Component.literal(RandomRunMod.getInstance().getConfig().isUpgraderEnabled()
-            ? "RRM Upgrader: §aВКЛ" : "RRM Upgrader: §cВЫКЛ");
+            ? com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.mode.upgrader.on") : com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.mode.upgrader.off"));
     }
 
     private void updateUpgraderTooltip() {
         upgraderButton.setTooltip(Tooltip.create(Component.literal(
-            "§eRRM Upgrader\n§7Меняйте предметы из инвентаря с честным шансом\n"
-                + "§7Открыть: " + com.randomrun.features.upgrader.client.UpgraderClient.keyName().getString()
-                + " (можно изменить в управлении)\n"
-                + "§7Режим фиксируется при старте забега\n§cОтдельная локальная история, без лидерборда")));
+            com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.mode.upgrader.tooltip", com.randomrun.features.upgrader.client.UpgraderClient.keyName().getString()))));
     }
 
     private void onSearchChanged(String text) {
@@ -297,7 +295,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
     }
 
     private void selectItem(SpeedrunTarget target) {
-        if (target != null) {
+        if (target != null && !slotMachineActive) {
             if (itemWidget != null) {
                 removeWidget(itemWidget);
                 itemWidget = null;
@@ -316,11 +314,10 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
             int startX = centerX - totalWidth / 2;
             int centerPanelX = startX + PANEL_WIDTH_SIDE + PANEL_SPACING;
 
-            int gridHeight = VISIBLE_ROWS * (ITEM_SIZE + 2);
-            int itemX = centerPanelX + 50;
-            int itemY = 60 + 60 + gridHeight + 30;
-
-            itemWidget = new RevealAnimationWidget(itemX, itemY, com.randomrun.ui.util.PreviewItems.stack(selectedItem));
+            int slot = CARD_HEIGHT - 8;
+            selectedAt = System.currentTimeMillis();
+            itemWidget = new RevealAnimationWidget(centerPanelX + PANEL_PADDING + 4 + slot / 2, cardTop() + 4 + slot / 2,
+                com.randomrun.ui.util.Previews.PreviewItems.stack(selectedItem), 28f);
             addRenderableWidget(itemWidget);
         }
     }
@@ -342,7 +339,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
 
         Item result = allItems.get(ThreadLocalRandom.current().nextInt(allItems.size()));
 
-        slotAnimator = new CompactSlotMachineAnimator(allItems, result);
+        slotAnimator = new com.randomrun.ui.widget.ItemRoulette(allItems, result, ThreadLocalRandom.current().nextLong()).hideName();
         slotMachineActive = true;
         selectedItem = result;
     }
@@ -350,6 +347,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
     @Override
     public void tick() {
         super.tick();
+        if (startButton != null) startButton.active = selectedItem != null && !slotMachineActive;
 
         if (slotMachineActive && slotAnimator != null) {
             if (slotAnimator.isComplete()) {
@@ -361,6 +359,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
     }
 
     private void startSpeedrun() {
+        if (slotMachineActive) return;
         if (selectedItem == null) {
             com.randomrun.infrastructure.util.CompactLogger.warn("Не выбран предмет для спидрана");
             return;
@@ -390,9 +389,14 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         int gridHeight = VISIBLE_ROWS * (ITEM_SIZE + 2);
         int centerPanelHeight = 60 + gridHeight + 60;
 
-        renderPanelBackground(context, startX, 60, PANEL_WIDTH_SIDE, centerPanelHeight, "Настройки спидрана");
-        renderPanelBackground(context, startX + PANEL_WIDTH_SIDE + PANEL_SPACING, 60, PANEL_WIDTH_CENTER, centerPanelHeight, "Выбор предмета");
-        renderPanelBackground(context, startX + PANEL_WIDTH_SIDE + PANEL_WIDTH_CENTER + PANEL_SPACING * 2, 60, PANEL_WIDTH_SIDE, centerPanelHeight, "Режим игры");
+        renderPanelBackground(context, startX, 60, PANEL_WIDTH_SIDE, centerPanelHeight, "randomrun.speedrun.panel.settings");
+        renderPanelBackground(context, startX + PANEL_WIDTH_SIDE + PANEL_SPACING, 60, PANEL_WIDTH_CENTER, centerPanelHeight, "randomrun.speedrun.panel.item");
+        renderPanelBackground(context, startX + PANEL_WIDTH_SIDE + PANEL_WIDTH_CENTER + PANEL_SPACING * 2, 60, PANEL_WIDTH_SIDE, centerPanelHeight, "randomrun.speedrun.panel.mode");
+        if (!slotMachineActive) {
+            int cx = startX + PANEL_WIDTH_SIDE + PANEL_SPACING;
+            com.randomrun.ui.util.Ui.selectedItemCard(context, font, cx + PANEL_PADDING, cardTop(),
+                cx + PANEL_WIDTH_CENTER - PANEL_PADDING, cardTop() + CARD_HEIGHT, selectedItem, false, selectedAt);
+        }
     }
 
     @Override
@@ -402,7 +406,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         int startX = centerX - totalWidth / 2;
 
         com.randomrun.ui.util.GuiText.centeredText(context, font,
-            Component.literal("Спидран"),
+            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.speedrun.title"),
             centerX, 20, COLOR_TITLE);
 
         super.extractRenderState(context, mouseX, mouseY, delta);
@@ -414,39 +418,25 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
                     + com.randomrun.features.upgrader.client.UpgraderClient.keyName().getString()
                     + " §7— RRM Upgrader", rightPanelX + 10, 154, COLOR_TITLE);
             }
-            com.randomrun.ui.util.GuiText.text(context, font, "§7Локальный режим", rightPanelX + 10, 169, COLOR_TITLE);
+            com.randomrun.ui.util.GuiText.text(context, font, com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.mode.upgrader.local"), rightPanelX + 10, 169, COLOR_TITLE);
         }
 
         renderCenterPanelContent(context, startX + PANEL_WIDTH_SIDE + PANEL_SPACING, mouseX, mouseY);
 
         if (slotMachineActive && slotAnimator != null) {
             int gridHeight = VISIBLE_ROWS * (ITEM_SIZE + 2);
-            int animX = startX + PANEL_WIDTH_SIDE + PANEL_SPACING + 50;
+            int animX = startX + PANEL_WIDTH_SIDE + PANEL_SPACING + PANEL_WIDTH_CENTER / 2;
             int animY = 60 + 60 + gridHeight + 30;
-            slotAnimator.extractRenderState(context, animX, animY, delta);
+            slotAnimator.extract(context, animX, animY, PANEL_WIDTH_CENTER - 20, 30);
         }
 
-        if (selectedItem != null && !slotMachineActive) {
-            renderItemName(context, startX + PANEL_WIDTH_SIDE + PANEL_SPACING);
-        }
     }
 
     private void renderPanelBackground(GuiGraphicsExtractor context, int x, int y, int width, int height, String title) {
-        context.fill(x, y, x + width, y + height, 0xD0202020);
-
-        context.fill(x, y, x + width, y + BORDER_WIDTH, COLOR_PANEL_BORDER);
-        context.fill(x, y + height - BORDER_WIDTH, x + width, y + height, COLOR_PANEL_BORDER);
-        context.fill(x, y, x + BORDER_WIDTH, y + height, COLOR_PANEL_BORDER);
-        context.fill(x + width - BORDER_WIDTH, y, x + width, y + height, COLOR_PANEL_BORDER);
-
-        int separatorY = y + 25;
-        context.fill(x + 5, separatorY, x + width - 5, separatorY + SEPARATOR_HEIGHT, COLOR_SEPARATOR);
-
-        int titleWidth = font.width(title);
-        int titleY = y + (25 - font.lineHeight) / 2 + 2;
-        com.randomrun.ui.util.GuiText.text(context, font,
-            Component.literal(title),
-            x + width / 2 - titleWidth / 2, titleY, COLOR_TITLE);
+        com.randomrun.ui.theme.Theme theme = com.randomrun.ui.theme.Theme.current();
+        com.randomrun.ui.util.Ui.panel(context, x, y, x + width, y + height, 1f);
+        com.randomrun.ui.util.Ui.divider(context, x + 6, x + width - 6, y + 25, theme.accent, 1f);
+        com.randomrun.ui.util.GuiText.centeredText(context, font, com.randomrun.infrastructure.util.LanguageManager.text(title), x + width / 2, y + (25 - font.lineHeight) / 2 + 2, 0xFFFFFFFF);
     }
 
     private Component getToggleText(String key, boolean enabled) {
@@ -491,8 +481,8 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
                 hoveredTarget = target;
             }
 
-            int slotColor = isSelected ? COLOR_ITEM_SELECTED :
-                           (isHovered ? COLOR_ITEM_HOVER : 0x80000000);
+            int slotColor = isSelected ? COLOR_ITEM_SELECTED() :
+                           (isHovered ? COLOR_ITEM_HOVER() : 0x80000000);
             context.fill(itemX, itemY, itemX + ITEM_SIZE, itemY + ITEM_SIZE, slotColor);
 
             context.item(target.getPreviewStack(), itemX + 1, itemY + 1);
@@ -513,31 +503,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         int scrollbarHeight = Math.max(20, height / (maxScroll + VISIBLE_ROWS));
         int scrollbarY = y + (int) ((height - scrollbarHeight) * ((double) scrollOffset / maxScroll));
 
-        context.fill(x, scrollbarY, x + SCROLLBAR_WIDTH, scrollbarY + scrollbarHeight, COLOR_PANEL_BORDER);
-    }
-
-    private void renderItemName(GuiGraphicsExtractor context, int centerPanelX) {
-        if (selectedItem == null) return;
-
-        int gridHeight = VISIBLE_ROWS * (ITEM_SIZE + 2);
-        int itemX = centerPanelX + 50;
-        int itemY = 60 + 60 + gridHeight + 30;
-
-        int textX = itemX + 40;
-        int textY = itemY - font.lineHeight / 2;
-        Language language = Language.getInstance();
-        if (selectedItem != namedItem || language != nameLanguage) {
-            String itemName = Component.translatable(selectedItem.getDescriptionId()).getString();
-            if (font.width(itemName) > 140) {
-                itemName = font.plainSubstrByWidth(itemName, 140 - font.width("...")) + "...";
-            }
-            selectedName = Component.literal(itemName);
-            namedItem = selectedItem;
-            nameLanguage = language;
-        }
-        com.randomrun.ui.util.GuiText.text(context, font,
-            selectedName,
-            textX, textY, COLOR_TITLE);
+        context.fill(x, scrollbarY, x + SCROLLBAR_WIDTH, scrollbarY + scrollbarHeight, COLOR_PANEL_BORDER());
     }
 
     @Override
@@ -602,7 +568,7 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
     public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double deltaX, double deltaY) {
         double mouseX = event.x();
         double mouseY = event.y();
-        int button = event.button();
+
         if (isDraggingScrollbar) {
             int gridHeight = VISIBLE_ROWS * (ITEM_SIZE + 2);
             int maxScroll = Math.max(0, (int) Math.ceil((double) filteredTargets.size() / ITEMS_PER_ROW) - VISIBLE_ROWS);
@@ -654,8 +620,4 @@ public class SpeedrunScreen extends AbstractRandomRunScreen {
         minecraft.gui.setScreen(parent);
     }
 
-    @Override
-    protected boolean shouldEnableAfk() {
-        return false;
-    }
 }

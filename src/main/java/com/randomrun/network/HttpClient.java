@@ -1,316 +1,75 @@
 package com.randomrun.network;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import com.randomrun.features.battle.manager.BattleRoom;
 import com.randomrun.features.battle.manager.BattleRoomSerializer;
-import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.util.CompactLogger;
-
-import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
-public class HttpClient {
-    private static volatile HttpClient instance;
-    
-    private static final Gson GSON = new GsonBuilder()
-        .registerTypeAdapter(BattleRoom.class, new BattleRoomSerializer())
-        .create();
-    
-    private static final long DEFAULT_CACHE_TTL_MS = 10000; 
-    private static final long CACHE_CLEANUP_INTERVAL_MS = 60000; 
-    private static final int DEFAULT_TIMEOUT_SEC = 30;
-    private static final int MAX_NETWORK_THREADS = Math.max(4, Runtime.getRuntime().availableProcessors());
-    
-    private final java.net.http.HttpClient httpClient;
-    private final Map<String, CachedResponse> responseCache = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService cacheCleanupExecutor;
-
-    private static final ExecutorService NETWORK_EXECUTOR = Executors.newFixedThreadPool(
-        MAX_NETWORK_THREADS,
-        r -> {
-            Thread t = new Thread(r, "RandomRun-Network");
-            t.setDaemon(true);
-            return t;
-        }
-    );
-
-    private HttpClient() {
-        this.httpClient = java.net.http.HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(DEFAULT_TIMEOUT_SEC))
-            .followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
-            .executor(NETWORK_EXECUTOR)
-            .version(java.net.http.HttpClient.Version.HTTP_2)
-            .build();
-
-        this.cacheCleanupExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "RandomRun-CacheCleanup");
-            t.setDaemon(true);
-            return t;
+public final class HttpClient {
+    private static final Gson GSON = new GsonBuilder().registerTypeAdapter(BattleRoom.class, new BattleRoomSerializer()).create();
+    private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(8, r -> { Thread thread = new Thread(r, "RandomRun-API"); thread.setDaemon(true); return thread; });
+    private static final HttpClient INSTANCE = new HttpClient();
+    private final java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).followRedirects(java.net.http.HttpClient.Redirect.NEVER).executor(EXECUTOR).build();
+    private final ConcurrentHashMap<String, Cached> cache = new ConcurrentHashMap<>();
+    private record Cached(JsonElement value, long expires, BackendSession.Session session) {}
+    public static final class ApiException extends RuntimeException {
+        private final int status;
+        public ApiException(int status, String code) { super(code); this.status = status; }
+        public int status() { return status; }
+    }
+    private HttpClient() {}
+    public static HttpClient getInstance() { return INSTANCE; }
+    public static ExecutorService getNetworkExecutor() { return EXECUTOR; }
+    public CompletableFuture<JsonElement> request(String method, String path, Object data, boolean authenticated) {
+        BackendSession.Session session = BackendSession.current();
+        if (authenticated && !BackendSession.isAuthenticated()) return CompletableFuture.failedFuture(new ApiException(401, "AUTH_REQUIRED"));
+        HttpRequest.Builder builder = HttpRequest.newBuilder(BackendConfig.endpoint(path)).timeout(Duration.ofSeconds(30)).header("Accept", "application/json");
+        if (authenticated) builder.header("Authorization", "Bearer " + session.token());
+        builder.method(method, data == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(GSON.toJson(data)));
+        if (data != null) builder.header("Content-Type", "application/json");
+        return client.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofString()).thenApply(response -> {
+            if (authenticated && BackendSession.current() != session) throw new CancellationException("Session changed");
+            JsonElement value;
+            try { value = JsonParser.parseString(response.body()); } catch (Exception error) { throw new ApiException(response.statusCode(), "INVALID_SERVER_RESPONSE"); }
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                if (authenticated && response.statusCode() == 401 && value.isJsonObject() && value.getAsJsonObject().has("error")
+                        && java.util.Set.of("SESSION_EXPIRED", "AUTH_REQUIRED").contains(value.getAsJsonObject().get("error").getAsString())) BackendSession.invalidate(session);
+                if (authenticated && response.statusCode() == 403 && value.isJsonObject() && value.getAsJsonObject().has("error")
+                        && "ACCOUNT_BANNED".equals(value.getAsJsonObject().get("error").getAsString())) BackendSession.markBanned(session);
+                throw new ApiException(response.statusCode(), value.isJsonObject() && value.getAsJsonObject().has("error") ? value.getAsJsonObject().get("error").getAsString() : "REQUEST_FAILED");
+            }
+            if (authenticated && !method.equals("GET") && value.isJsonObject()) {
+                JsonObject object = value.getAsJsonObject();
+                if (object.has("roomCode")) RealtimeClient.getInstance().acceptRoom(object);
+                else if (object.has("room") && object.get("room").isJsonObject()) RealtimeClient.getInstance().acceptRoom(object.getAsJsonObject("room"));
+            }
+            return value;
         });
-        
-        cacheCleanupExecutor.scheduleAtFixedRate(
-            this::cleanupExpiredCache,
-            CACHE_CLEANUP_INTERVAL_MS,
-            CACHE_CLEANUP_INTERVAL_MS,
-            TimeUnit.MILLISECONDS
-        );
     }
-
-    private static class CachedResponse {
-        final JsonElement data;
-        final long timestamp;
-        final long ttlMs;
-        
-        CachedResponse(JsonElement data, long ttlMs) {
-            this.data = data;
-            this.timestamp = System.currentTimeMillis();
-            this.ttlMs = ttlMs;
+    public CompletableFuture<JsonElement> get(String path) { return getCached(path, 10000); }
+    public CompletableFuture<JsonElement> getNoCache(String path) { return getCached(path, 0); }
+    public CompletableFuture<JsonElement> getCached(String path, long ttl) {
+        if (ttl > 0 && RealtimeClient.getInstance().isConnected()) {
+            JsonObject snapshot = RealtimeClient.getInstance().rooms();
+            if (snapshot != null && path.equals("/rooms")) return CompletableFuture.completedFuture(snapshot);
+            if (snapshot != null && path.matches("/rooms/[0-9]{5}") && snapshot.has(path.substring(7))) return CompletableFuture.completedFuture(snapshot.get(path.substring(7)));
         }
-        
-        boolean isExpired() {
-            return System.currentTimeMillis() - timestamp > ttlMs;
-        }
+        BackendSession.Session session = BackendSession.current();
+        Cached hit = cache.get(path);
+        if (ttl > 0 && hit != null && hit.session == session && hit.expires > System.currentTimeMillis()) return CompletableFuture.completedFuture(hit.value.deepCopy());
+        return request("GET", path, null, !path.equals("/version") && !path.equals("/health")).thenApply(value -> {
+            if (ttl > 0 && BackendSession.current() == session) cache.put(path, new Cached(value.deepCopy(), System.currentTimeMillis() + ttl, session));
+            return value;
+        });
     }
-
-    public static synchronized HttpClient getInstance() {
-        if (instance == null) {
-            instance = new HttpClient();
-        }
-        return instance;
-    }
-
-    public CompletableFuture<JsonElement> get(String path) {
-        return getCached(path, DEFAULT_CACHE_TTL_MS);
-    }
-    
-    public CompletableFuture<JsonElement> getCached(String path, long cacheTtlMs) {
-        if (!isOnlineMode() && !"/version".equals(path)) {
-            return CompletableFuture.completedFuture(null);
-        }
-
-        if (cacheTtlMs > 0) {
-            CachedResponse cached = responseCache.get(path);
-            if (cached != null && !cached.isExpired()) {
-                return CompletableFuture.completedFuture(cached.data);
-            }
-        }
-
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                HttpRequest request = buildRequest(path)
-                    .GET()
-                    .build();
-                    
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-                if (response.statusCode() == 200) {
-                    String body = response.body();
-                    if (isEmptyResponse(body)) {
-                        return null;
-                    }
-                    
-                    try {
-                        JsonElement result = JsonParser.parseString(body);
-                        if (cacheTtlMs > 0) {
-                            responseCache.put(path, new CachedResponse(result, cacheTtlMs));
-                        }
-                        return result;
-                    } catch (com.google.gson.JsonSyntaxException e) {
-                        CompactLogger.warn("Invalid JSON response from GET {}", path);
-                        return null;
-                    }
-                } else {
-                    CompactLogger.networkError("GET {} failed: {}", path, response.statusCode());
-                    return null;
-                }
-            } catch (Exception e) {
-                CompactLogger.networkError("GET {} error: {}", path, e.getMessage());
-                return null;
-            }
-        }, NETWORK_EXECUTOR);
-    }
-    
-    public CompletableFuture<JsonElement> getNoCache(String path) {
-        return getCached(path, 0);
-    }
-
-    public CompletableFuture<Boolean> put(String path, Object data) {
-        if (!isOnlineMode()) {
-            return CompletableFuture.completedFuture(false);
-        }
-
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                String json = GSON.toJson(data);
-                HttpRequest request = buildRequest(path)
-                    .header("Content-Type", "application/json")
-                    .PUT(HttpRequest.BodyPublishers.ofString(json))
-                    .build();
-                    
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-                boolean success = response.statusCode() == 200;
-                
-                if (!success) {
-                    CompactLogger.networkError("PUT {} failed: {}", path, response.statusCode());
-                }
-                
-                invalidateRelatedPaths(path);
-                return success;
-            } catch (Exception e) {
-                CompactLogger.networkError("PUT {} error: {}", path, e.getMessage());
-                return false;
-            }
-        }, NETWORK_EXECUTOR);
-    }
-
-    public CompletableFuture<Boolean> patch(String path, Object data) {
-        if (!isOnlineMode()) {
-            return CompletableFuture.completedFuture(false);
-        }
-
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                String json = GSON.toJson(data);
-                HttpRequest request = buildRequest(path)
-                    .header("Content-Type", "application/json")
-                    .method("PATCH", HttpRequest.BodyPublishers.ofString(json))
-                    .build();
-
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-                boolean success = response.statusCode() == 200;
-                
-                if (!success) {
-                    CompactLogger.networkError("PATCH {} failed: {}", path, response.statusCode());
-                }
-                
-                invalidateRelatedPaths(path);
-                return success;
-            } catch (Exception e) {
-                CompactLogger.networkError("PATCH {} error: {}", path, e.getMessage());
-                return false;
-            }
-        }, NETWORK_EXECUTOR);
-    }
-
-    public CompletableFuture<String> post(String path, Object data) {
-        if (!isOnlineMode()) {
-            return CompletableFuture.completedFuture(null);
-        }
-
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                String json = GSON.toJson(data);
-                HttpRequest request = buildRequest(path)
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(json))
-                    .build();
-
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-                if (response.statusCode() == 200 || response.statusCode() == 201) {
-                    invalidateRelatedPaths(path);
-                    return response.body();
-                } else {
-                    CompactLogger.networkError("POST {} failed: {}", path, response.statusCode());
-                    return null;
-                }
-            } catch (Exception e) {
-                CompactLogger.networkError("POST {} error: {}", path, e.getMessage());
-                return null;
-            }
-        }, NETWORK_EXECUTOR);
-    }
-
-    public CompletableFuture<Boolean> delete(String path) {
-        if (!isOnlineMode()) {
-            return CompletableFuture.completedFuture(false);
-        }
-
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                HttpRequest request = buildRequest(path)
-                    .DELETE()
-                    .build();
-                    
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-                boolean success = response.statusCode() == 200 || response.statusCode() == 204;
-                
-                if (!success) {
-                    CompactLogger.networkError("DELETE {} failed: {}", path, response.statusCode());
-                }
-                
-                invalidateRelatedPaths(path);
-                return success;
-            } catch (Exception e) {
-                CompactLogger.networkError("DELETE {} error: {}", path, e.getMessage());
-                return false;
-            }
-        }, NETWORK_EXECUTOR);
-    }
-    
-    public void invalidateCache(String path) {
-        invalidateRelatedPaths(path);
-    }
-    
-    public void clearCache() {
-        responseCache.clear();
-    }
-
-    private void cleanupExpiredCache() {
-        try {
-            responseCache.entrySet().removeIf(entry -> entry.getValue().isExpired());
-        } catch (Exception e) {
-            CompactLogger.debug("Cache cleanup error: {}", e.getMessage());
-        }
-    }
-
-    private void invalidateRelatedPaths(String path) {
-        responseCache.remove(path);
-        
-        String[] parts = path.split("/");
-        StringBuilder parentPath = new StringBuilder();
-        for (int i = 0; i < parts.length - 1; i++) {
-            if (!parts[i].isEmpty()) {
-                parentPath.append("/").append(parts[i]);
-                responseCache.remove(parentPath.toString());
-            }
-        }
-    }
-    
-    public static ExecutorService getNetworkExecutor() {
-        return NETWORK_EXECUTOR;
-    }
-    
-    private boolean isOnlineMode() {
-        return RandomRunMod.getInstance().getConfig().isOnlineMode();
-    }
-    
-    private boolean isEmptyResponse(String body) {
-        return body == null || body.equals("null") || body.isEmpty();
-    }
-    
-    private HttpRequest.Builder buildRequest(String path) {
-        return buildRequest(path, Duration.ofSeconds(DEFAULT_TIMEOUT_SEC));
-    }
-    
-    private HttpRequest.Builder buildRequest(String path, Duration timeout) {
-        String firebaseUrl = FirebaseClient.DatabaseRouter.getUrlForPath(path);
-        
-        return HttpRequest.newBuilder()
-            .uri(URI.create(firebaseUrl))
-            .timeout(timeout);
-    }
+    public CompletableFuture<Boolean> put(String path, Object data) { return mutate("PUT", path, data); }
+    public CompletableFuture<Boolean> patch(String path, Object data) { return mutate("PATCH", path, data); }
+    public CompletableFuture<JsonElement> post(String path, Object data) { return request("POST", path, data, true); }
+    public CompletableFuture<Boolean> delete(String path) { return mutate("DELETE", path, null); }
+    private CompletableFuture<Boolean> mutate(String method, String path, Object data) { return request(method, path, data, true).thenApply(value -> { clearCache(); return true; }); }
+    public void invalidateCache(String path) { clearCache(); }
+    public void clearCache() { cache.clear(); }
 }

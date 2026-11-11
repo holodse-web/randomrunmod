@@ -1,11 +1,12 @@
 package com.randomrun.ui.screen.settings;
 
+
+import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.config.ModConfig;
 import com.randomrun.infrastructure.util.LanguageManager;
 import com.randomrun.infrastructure.util.LegacyKeyCodes;
-import com.randomrun.ui.widget.styled.ButtonDefault;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Tooltip;
@@ -52,7 +53,7 @@ public class ControlSettingsScreen extends AnimatedSettingsScreen {
         startResetButton = addResetButton(Binding.START, top + 75, 2);
         upgraderKeyButton = addBindingButton(Binding.UPGRADER, top + 110, 3);
         upgraderResetButton = addResetButton(Binding.UPGRADER, top + 110, 4);
-        addRenderableWidget(new ButtonDefault(centerX - BUTTON_WIDTH / 2, top + WIDGET_HEIGHT - 40,
+        addRenderableWidget(new ButtonDefault(centerX - BUTTON_WIDTH / 2, height - 30,
             BUTTON_WIDTH, BUTTON_HEIGHT, LanguageManager.text("randomrun.button.back"),
             button -> startClosing(), 5, .2f, isRefreshing));
         updateBindings();

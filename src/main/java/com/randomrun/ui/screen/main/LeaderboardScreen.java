@@ -1,1096 +1,757 @@
 package com.randomrun.ui.screen.main;
 
+
+
+import com.randomrun.ui.widget.styled.Buttons.ButtonYellow;
+import com.randomrun.ui.util.Previews.ItemPreviewRenderer;
+import com.randomrun.ui.util.Previews.PreviewItems;
+import com.randomrun.features.challenges.classic.data.ItemDifficulty;
 import com.randomrun.features.leaderboard.LeaderboardEntry;
 import com.randomrun.features.leaderboard.LeaderboardService;
-import com.randomrun.ui.widget.styled.ButtonYellow;
+import com.randomrun.infrastructure.RandomRunMod;
+import com.randomrun.infrastructure.util.LanguageManager;
+import com.randomrun.network.BackendSession;
+import com.randomrun.ui.util.GuiQuadBatch;
+import com.randomrun.ui.util.GuiText;
+import com.randomrun.ui.util.Heads;
+import com.randomrun.ui.util.Ui;
 import com.randomrun.ui.widget.GlobalParticleSystem;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import net.minecraft.client.Minecraft;
+import com.randomrun.ui.widget.styled.TextFieldStyled;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class LeaderboardScreen extends AbstractRandomRunScreen {
-    private static final Logger LOGGER = LoggerFactory.getLogger(LeaderboardScreen.class);
-    
-    private static final int LEFT_PANEL_WIDTH = 220;
-    private static final int PADDING = 15;
-    private static final int ITEM_SIZE = 20;
-    private static final int ITEM_SPACING = 4;
-    private static final int ITEMS_PER_ROW = 8;
-    private static final int TOP_RECORDS_LIMIT = 100;
-    private static final int DISPLAYED_RECORDS_LIMIT = 10;
-    private static final long SEARCH_DEBOUNCE_MS = 300L;
-    
-    private static final int COLOR_DARK_GOLD = 0xE0_3d2f06;
-    private static final int COLOR_LIGHT_GOLD = 0xE0_3d2f06;
-    private static final int COLOR_GOLD = 0xFFD700;
-    private static final int COLOR_GOLD_BORDER = 0xFFDAA520;
-    private static final int COLOR_GOLD_SEPARATOR = 0xAAFFD700;
-    private static final int COLOR_GOLD_TEXT = 0xFFAA00;
-    private static final int COLOR_SILVER = 0xC0C0C0;
-    private static final int COLOR_BRONZE = 0xCD7F32;
-    private static final int COLOR_WHITE = 0xFFFFFF;
-    private static final int COLOR_GRAY = 0xCCCCCC;
-    private static final int COLOR_DARK_GRAY = 0x888888;
-    private static final int COLOR_RED = 0xFF5555;
-    private static final int COLOR_ROW_BG = 0x30_000000;
-    private static final int COLOR_ITEM_BG = 0xFF3d2f06;
-    private static final int COLOR_ITEM_HOVER = 0xFF5d4f16;
-    private static final int COLOR_ITEM_SELECTED = 0xFFDAA520;
-    private static final long ANIMATION_CYCLE_MS = 5000L;
-    private static final int GRADIENT_LENGTH = 40;
-    private static final int BORDER_THICKNESS = 2;
-    
+    private static final int PAD = 12;
+    private static final int TOP = 36;
+    private static final int CELL = 20;
+    private static final int ROW = 24;
+    private static final int TOP_LIMIT = 10;
+    private static final long SEARCH_DEBOUNCE_MS = 200L;
+    private static final long GLOW_CYCLE_MS = 5000L;
+    private static final int GLOW_LENGTH = 40;
+
+    private static final int GOLD = 0xFFD700;
+    private static final int GOLD_TEXT = 0xFFAA00;
+    private static final int GOLD_BORDER = 0xDAA520;
+    private static final int PANEL_BG = 0x1A1305;
+    private static final int CELL_BG = 0x3D2F06;
+    private static final int CELL_HOVER = 0x5D4F16;
+    private static final int SILVER = 0xC0C0C0;
+    private static final int BRONZE = 0xCD7F32;
+    private static final int MUTED = 0x9A8F70;
+    private static final int TEXT = 0xF5EED8;
+    private static final int OWN = 0x4ADE80;
+
+    private enum View { MINE, PLAYERS, ITEM }
+    private enum Filter { RECORDS, ALL }
+
+    private record Mine(String itemId, long time, int rank, long gap) {}
+    private record PlayerStat(String name, int wins, int podiums, int entries) {}
+    private record Hit(int x, int y, int w, int h, Runnable action) {}
+
+    private static View lastView = View.MINE;
+    private static Filter lastFilter = Filter.RECORDS;
+    private static String lastSelected;
+
     private final Screen parent;
-    private String selectedTarget = null;
-    private List<LeaderboardEntry> currentRecords = new ArrayList<>();
-    private boolean isFetching = false;
-    private String lastErrorMessage = null;
-    
-    private java.util.Map<String, List<LeaderboardEntry>> leaderboardsCache = new java.util.HashMap<>();
-    private java.util.Set<String> itemsWithRecords = new java.util.HashSet<>();
-    private boolean allLeaderboardsLoaded = false;
-    
-    private com.randomrun.ui.widget.styled.TextFieldStyled searchBox;
-    private List<String> allTargets = new ArrayList<>();
-    private List<String> filteredTargets = new ArrayList<>();
-    
-    private double smoothScrollOffset = 0.0;
-    private int itemGridScrollOffset = 0;
-    
-    private long lastSearchTime = 0L;
-    private String pendingSearchQuery = "";
-    private boolean searchPending = false;
-    
-    private enum SortType {
-        RECENT,
-        EASY_HARD,
-        HARD_EASY
-    }
-    private SortType currentSort = SortType.RECENT;
-    
-    private boolean isDraggingScrollbar = false;
-    private int dragStartY = 0;
-    private int dragStartScrollOffset = 0;
-    
-    private List<PlayerRecordEntry> playerTopRecords = new ArrayList<>();
+    private final List<String> allTargets = new ArrayList<>();
+    private final Map<String, ItemStack> stacks = new HashMap<>();
+    private final Map<String, String> names = new HashMap<>();
+    private final List<Hit> hits = new ArrayList<>();
+
+    private Map<String, List<LeaderboardEntry>> boards = new HashMap<>();
+    private List<String> gridItems = new ArrayList<>();
+    private List<Mine> mine = new ArrayList<>();
+    private List<PlayerStat> players = new ArrayList<>();
+    private int totalRecords;
+
+    private View view = lastView;
+    private Filter filter = lastFilter;
+    private String selected = lastSelected;
+    private boolean loading;
+    private boolean loaded;
+    private String error;
+
+    private TextFieldStyled search;
+    private String query = "";
+    private String pendingQuery = "";
+    private long queryChangedAt;
+
+    private float gridScroll, gridScrollTarget;
+    private float listScroll, listScrollTarget;
+    private int dragging;
+    private int lastMouseX, lastMouseY;
+    private double dragOffset;
+    private long viewChangedAt = System.currentTimeMillis();
 
     public LeaderboardScreen(Screen parent) {
-        super(com.randomrun.infrastructure.util.LanguageManager.text("randomrun.leaderboard.title"));
+        super(LanguageManager.text("randomrun.leaderboard.title"));
         this.parent = parent;
-        
-        boolean allowUnobtainable = com.randomrun.infrastructure.RandomRunMod.getInstance().getConfig().isAllowUnobtainableItems();
-        
-        List<net.minecraft.world.item.Item> items = com.randomrun.features.challenges.classic.data.ItemDifficulty.getAllItems(allowUnobtainable);
-        items.forEach(item -> {
-            net.minecraft.resources.Identifier id = BuiltInRegistries.ITEM.getKey(item);
-            if (id != null) {
-                allTargets.add(id.toString());
-            }
-        });
-        
-        filteredTargets.addAll(allTargets);
+        boolean unobtainable = RandomRunMod.getInstance().getConfig().isAllowUnobtainableItems();
+        for (Item item : ItemDifficulty.getAllItems(unobtainable)) {
+            Identifier id = BuiltInRegistries.ITEM.getKey(item);
+            if (id != null) allTargets.add(id.toString());
+        }
     }
 
     @Override
     protected void init() {
         super.init();
         GlobalParticleSystem.getInstance().setYellowMode(true);
-        initUI();
-        
-        if (!allLeaderboardsLoaded) {
-            loadAllLeaderboards();
-        } else if (selectedTarget != null) {
-            showCachedRecords(selectedTarget);
-        }
+        int leftRight = leftRight();
+        search = new TextFieldStyled(font, PAD + 8, TOP + 22, leftRight - PAD - 16, 16, LanguageManager.text("randomrun.search"), 0f);
+        search.setColors(CELL_BG, GOLD_TEXT);
+        search.setBorderColor(GOLD_BORDER);
+        search.setCenteredPlaceholder(LanguageManager.text("randomrun.leaderboard.search_placeholder").withStyle(style -> style.withColor(MUTED)));
+        search.setValue(query);
+        search.setResponder(text -> {
+            pendingQuery = text;
+            queryChangedAt = System.currentTimeMillis();
+        });
+        addRenderableWidget(search);
+        addRenderableWidget(new ButtonYellow(width - PAD - 90, 10, 90, 18, LanguageManager.text("randomrun.leaderboard.refresh"), button -> reload()));
+        addRenderableWidget(new ButtonYellow(width / 2 - 100, height - 30, 200, 20, LanguageManager.text("randomrun.button.back"), button -> onClose()));
+        if (!loaded && !loading) load(false);
+        else rebuildGrid();
     }
 
-    private void initUI() {
-        initSearchBox();
-        initObtainableFilterButton();
-        initRefreshButton();
-        initBackButton();
+    private int leftRight() {
+        return PAD + Math.max(180, Math.min(250, (int) (width * 0.36f)));
     }
-    
-    private void initSearchBox() {
-        int searchWidth = LEFT_PANEL_WIDTH - 20;
-        searchBox = new com.randomrun.ui.widget.styled.TextFieldStyled(font, PADDING + 10, PADDING + 45, searchWidth, 18, 
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.search"), 0f) {
-            @Override
-            protected int getTextYAdjustment() {
-                return 5;
+
+    private int panelBottom() {
+        return height - 36;
+    }
+
+    private void reload() {
+        LeaderboardService.getInstance().clearCache();
+        load(true);
+    }
+
+    private void load(boolean force) {
+        loading = true;
+        error = null;
+        LeaderboardService.getInstance().loadAllLeaderboards().whenComplete((result, failure) -> minecraft.execute(() -> {
+            loading = false;
+            loaded = true;
+            if (failure != null || result == null) {
+                error = LanguageManager.translate("randomrun.leaderboard.error");
+                return;
             }
+            Map<String, List<LeaderboardEntry>> sorted = new HashMap<>();
+            result.forEach((id, list) -> {
+                List<LeaderboardEntry> copy = new ArrayList<>(list);
+                copy.sort(Comparator.comparingLong(LeaderboardEntry::getCompletionTime));
+                if (!copy.isEmpty() && !stack(id).isEmpty()) sorted.put(id, copy);
+            });
+            boards = sorted;
+            computeStats();
+            rebuildGrid();
+            if (force) viewChangedAt = System.currentTimeMillis();
+        }));
+    }
+
+    private String me() {
+        return BackendSession.playerName();
+    }
+
+    private void computeStats() {
+        String me = me();
+        mine = new ArrayList<>();
+        Map<String, int[]> stats = new LinkedHashMap<>();
+        totalRecords = 0;
+        for (Map.Entry<String, List<LeaderboardEntry>> board : boards.entrySet()) {
+            List<LeaderboardEntry> list = board.getValue();
+            totalRecords += list.size();
+            long best = list.getFirst().getCompletionTime();
+            for (int i = 0; i < list.size(); i++) {
+                LeaderboardEntry entry = list.get(i);
+                int[] stat = stats.computeIfAbsent(entry.getPlayerName(), name -> new int[3]);
+                if (i == 0) stat[0]++;
+                if (i < 3) stat[1]++;
+                stat[2]++;
+                if (entry.getPlayerName() != null && entry.getPlayerName().equals(me) && mine.stream().noneMatch(m -> m.itemId().equals(board.getKey()))) {
+                    mine.add(new Mine(board.getKey(), entry.getCompletionTime(), i + 1, entry.getCompletionTime() - best));
+                }
+            }
+        }
+        mine.sort(Comparator.comparingInt(Mine::rank).thenComparingLong(Mine::time));
+        players = new ArrayList<>();
+        stats.forEach((name, stat) -> { if (name != null) players.add(new PlayerStat(name, stat[0], stat[1], stat[2])); });
+        players.sort(Comparator.comparingInt(PlayerStat::wins).reversed().thenComparing(Comparator.comparingInt(PlayerStat::podiums).reversed()).thenComparing(Comparator.comparingInt(PlayerStat::entries).reversed()));
+    }
+
+    private void rebuildGrid() {
+        String q = query.trim().toLowerCase(Locale.ROOT);
+        List<String> source = filter == Filter.RECORDS ? new ArrayList<>(boards.keySet()) : allTargets;
+        List<String> result = new ArrayList<>();
+        for (String id : source) {
+            if (q.isEmpty() || id.toLowerCase(Locale.ROOT).contains(q) || name(id).toLowerCase(Locale.ROOT).contains(q)) result.add(id);
+        }
+        if (filter == Filter.RECORDS) result.sort(Comparator.comparingInt((String id) -> boards.get(id).size()).reversed().thenComparing(this::name));
+        gridItems = result;
+        gridScrollTarget = Math.min(gridScrollTarget, maxGridScroll());
+    }
+
+    private ItemStack stack(String id) {
+        return stacks.computeIfAbsent(id, key -> {
+            Identifier identifier = Identifier.tryParse(key);
+            return identifier == null ? ItemStack.EMPTY : PreviewItems.stack(BuiltInRegistries.ITEM.getValue(identifier));
+        });
+    }
+
+    private String name(String id) {
+        return names.computeIfAbsent(id, key -> {
+            ItemStack stack = stack(key);
+            return stack.isEmpty() ? key : stack.getHoverName().getString();
+        });
+    }
+
+    private static String time(long millis) {
+        long hours = millis / 3_600_000L, minutes = millis / 60_000L % 60, seconds = millis / 1000 % 60, ms = millis % 1000;
+        return hours > 0 ? String.format("%d:%02d:%02d.%03d", hours, minutes, seconds, ms) : String.format("%d:%02d.%03d", minutes, seconds, ms);
+    }
+
+    private static String date(long timestamp) {
+        return timestamp <= 0 ? "" : new SimpleDateFormat("dd.MM.yy").format(new Date(timestamp));
+    }
+
+    private static int rankColor(int rank) {
+        return switch (rank) { case 1 -> GOLD; case 2 -> SILVER; case 3 -> BRONZE; default -> MUTED; };
+    }
+
+    private int gridColumns() {
+        return Math.max(1, (leftRight() - PAD - 22) / CELL);
+    }
+
+    private int gridX() {
+        int left = PAD, right = leftRight();
+        int used = gridColumns() * CELL - 2;
+        return left + 4 + Math.max(0, (right - 10 - left - 4 - used) / 2);
+    }
+
+    private int gridTop() {
+        return TOP + 62;
+    }
+
+    private int gridBottom() {
+        return panelBottom() - 16;
+    }
+
+    private float maxGridScroll() {
+        int rows = (gridItems.size() + gridColumns() - 1) / gridColumns();
+        return Math.max(0, rows * CELL - (gridBottom() - gridTop()));
+    }
+
+    private int listTop() {
+        return TOP + (view == View.ITEM ? 70 : 44);
+    }
+
+    private int listBottom() {
+        return panelBottom() - (view == View.ITEM ? 30 : 8);
+    }
+
+    private int listCount() {
+        return switch (view) {
+            case MINE -> mine.size();
+            case PLAYERS -> players.size();
+            case ITEM -> selected == null || !boards.containsKey(selected) ? 0 : Math.min(TOP_LIMIT, boards.get(selected).size());
         };
-        searchBox.setColors(0x3d2f06, 0x5d4f16);
-        searchBox.setBorderColor(0xDAA520);
-        searchBox.setCenteredPlaceholder(com.randomrun.infrastructure.util.LanguageManager.text("randomrun.leaderboard.search_placeholder")
-            .withStyle(s -> s.withColor(COLOR_DARK_GRAY)));
-        searchBox.setResponder(text -> {
-            pendingSearchQuery = text;
-            searchPending = true;
-            lastSearchTime = System.currentTimeMillis();
-        });
-        addRenderableWidget(searchBox);
-    }
-    
-    private void initObtainableFilterButton() {
-    }
-    
-    private void initRefreshButton() {
-        int buttonWidth = 120;
-        int buttonHeight = 20;
-        int buttonX = width - buttonWidth - 20;
-        int buttonY = 22;
-        
-        addRenderableWidget(new ButtonYellow(
-            buttonX, buttonY, buttonWidth, buttonHeight,
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.leaderboard.refresh"),
-            button -> {
-                leaderboardsCache.clear();
-                itemsWithRecords.clear();
-                allLeaderboardsLoaded = false;
-                LeaderboardService.getInstance().clearCache();
-                
-                loadAllLeaderboards();
-            }
-        ));
-    }
-    
-    private void initBackButton() {
-        int buttonWidth = 200;
-        int buttonHeight = 20;
-        int buttonX = (width - buttonWidth) / 2;
-        int buttonY = height - 30;
-        
-        addRenderableWidget(new ButtonYellow(
-            buttonX, buttonY, buttonWidth, buttonHeight,
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.button.back"),
-            button -> Minecraft.getInstance().gui.setScreen(parent)
-        ));
-        
-        if (selectedTarget != null) {
-            int profileButtonSize = 20;
-            int profileButtonX = buttonX + buttonWidth + 10;
-            int profileButtonY = buttonY;
-            
-            addRenderableWidget(new ButtonYellow(
-                profileButtonX, profileButtonY, profileButtonSize, profileButtonSize,
-                Component.literal("👤"),
-                button -> {
-                    selectedTarget = null;
-                    currentRecords.clear();
-                    
-                    clearWidgets();
-                    initUI();
-                }
-            ));
-        }
-    }
-    
-    private void filterTargets(String query) {
-        if (query.isEmpty()) {
-            filteredTargets = new ArrayList<>(allTargets);
-        } else {
-            String lowerQuery = query.toLowerCase();
-            filteredTargets = allTargets.stream()
-                .filter(id -> {
-                    try {
-                        String cleanId = id.contains(":") ? id.split(":")[1] : id;
-                        
-                        net.minecraft.resources.Identifier identifier = net.minecraft.resources.Identifier.tryParse(id);
-                        if (identifier == null) return false;
-                        
-                        Item item = BuiltInRegistries.ITEM.getValue(identifier);
-                        if (item == null) return false;
-                        
-                        String translatedName = net.minecraft.network.chat.Component.translatable(item.getDescriptionId()).getString().toLowerCase();
-                        
-                        String englishName = cleanId.replace("_", " ").toLowerCase();
-                        
-                        return cleanId.toLowerCase().contains(lowerQuery) || 
-                               translatedName.contains(lowerQuery) || 
-                               englishName.contains(lowerQuery);
-                    } catch (Exception e) {
-                        return false;
-                    }
-                })
-                .collect(Collectors.toList());
-        }
-        itemGridScrollOffset = 0;
-    }
-    
-    private void applySorting() {
-        switch (currentSort) {
-            case RECENT -> sortByRecentRecord();
-            case EASY_HARD -> sortByDifficulty(false);
-            case HARD_EASY -> sortByDifficulty(true);
-        }
-        itemGridScrollOffset = 0;
-    }
-    
-    private void sortByRecentRecord() {
-        filteredTargets.sort((id1, id2) -> {
-            List<LeaderboardEntry> records1 = leaderboardsCache.get(id1);
-            List<LeaderboardEntry> records2 = leaderboardsCache.get(id2);
-            
-            long time1 = records1 != null && !records1.isEmpty() ? records1.get(0).getTimestamp() : 0;
-            long time2 = records2 != null && !records2.isEmpty() ? records2.get(0).getTimestamp() : 0;
-            
-            return Long.compare(time2, time1);
-        });
-    }
-    
-    private void sortByDifficulty(boolean hardFirst) {
-        filteredTargets.sort((id1, id2) -> {
-            try {
-                int difficulty1Ordinal;
-                int difficulty2Ordinal;
-                
-                net.minecraft.resources.Identifier identifier1 = net.minecraft.resources.Identifier.tryParse(id1);
-                if (identifier1 != null) {
-                    Item item1 = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(identifier1);
-                    com.randomrun.features.challenges.classic.data.ItemDifficulty.Difficulty itemDiff = 
-                        com.randomrun.features.challenges.classic.data.ItemDifficulty.getDifficulty(item1);
-                    difficulty1Ordinal = itemDiff.ordinal();
-                } else {
-                    difficulty1Ordinal = 0;
-                }
-                
-                net.minecraft.resources.Identifier identifier2 = net.minecraft.resources.Identifier.tryParse(id2);
-                if (identifier2 != null) {
-                    Item item2 = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(identifier2);
-                    com.randomrun.features.challenges.classic.data.ItemDifficulty.Difficulty itemDiff = 
-                        com.randomrun.features.challenges.classic.data.ItemDifficulty.getDifficulty(item2);
-                    difficulty2Ordinal = itemDiff.ordinal();
-                } else {
-                    difficulty2Ordinal = 0;
-                }
-                
-                int result = hardFirst ? 
-                    Integer.compare(difficulty2Ordinal, difficulty1Ordinal) : 
-                    Integer.compare(difficulty1Ordinal, difficulty2Ordinal);
-                
-                if (result == 0) {
-                    result = id1.compareTo(id2);
-                }
-                
-                return result;
-            } catch (Exception e) {
-                return id1.compareTo(id2);
-            }
-        });
-    }
-    
-    @Override
-    protected void rebuildWidgets() {
-        this.clearWidgets();
-        initUI();
     }
 
-    private void loadAllLeaderboards() {
-        if (isFetching) return;
-        
-        isFetching = true;
-        currentRecords.clear();
-        lastErrorMessage = null;
-        
-        LeaderboardService.getInstance().loadAllLeaderboards().thenAccept(allLeaderboards -> {
-            Minecraft.getInstance().execute(() -> {
-                this.leaderboardsCache = allLeaderboards;
-                this.itemsWithRecords = new java.util.HashSet<>(allLeaderboards.keySet());
-                this.allLeaderboardsLoaded = true;
-                this.isFetching = false;
-                
-                showCachedRecords(selectedTarget);
-            });
-        }).exceptionally(e -> {
-            Minecraft.getInstance().execute(() -> {
-                this.isFetching = false;
-                this.allLeaderboardsLoaded = true;
-                this.lastErrorMessage = com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.leaderboard.error");
-                LOGGER.error("[Leaderboard] Ошибка загрузки всех лидербордов", e);
-            });
-            return null;
-        });
+    private float maxListScroll() {
+        return Math.max(0, listCount() * ROW - (listBottom() - listTop()));
     }
-    
-    private void showCachedRecords(String targetId) {
-        currentRecords.clear();
-        lastErrorMessage = null;
-        
-        if (leaderboardsCache.containsKey(targetId)) {
-            List<LeaderboardEntry> cached = leaderboardsCache.get(targetId);
-            currentRecords = new ArrayList<>(cached);
+
+    private void open(View value, String item) {
+        view = value;
+        lastView = value;
+        if (item != null) {
+            selected = item;
+            lastSelected = item;
         }
-        
-        clearWidgets();
-        initUI();
-    }
-    
-    private List<LeaderboardEntry> getFilteredRecords() {
-        return currentRecords.stream()
-            .limit(DISPLAYED_RECORDS_LIMIT)
-            .collect(Collectors.toList());
+        listScroll = listScrollTarget = 0;
+        viewChangedAt = System.currentTimeMillis();
+        Ui.click();
     }
 
     @Override
     public void extractBackground(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        int GRADIENT_TOP = 0xFF141000;
-        int GRADIENT_MID = 0xFF886600;
-        int GRADIENT_BOTTOM = 0xFF332200;
-        
-        context.fillGradient(0, 0, width, height / 2, GRADIENT_TOP, GRADIENT_MID);
-        context.fillGradient(0, height / 2, width, height, GRADIENT_MID, GRADIENT_BOTTOM);
-        
+        context.fillGradient(0, 0, width, height / 2, 0xFF141000, 0xFF886600);
+        context.fillGradient(0, height / 2, width, height, 0xFF886600, 0xFF332200);
         GlobalParticleSystem particles = GlobalParticleSystem.getInstance();
         particles.update(delta);
         particles.extractRenderState(context);
-        
-        if (searchPending && System.currentTimeMillis() - lastSearchTime >= SEARCH_DEBOUNCE_MS) {
-            filterTargets(pendingSearchQuery);
-            searchPending = false;
+    }
+
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        lastMouseX = mouseX;
+        lastMouseY = mouseY;
+        if (!pendingQuery.equals(query) && System.currentTimeMillis() - queryChangedAt >= SEARCH_DEBOUNCE_MS) {
+            query = pendingQuery;
+            gridScrollTarget = 0;
+            rebuildGrid();
         }
-        
-        smoothScrollOffset += (itemGridScrollOffset - smoothScrollOffset) * 0.3;
-        
-        int leftPanelRight = PADDING + LEFT_PANEL_WIDTH;
-        int rightPanelLeft = leftPanelRight + PADDING;
-        int rightPanelRight = width - PADDING;
-        
-        renderLeftPanel(context, leftPanelRight, mouseX, mouseY);
-        renderRightPanel(context, rightPanelLeft, rightPanelRight, mouseX, mouseY);
+        gridScroll += (gridScrollTarget - gridScroll) * 0.35f;
+        listScroll += (listScrollTarget - listScroll) * 0.35f;
+        hits.clear();
+
+        renderHeader(context);
+        int leftRight = leftRight();
+        int rightLeft = leftRight + PAD;
+        panel(context, PAD, TOP, leftRight, panelBottom());
+        panel(context, rightLeft, TOP, width - PAD, panelBottom());
+        super.extractRenderState(context, mouseX, mouseY, delta);
+        renderLeft(context, mouseX, mouseY, leftRight);
+        renderRight(context, mouseX, mouseY, rightLeft, width - PAD);
     }
-    
-    private void renderLeftPanel(GuiGraphicsExtractor context, int leftPanelRight, int mouseX, int mouseY) {
-        int panelBottom = height - 50;
-        context.fill(PADDING, PADDING, leftPanelRight, panelBottom, COLOR_DARK_GOLD);
-        renderGoldBorder(context, PADDING, PADDING, leftPanelRight, panelBottom, false);
-        
-        Component leftTitle = com.randomrun.infrastructure.util.LanguageManager.text("randomrun.leaderboard.items_panel")
-            .withStyle(s -> s.withColor(COLOR_GOLD));
-        com.randomrun.ui.util.GuiText.text(context, font, leftTitle, PADDING + 15, PADDING + 15, COLOR_WHITE);
-        
-        context.fill(PADDING + 10, PADDING + 35, leftPanelRight - 10, PADDING + 37, COLOR_GOLD_SEPARATOR);
-        
-        renderItemGrid(context, mouseX, mouseY);
-        
-        String countText = filteredTargets.size() + " / " + allTargets.size();
-        com.randomrun.ui.util.GuiText.centeredText(context, font, Component.literal(countText).withStyle(s -> s.withColor(COLOR_GOLD_TEXT)), 
-            PADDING + LEFT_PANEL_WIDTH / 2, panelBottom - 20, COLOR_WHITE);
+
+    private void panel(GuiGraphicsExtractor context, int left, int top, int right, int bottom) {
+        Ui.shadow(context, left, top, right, bottom, 1f);
+        context.fill(left, top, right, bottom, 0xE0000000 | PANEL_BG);
+        Ui.border(context, left, top, right, bottom, 2, 0xFF000000 | GOLD_BORDER);
+        renderGlow(context, left, top, right, bottom);
     }
-    
-    private void renderItemGrid(GuiGraphicsExtractor context, int mouseX, int mouseY) {
-        int gridX = PADDING + 10;
-        int gridY = PADDING + 70;
-        int gridWidth = LEFT_PANEL_WIDTH - 20;
-        int panelBottom = height - 50;
-        int gridHeight = panelBottom - gridY - 30;
-        
-        context.enableScissor(gridX, gridY, gridX + gridWidth, gridY + gridHeight);
-        
-        int itemsPerRow = ITEMS_PER_ROW;
-        int totalRows = (int) Math.ceil((double) filteredTargets.size() / itemsPerRow);
-        int visibleRows = gridHeight / (ITEM_SIZE + ITEM_SPACING);
-        
-        int startRow = (int) (smoothScrollOffset / (ITEM_SIZE + ITEM_SPACING));
-        int endRow = Math.min(startRow + visibleRows + 2, totalRows);
-        
-        String hoveredItemId = null;
-        int hoveredX = 0, hoveredY = 0;
-        
-        for (int row = startRow; row < endRow; row++) {
-            for (int col = 0; col < itemsPerRow; col++) {
-                int index = row * itemsPerRow + col;
-                if (index >= filteredTargets.size()) break;
-                
-                String targetId = filteredTargets.get(index);
-                
-                int x = gridX + col * (ITEM_SIZE + ITEM_SPACING);
-                int y = gridY + row * (ITEM_SIZE + ITEM_SPACING) - (int) smoothScrollOffset;
-                
-                boolean isSelected = targetId.equals(selectedTarget);
-                boolean isHovered = mouseX >= x && mouseX < x + ITEM_SIZE && 
-                                   mouseY >= y && mouseY < y + ITEM_SIZE &&
-                                   mouseY >= gridY && mouseY < gridY + gridHeight;
-                
-                int bgColor = isSelected ? COLOR_ITEM_SELECTED : (isHovered ? COLOR_ITEM_HOVER : COLOR_ITEM_BG);
-                context.fill(x, y, x + ITEM_SIZE, y + ITEM_SIZE, bgColor);
-                
-                if (isSelected) {
-                    context.fill(x, y, x + ITEM_SIZE, y + 1, COLOR_GOLD);
-                    context.fill(x, y + ITEM_SIZE - 1, x + ITEM_SIZE, y + ITEM_SIZE, COLOR_GOLD);
-                    context.fill(x, y, x + 1, y + ITEM_SIZE, COLOR_GOLD);
-                    context.fill(x + ITEM_SIZE - 1, y, x + ITEM_SIZE, y + ITEM_SIZE, COLOR_GOLD);
-                }
-                
-                renderTarget(context, targetId, x + 2, y + 2, ITEM_SIZE - 4, mouseX, mouseY);
-                
-                if (itemsWithRecords.contains(targetId)) {
-                    int borderColor = 0xFFFFD700;
-                    context.fill(x, y, x + ITEM_SIZE, y + 1, borderColor);
-                    context.fill(x, y + ITEM_SIZE - 1, x + ITEM_SIZE, y + ITEM_SIZE, borderColor);
-                    context.fill(x, y, x + 1, y + ITEM_SIZE, borderColor);
-                    context.fill(x + ITEM_SIZE - 1, y, x + ITEM_SIZE, y + ITEM_SIZE, borderColor);
-                }
-                
-                if (isHovered) {
-                    hoveredItemId = targetId;
-                    hoveredX = mouseX;
-                    hoveredY = mouseY;
-                }
+
+    private void renderGlow(GuiGraphicsExtractor context, int left, int top, int right, int bottom) {
+        if (!RandomRunMod.getInstance().getConfig().isAnimationsEnabled()) return;
+        int w = right - left, h = bottom - top, perimeter = 2 * (w + h);
+        float head = (System.currentTimeMillis() % GLOW_CYCLE_MS) / (float) GLOW_CYCLE_MS * perimeter;
+        GuiQuadBatch.Builder batch = new GuiQuadBatch.Builder(GLOW_LENGTH * 2 + 2);
+        for (int i = -GLOW_LENGTH; i <= GLOW_LENGTH; i++) {
+            int pos = Math.floorMod((int) head + i, perimeter);
+            float intensity = 1f - Math.abs(i) / (float) GLOW_LENGTH;
+            int color = 0xFF000000 | Ui.lerp(0xFF000000 | GOLD_TEXT, 0xFFFFFFFF, intensity) & 0xFFFFFF;
+            if (pos < w) batch.fill(left + pos, top, left + pos + 1, top + 2, color);
+            else if (pos < w + h) { int p = pos - w; batch.fill(right - 2, top + p, right, top + p + 1, color); }
+            else if (pos < 2 * w + h) { int p = pos - w - h; batch.fill(right - p - 1, bottom - 2, right - p, bottom, color); }
+            else { int p = pos - 2 * w - h; batch.fill(left, bottom - p - 1, left + 2, bottom - p, color); }
+        }
+        batch.build().extract(context);
+    }
+
+    private void renderHeader(GuiGraphicsExtractor context) {
+        Ui.centeredScaled(context, font, LanguageManager.text("randomrun.leaderboard.title"), PAD + font.width(LanguageManager.text("randomrun.leaderboard.title")) * 0.75f, 13, 1.5f, 0xFF000000 | GOLD);
+        int x = PAD + Math.round(font.width(LanguageManager.text("randomrun.leaderboard.title")) * 1.5f) + 12;
+        if (!loaded) return;
+        String[] chips = {
+            LanguageManager.translate("randomrun.leaderboard.stat.items", boards.size()),
+            LanguageManager.translate("randomrun.leaderboard.stat.records", totalRecords),
+            LanguageManager.translate("randomrun.leaderboard.stat.players", players.size())
+        };
+        for (String chip : chips) {
+            int w = font.width(chip) + 10;
+            if (x + w > width - PAD - 100) break;
+            context.fill(x, 12, x + w, 26, 0x90000000);
+            Ui.border(context, x, 12, x + w, 26, 1, 0x60000000 | GOLD_BORDER);
+            GuiText.text(context, font, chip, x + 5, 15, 0xFF000000 | TEXT, false);
+            x += w + 4;
+        }
+    }
+
+    private void renderLeft(GuiGraphicsExtractor context, int mouseX, int mouseY, int right) {
+        int left = PAD;
+        GuiText.text(context, font, LanguageManager.text("randomrun.leaderboard.items_panel"), left + 8, TOP + 8, 0xFF000000 | GOLD, true);
+        String count = String.valueOf(gridItems.size());
+        GuiText.text(context, font, count, right - 8 - font.width(count), TOP + 8, 0xFF000000 | MUTED, false);
+
+        int segY = TOP + 42, segW = (right - left - 16) / 2;
+        segment(context, left + 8, segY, segW, LanguageManager.translate("randomrun.leaderboard.filter.records"), filter == Filter.RECORDS, mouseX, mouseY, () -> setFilter(Filter.RECORDS));
+        segment(context, left + 8 + segW, segY, right - left - 16 - segW, LanguageManager.translate("randomrun.leaderboard.filter.all"), filter == Filter.ALL, mouseX, mouseY, () -> setFilter(Filter.ALL));
+
+        int top = gridTop(), bottom = gridBottom();
+        int columns = gridColumns();
+        int gridX = gridX();
+        String hovered = null;
+        context.enableScissor(left + 2, top, right - 2, bottom);
+        for (int i = 0; i < gridItems.size(); i++) {
+            int col = i % columns, row = i / columns;
+            int x = gridX + col * CELL, y = top + row * CELL - Math.round(gridScroll);
+            if (y + CELL < top || y > bottom) continue;
+            String id = gridItems.get(i);
+            boolean records = boards.containsKey(id);
+            boolean hover = Ui.inside(mouseX, mouseY, x, y, CELL - 2, CELL - 2) && mouseY >= top && mouseY < bottom;
+            boolean active = id.equals(selected) && view == View.ITEM;
+            context.fill(x, y, x + CELL - 2, y + CELL - 2, 0xFF000000 | (hover ? CELL_HOVER : CELL_BG));
+            if (active) Ui.border(context, x, y, x + CELL - 2, y + CELL - 2, 1, 0xFF000000 | GOLD);
+            context.item(stack(id), x + 1, y + 1);
+            if (!records && filter == Filter.ALL) context.fill(x, y, x + CELL - 2, y + CELL - 2, 0x99000000);
+            if (records) {
+                boolean own = mine.stream().anyMatch(m -> m.itemId().equals(id));
+                context.fill(x + CELL - 6, y + 1, x + CELL - 3, y + 4, 0xFF000000 | (own ? OWN : GOLD));
             }
+            if (hover) hovered = id;
+            if (y >= top - CELL / 2 && y + CELL / 2 <= bottom) hits.add(new Hit(x, Math.max(y, top), CELL - 2, Math.min(y + CELL - 2, bottom) - Math.max(y, top), () -> open(View.ITEM, id)));
         }
-        
         context.disableScissor();
-        
-        if (hoveredItemId != null) {
-            renderTargetTooltip(context, hoveredItemId, hoveredX, hoveredY);
+        if (gridItems.isEmpty()) {
+            Component empty = LanguageManager.text(loading ? "randomrun.leaderboard.loading" : filter == Filter.RECORDS && query.isBlank() ? "randomrun.leaderboard.no_records" : "randomrun.leaderboard.nothing_found");
+            GuiText.centeredText(context, font, empty, (left + right) / 2, (top + bottom) / 2, 0xFF000000 | MUTED);
         }
-        
-        if (totalRows * (ITEM_SIZE + ITEM_SPACING) > gridHeight) {
-            int scrollBarX = gridX + gridWidth - 4;
-            int scrollBarHeight = Math.max(20, gridHeight * gridHeight / (totalRows * (ITEM_SIZE + ITEM_SPACING)));
-            int scrollBarY = gridY + (int) ((gridHeight - scrollBarHeight) * (smoothScrollOffset / ((totalRows * (ITEM_SIZE + ITEM_SPACING)) - gridHeight)));
-            
-            boolean isHovered = mouseX >= scrollBarX && mouseX <= scrollBarX + 3 && 
-                               mouseY >= scrollBarY && mouseY <= scrollBarY + scrollBarHeight;
-            
-            context.fill(scrollBarX, gridY, scrollBarX + 3, gridY + gridHeight, 0x40FFFFFF);
-            
-            int thumbColor = isDraggingScrollbar ? 0xFFFFD700 : (isHovered ? 0xFFFFCC00 : COLOR_GOLD);
-            context.fill(scrollBarX, scrollBarY, scrollBarX + 3, scrollBarY + scrollBarHeight, thumbColor);
+        float max = maxGridScroll();
+        if (max > 0) {
+            int trackH = bottom - top;
+            int thumbH = Math.max(16, (int) (trackH * trackH / (trackH + max)));
+            int thumbY = top + (int) ((trackH - thumbH) * (gridScroll / max));
+            thumb(context, 1, right, top, bottom, thumbY, thumbH, mouseX, mouseY);
         }
+        String a = LanguageManager.translate("randomrun.leaderboard.legend.records"), b = LanguageManager.translate("randomrun.leaderboard.legend.mine");
+        int total = 6 + font.width(a) + 12 + 6 + font.width(b);
+        int lx = (left + right) / 2 - total / 2, ly = bottom + 4;
+        context.fill(lx, ly + 2, lx + 4, ly + 6, 0xFF000000 | GOLD);
+        GuiText.text(context, font, a, lx + 6, ly, 0xFF000000 | MUTED, false);
+        lx += 6 + font.width(a) + 12;
+        context.fill(lx, ly + 2, lx + 4, ly + 6, 0xFF000000 | OWN);
+        GuiText.text(context, font, b, lx + 6, ly, 0xFF000000 | MUTED, false);
+        if (hovered != null) itemTooltip(context, hovered, mouseX, mouseY);
     }
-    
-    private void renderRightPanel(GuiGraphicsExtractor context, int rightPanelLeft, int rightPanelRight, int mouseX, int mouseY) {
-        int panelBottom = height - 50;
-        context.fill(rightPanelLeft, PADDING, rightPanelRight, panelBottom, COLOR_LIGHT_GOLD);
-        renderGoldBorder(context, rightPanelLeft, PADDING, rightPanelRight, panelBottom, true);
-        
-        renderRightPanelHeader(context, rightPanelLeft, rightPanelRight);
-        renderLeaderboardTable(context, rightPanelLeft, rightPanelRight, mouseX, mouseY);
-        renderFooter(context, rightPanelLeft, rightPanelRight);
-    }
-    
-    private void renderRightPanelHeader(GuiGraphicsExtractor context, int rightPanelLeft, int rightPanelRight) {
-        if (selectedTarget == null) {
-            com.randomrun.core.profile.PlayerProfile profile = com.randomrun.core.profile.PlayerProfile.get();
-            if (profile != null) {
-                String playerName = profile.getPlayerName();
-                
-                int headSize = 20;
-                int headX = rightPanelLeft + 20;
-                int headY = 22;
-                renderPlayerHead(context, playerName, null, headX, headY, headSize);
-                
-                Component nameText = Component.literal(playerName).withStyle(s -> s.withColor(COLOR_GOLD));
-                com.randomrun.ui.util.GuiText.text(context, font, nameText, headX + headSize + 6, headY + 6, COLOR_WHITE);
-            }
-        } else {
-            String itemName = getItemDisplayName(selectedTarget);
-            Component titleText = Component.literal(itemName).withStyle(s -> s.withColor(COLOR_GOLD));
-            com.randomrun.ui.util.GuiText.text(context, font, titleText, rightPanelLeft + 20, PADDING + 15, COLOR_WHITE);
+
+    private void itemTooltip(GuiGraphicsExtractor context, String id, int mouseX, int mouseY) {
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.literal(name(id)).withStyle(style -> style.withColor(GOLD)));
+        List<LeaderboardEntry> board = boards.get(id);
+        if (board == null) lines.add(LanguageManager.text("randomrun.leaderboard.no_records").withStyle(style -> style.withColor(MUTED)));
+        else {
+            lines.add(LanguageManager.text("randomrun.leaderboard.tooltip.best", time(board.getFirst().getCompletionTime()), board.getFirst().getPlayerName()).withStyle(style -> style.withColor(TEXT)));
+            lines.add(LanguageManager.text("randomrun.leaderboard.tooltip.count", board.size()).withStyle(style -> style.withColor(MUTED)));
         }
-        
-        context.fill(rightPanelLeft + 15, PADDING + 35, rightPanelRight - 15, PADDING + 37, COLOR_GOLD_SEPARATOR);
+        context.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
     }
-    
-    private String getItemDisplayName(String itemId) {
-        try {
-            Identifier id = Identifier.tryParse(itemId);
-            if (id != null) {
-                Item item = BuiltInRegistries.ITEM.getValue(id);
-                if (item != null && item != net.minecraft.world.item.Items.AIR) {
-                    return net.minecraft.network.chat.Component.translatable(item.getDescriptionId()).getString();
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.warn("[Leaderboard] Ошибка получения имени для {}", itemId);
-        }
-        return com.randomrun.infrastructure.util.LanguageManager.translateItem(itemId);
+
+    private void setFilter(Filter value) {
+        if (filter == value) return;
+        filter = value;
+        lastFilter = value;
+        gridScroll = gridScrollTarget = 0;
+        rebuildGrid();
+        Ui.click();
     }
-    
-    private void renderLeaderboardTable(GuiGraphicsExtractor context, int rightPanelLeft, int rightPanelRight, int mouseX, int mouseY) {
-        int startY = PADDING + 45;
-        
-        if (selectedTarget == null) {
-            renderPlayerTopRecords(context, rightPanelLeft, rightPanelRight, startY, mouseX, mouseY);
-        } else {
-            int rankX = rightPanelLeft + 30;
-            int playerX = rightPanelLeft + 80;
-            int timeX = rightPanelRight - 120;
-            
-            renderTableHeaders(context, rankX, playerX, timeX, startY);
-            
-            int listY = startY + 20;
-            
-            if (isFetching) {
-                renderLoadingMessage(context, rightPanelLeft, rightPanelRight, listY);
-            } else if (lastErrorMessage != null) {
-                renderErrorMessage(context, rightPanelLeft, rightPanelRight, listY);
-            } else {
-                renderRecordsList(context, rankX, playerX, timeX, listY, rightPanelLeft, rightPanelRight);
-            }
-        }
+
+    private void segment(GuiGraphicsExtractor context, int x, int y, int w, String label, boolean active, int mouseX, int mouseY, Runnable action) {
+        boolean hover = Ui.inside(mouseX, mouseY, x, y, w, 14);
+        context.fill(x, y, x + w, y + 14, 0xFF000000 | (active ? 0x6B5410 : hover ? CELL_HOVER : CELL_BG));
+        if (active) context.fill(x, y + 13, x + w, y + 14, 0xFF000000 | GOLD);
+        GuiText.centeredText(context, font, Ui.ellipsize(font, label, w - 6), x + w / 2, y + 3, 0xFF000000 | (active ? 0xFFFFFF : MUTED));
+        hits.add(new Hit(x, y, w, 14, action));
     }
-    
-    private void renderTableHeaders(GuiGraphicsExtractor context, int rankX, int playerX, int timeX, int startY) {
-        com.randomrun.ui.util.GuiText.text(context, font, 
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.leaderboard.rank").withStyle(s -> s.withColor(COLOR_GOLD)), 
-            rankX, startY, COLOR_WHITE);
-        com.randomrun.ui.util.GuiText.text(context, font, 
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.leaderboard.player").withStyle(s -> s.withColor(COLOR_GOLD)), 
-            playerX, startY, COLOR_WHITE);
-        com.randomrun.ui.util.GuiText.text(context, font, 
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.leaderboard.time").withStyle(s -> s.withColor(COLOR_GOLD)), 
-            timeX, startY, COLOR_WHITE);
-    }
-    
-    private void renderLoadingMessage(GuiGraphicsExtractor context, int rightPanelLeft, int rightPanelRight, int listY) {
-        int centerX = rightPanelLeft + (rightPanelRight - rightPanelLeft) / 2;
-        com.randomrun.ui.util.GuiText.centeredText(context, font, 
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.leaderboard.loading").withStyle(s -> s.withColor(COLOR_GOLD)), 
-            centerX, listY + 40, COLOR_WHITE);
-    }
-    
-    private void renderErrorMessage(GuiGraphicsExtractor context, int rightPanelLeft, int rightPanelRight, int listY) {
-        int centerX = rightPanelLeft + (rightPanelRight - rightPanelLeft) / 2;
-        com.randomrun.ui.util.GuiText.centeredText(context, font, 
-            Component.literal(lastErrorMessage).withStyle(s -> s.withColor(COLOR_RED)), 
-            centerX, listY + 40, COLOR_WHITE);
-    }
-    
-    private void renderRecordsList(GuiGraphicsExtractor context, int rankX, int playerX, int timeX, int listY, int rightPanelLeft, int rightPanelRight) {
-        List<LeaderboardEntry> filteredRecords = getFilteredRecords();
-        
-        if (filteredRecords.isEmpty()) {
-            int centerX = rightPanelLeft + (rightPanelRight - rightPanelLeft) / 2;
-            
-            com.randomrun.core.profile.PlayerProfile profile = com.randomrun.core.profile.PlayerProfile.get();
-            boolean lowTrustScore = profile != null && !profile.canSubmitToLeaderboard();
-            
-            if (lowTrustScore) {
-                int ts = profile.getTrustScore();
-                String lowTrustMsg = String.format(
-                    com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.leaderboard.low_trust"), ts);
-                com.randomrun.ui.util.GuiText.centeredText(context, font, 
-                    Component.literal(lowTrustMsg).withStyle(s -> s.withColor(COLOR_RED)), 
-                    centerX, listY + 20, COLOR_WHITE);
-                
-                int trustScore = profile.getTrustScore();
-                int needed = com.randomrun.core.profile.PlayerProfile.LEADERBOARD_THRESHOLD - trustScore;
-                Component trustText = Component.literal(String.format("Trust Score: %d/%d (нужно +%d)", 
-                    trustScore, com.randomrun.core.profile.PlayerProfile.LEADERBOARD_THRESHOLD, needed))
-                    .withStyle(s -> s.withColor(COLOR_GOLD_TEXT));
-                com.randomrun.ui.util.GuiText.centeredText(context, font, trustText, centerX, listY + 35, COLOR_WHITE);
-                
-                com.randomrun.ui.util.GuiText.centeredText(context, font, 
-                    com.randomrun.infrastructure.util.LanguageManager.text("randomrun.leaderboard.earn_trust").withStyle(s -> s.withColor(COLOR_GOLD)), 
-                    centerX, listY + 50, COLOR_WHITE);
-            } else {
-                com.randomrun.ui.util.GuiText.centeredText(context, font, 
-                    com.randomrun.infrastructure.util.LanguageManager.text("randomrun.leaderboard.no_records").withStyle(s -> s.withColor(COLOR_RED)), 
-                    centerX, listY + 30, COLOR_WHITE);
-                com.randomrun.ui.util.GuiText.centeredText(context, font, 
-                    com.randomrun.infrastructure.util.LanguageManager.text("randomrun.leaderboard.be_first").withStyle(s -> s.withColor(COLOR_GOLD)), 
-                    centerX, listY + 50, COLOR_WHITE);
-            }
+
+    private void renderRight(GuiGraphicsExtractor context, int mouseX, int mouseY, int left, int right) {
+        int tabY = TOP + 8;
+        int x = left + 8;
+        x += tab(context, x, tabY, LanguageManager.translate("randomrun.leaderboard.tab.mine"), view == View.MINE, mouseX, mouseY, () -> open(View.MINE, null));
+        x += tab(context, x, tabY, LanguageManager.translate("randomrun.leaderboard.tab.players"), view == View.PLAYERS, mouseX, mouseY, () -> open(View.PLAYERS, null));
+        if (selected != null) tab(context, x, tabY, Ui.ellipsize(font, name(selected), right - x - 30), view == View.ITEM, mouseX, mouseY, () -> open(View.ITEM, null));
+        context.fill(left + 8, tabY + 16, right - 8, tabY + 17, 0x80000000 | GOLD_BORDER);
+
+        if (loading && !loaded) {
+            GuiText.centeredText(context, font, LanguageManager.text("randomrun.leaderboard.loading"), (left + right) / 2, (TOP + panelBottom()) / 2, 0xFF000000 | MUTED);
             return;
         }
-        
-        for (int i = 0; i < filteredRecords.size(); i++) {
-            LeaderboardEntry record = filteredRecords.get(i);
-            
-            renderRecordRow(context, record, i, rankX, playerX, timeX, listY);
-            listY += 22;
+        if (error != null) {
+            GuiText.centeredText(context, font, Component.literal(error), (left + right) / 2, (TOP + panelBottom()) / 2, 0xFFFF5555);
+            return;
+        }
+        switch (view) {
+            case MINE -> renderMine(context, mouseX, mouseY, left, right);
+            case PLAYERS -> renderPlayers(context, mouseX, mouseY, left, right);
+            case ITEM -> renderItem(context, mouseX, mouseY, left, right);
         }
     }
-    
-    private void renderRecordRow(GuiGraphicsExtractor context, LeaderboardEntry record, int rank, int rankX, int playerX, int timeX, int listY) {
-        context.fill(rankX - 5, listY - 3, timeX + 100, listY + 15, 0x60000000);
-        
-        String rankText = String.valueOf(rank + 1);
-        int rankColor;
-        
-        switch (rank) {
-            case 0 -> rankColor = COLOR_GOLD;
-            case 1 -> rankColor = COLOR_SILVER;
-            case 2 -> rankColor = COLOR_BRONZE;
-            default -> rankColor = COLOR_GRAY;
+
+    private int tab(GuiGraphicsExtractor context, int x, int y, String label, boolean active, int mouseX, int mouseY, Runnable action) {
+        int w = font.width(label) + 14;
+        boolean hover = Ui.inside(mouseX, mouseY, x, y, w, 16);
+        if (active || hover) context.fill(x, y, x + w, y + 16, 0xFF000000 | (active ? 0x6B5410 : CELL_BG));
+        if (active) context.fill(x, y + 14, x + w, y + 16, 0xFF000000 | GOLD);
+        GuiText.text(context, font, label, x + 7, y + 4, 0xFF000000 | (active ? 0xFFFFFF : hover ? TEXT : MUTED), false);
+        hits.add(new Hit(x, y, w, 16, action));
+        return w + 2;
+    }
+
+    private float rowAppear(int index) {
+        return Ui.easeOut((System.currentTimeMillis() - viewChangedAt - Math.min(index, 12) * 35L) / 260f);
+    }
+
+    private void beginList(GuiGraphicsExtractor context, int left, int right) {
+        context.enableScissor(left + 2, listTop(), right - 2, listBottom());
+    }
+
+    private void endList(GuiGraphicsExtractor context, int right) {
+        context.disableScissor();
+        float max = maxListScroll();
+        if (max <= 0) return;
+        int top = listTop(), bottom = listBottom(), trackH = bottom - top;
+        int thumbH = Math.max(16, (int) (trackH * trackH / (trackH + max)));
+        int thumbY = top + (int) ((trackH - thumbH) * (listScroll / max));
+        thumb(context, 2, right, top, bottom, thumbY, thumbH, lastMouseX, lastMouseY);
+    }
+
+    private void thumb(GuiGraphicsExtractor context, int which, int right, int top, int bottom, int thumbY, int thumbH, int mouseX, int mouseY) {
+        boolean active = dragging == which || Ui.inside(mouseX, mouseY, right - 11, top, 10, bottom - top);
+        context.fill(right - 7, top, right - 4, bottom, 0x40000000);
+        int x0 = active ? right - 8 : right - 7, x1 = active ? right - 3 : right - 4;
+        context.fill(x0, thumbY, x1, thumbY + thumbH, 0xFF000000 | (active ? GOLD : GOLD_BORDER));
+    }
+
+    private void rowFrame(GuiGraphicsExtractor context, int left, int y, int right, boolean hover, boolean own, float fade) {
+        context.fill(left, y, right, y + ROW - 3, Ui.argb(hover ? CELL_HOVER : 0x000000, (hover ? 0.85f : 0.4f) * fade));
+        if (own) Ui.border(context, left, y, right, y + ROW - 3, 1, Ui.argb(OWN, 0.8f * fade));
+        else if (hover) Ui.border(context, left, y, right, y + ROW - 3, 1, Ui.argb(GOLD_BORDER, fade));
+    }
+
+    private void rankBadge(GuiGraphicsExtractor context, int x, int y, int rank, float fade) {
+        String text = String.valueOf(rank);
+        int color = rankColor(rank);
+        int width = Math.max(16, font.width(text) + 8);
+        if (rank <= 3) {
+            context.fill(x, y, x + width, y + 14, Ui.argb(Ui.lerp(0xFF000000 | color, 0xFF000000, 0.35f), fade));
+            context.fill(x + 1, y + 1, x + width - 1, y + 13, Ui.argb(color, fade));
+            context.fill(x + 1, y + 1, x + width - 1, y + 2, Ui.argb(Ui.lerp(0xFF000000 | color, 0xFFFFFFFF, 0.45f), fade));
+            GuiText.text(context, font, text, x + (width - font.width(text) + 1) / 2, y + 3, Ui.argb(0x1A1305, fade), false);
+        } else {
+            String label = rank < 100 ? "#" + text : text;
+            int w = font.width(label);
+            if (w <= 18) {
+                GuiText.text(context, font, label, x + (16 - w + 1) / 2, y + 3, Ui.argb(color, fade), false);
+            } else {
+                float scale = 18f / w;
+                context.pose().pushMatrix();
+                context.pose().translate(x - 1, y + 3 + (8 - 8 * scale) / 2f);
+                context.pose().scale(scale, scale);
+                GuiText.text(context, font, label, 0, 0, Ui.argb(color, fade), false);
+                context.pose().popMatrix();
+            }
         }
-        
-        com.randomrun.ui.util.GuiText.text(context, font, 
-            Component.literal(rankText).withStyle(s -> s.withColor(rankColor)), 
-            rankX, listY + 3, COLOR_WHITE);
-        
-        int headSize = 16;
-        int headX = playerX - headSize - 4;
-        int headY = listY - 2;
-        renderPlayerHead(context, record.getPlayerName(), null, headX, headY, headSize);
-        
-        com.randomrun.ui.util.GuiText.text(context, font, 
-            Component.literal(record.getPlayerName()).withStyle(s -> s.withColor(COLOR_WHITE)), 
-            playerX, listY + 3, COLOR_WHITE);
-        
-        if (record.getPlayerName().equalsIgnoreCase("salopuzik2")) {
-            int dateTimeX = timeX - 60;
-            int playerNameWidth = font.width(record.getPlayerName());
-            int playerNameEndX = playerX + playerNameWidth;
-            
-            int devLabelX = playerNameEndX + (dateTimeX - playerNameEndX) / 2 - 25;
-            
+    }
+
+    private void renderMine(GuiGraphicsExtractor context, int mouseX, int mouseY, int left, int right) {
+        int top = TOP + 30;
+        long wins = mine.stream().filter(m -> m.rank() == 1).count();
+        long podiums = mine.stream().filter(m -> m.rank() <= 3).count();
+        GuiText.text(context, font, LanguageManager.text("randomrun.leaderboard.mine.summary", wins, podiums, mine.size()), left + 10, top, 0xFF000000 | MUTED, false);
+        if (mine.isEmpty()) {
+            int cy = (listTop() + listBottom()) / 2;
+            GuiText.centeredText(context, font, LanguageManager.text("randomrun.leaderboard.no_personal_records"), (left + right) / 2, cy - 6, 0xFF000000 | TEXT);
+            GuiText.centeredText(context, font, LanguageManager.text("randomrun.leaderboard.mine.hint"), (left + right) / 2, cy + 6, 0xFF000000 | MUTED);
+            return;
+        }
+        beginList(context, left, right);
+        int rowLeft = left + 8, rowRight = right - 12;
+        for (int i = 0; i < mine.size(); i++) {
+            int y = listTop() + i * ROW - Math.round(listScroll);
+            if (y + ROW < listTop() || y > listBottom()) continue;
+            float fade = rowAppear(i);
+            if (fade <= 0) continue;
+            Mine entry = mine.get(i);
+            boolean hover = Ui.inside(mouseX, mouseY, rowLeft, y, rowRight - rowLeft, ROW - 3) && mouseY >= listTop() && mouseY < listBottom();
             context.pose().pushMatrix();
-            context.pose().translate(devLabelX, listY + 5);
-            context.pose().scale(0.7f, 0.7f);
-            com.randomrun.ui.util.GuiText.text(context, font, 
-                Component.literal("Разработчик"), 
-                0, 0, 0xFFFF5555, false);
+            context.pose().translate((1f - fade) * 14f, 0);
+            rowFrame(context, rowLeft, y, rowRight, hover, false, fade);
+            rankBadge(context, rowLeft + 4, y + 3, entry.rank(), fade);
+            context.item(stack(entry.itemId()), rowLeft + 26, y + 2);
+            GuiText.text(context, font, Ui.ellipsize(font, name(entry.itemId()), rowRight - rowLeft - 170), rowLeft + 46, y + 7, Ui.argb(TEXT, fade), false);
+            String t = time(entry.time());
+            GuiText.text(context, font, t, rowRight - 8 - font.width(t), y + 7, Ui.argb(GOLD_TEXT, fade), true);
+            if (entry.gap() > 0) {
+                String gap = "+" + time(entry.gap());
+                GuiText.text(context, font, gap, rowRight - 16 - font.width(t) - font.width(gap), y + 7, Ui.argb(MUTED, fade), false);
+            }
+            context.pose().popMatrix();
+            int hy = Math.max(y, listTop()), hb = Math.min(y + ROW - 3, listBottom());
+            if (hb > hy) hits.add(new Hit(rowLeft, hy, rowRight - rowLeft, hb - hy, () -> open(View.ITEM, entry.itemId())));
+        }
+        endList(context, right);
+    }
+
+    private void renderPlayers(GuiGraphicsExtractor context, int mouseX, int mouseY, int left, int right) {
+        int top = TOP + 30;
+        int rowLeft = left + 8, rowRight = right - 12;
+        int colWins = rowRight - 150, colPodium = rowRight - 92, colEntries = rowRight - 34;
+        GuiText.text(context, font, LanguageManager.text("randomrun.leaderboard.player"), rowLeft + 46, top, 0xFF000000 | MUTED, false);
+        GuiText.centeredText(context, font, LanguageManager.text("randomrun.leaderboard.col.wins"), colWins, top, 0xFF000000 | GOLD);
+        GuiText.centeredText(context, font, LanguageManager.text("randomrun.leaderboard.col.podiums"), colPodium, top, 0xFF000000 | MUTED);
+        GuiText.centeredText(context, font, LanguageManager.text("randomrun.leaderboard.col.entries"), colEntries, top, 0xFF000000 | MUTED);
+        if (players.isEmpty()) {
+            GuiText.centeredText(context, font, LanguageManager.text("randomrun.leaderboard.no_records"), (left + right) / 2, (listTop() + listBottom()) / 2, 0xFF000000 | MUTED);
+            return;
+        }
+        String me = me();
+        beginList(context, left, right);
+        for (int i = 0; i < players.size(); i++) {
+            int y = listTop() + i * ROW - Math.round(listScroll);
+            if (y + ROW < listTop() || y > listBottom()) continue;
+            float fade = rowAppear(i);
+            if (fade <= 0) continue;
+            PlayerStat stat = players.get(i);
+            boolean own = stat.name().equals(me);
+            context.pose().pushMatrix();
+            context.pose().translate((1f - fade) * 14f, 0);
+            rowFrame(context, rowLeft, y, rowRight, false, own, fade);
+            rankBadge(context, rowLeft + 4, y + 3, i + 1, fade);
+            Heads.draw(context, stat.name(), rowLeft + 26, y + 2, 16, 0);
+            GuiText.text(context, font, Ui.ellipsize(font, stat.name(), colWins - rowLeft - 70), rowLeft + 46, y + 7, Ui.argb(own ? OWN : TEXT, fade), false);
+            GuiText.centeredText(context, font, String.valueOf(stat.wins()), colWins, y + 7, Ui.argb(GOLD, fade));
+            GuiText.centeredText(context, font, String.valueOf(stat.podiums()), colPodium, y + 7, Ui.argb(TEXT, fade));
+            GuiText.centeredText(context, font, String.valueOf(stat.entries()), colEntries, y + 7, Ui.argb(MUTED, fade));
             context.pose().popMatrix();
         }
-        
-        String dateTimeStr = formatDateTime(record.getTimestamp());
-        int dateTimeX = timeX - 60;
-        context.pose().pushMatrix();
-        context.pose().translate(dateTimeX, listY + 5);
-        context.pose().scale(0.7f, 0.7f);
-        com.randomrun.ui.util.GuiText.text(context, font, 
-            Component.literal(dateTimeStr), 
-            0, 0, 0x80808080, false);
-        context.pose().popMatrix();
-        
-        String timeStr = formatTime(record.getCompletionTime());
-        com.randomrun.ui.util.GuiText.text(context, font, 
-            Component.literal(timeStr).withStyle(s -> s.withColor(COLOR_GOLD_TEXT)), 
-            timeX, listY + 3, COLOR_WHITE);
+        endList(context, right);
     }
-    
-    private String formatDateTime(long timestamp) {
-        java.time.Instant instant = java.time.Instant.ofEpochMilli(timestamp);
-        java.time.ZonedDateTime dateTime = instant.atZone(java.time.ZoneId.systemDefault());
-        
-        int day = dateTime.getDayOfMonth();
-        int month = dateTime.getMonthValue();
-        int year = dateTime.getYear() % 100;
-        int hour = dateTime.getHour();
-        int minute = dateTime.getMinute();
-        
-        return String.format("%02d.%02d.%02d %02d:%02d", day, month, year, hour, minute);
-    }
-    
-    private void renderPlayerHead(GuiGraphicsExtractor context, String playerName, String playerId, int x, int y, int size) {
-        try {
-            UUID playerUuid = playerId != null && !playerId.isEmpty() 
-                ? UUID.fromString(playerId) 
-                : com.randomrun.infrastructure.util.PlayerSkinHelper.getOfflineUUID(playerName);
-            
-            Identifier skinTexture = com.randomrun.infrastructure.util.PlayerSkinHelper.getPlayerSkin(playerName, playerUuid);
-            
-            context.fill(x - 1, y - 1, x + size + 1, y, COLOR_GOLD_BORDER);
-            context.fill(x - 1, y + size, x + size + 1, y + size + 1, COLOR_GOLD_BORDER);
-            context.fill(x - 1, y, x, y + size, COLOR_GOLD_BORDER);
-            context.fill(x + size, y, x + size + 1, y + size, COLOR_GOLD_BORDER);
-            
-            context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, skinTexture, x, y, 8.0f, 8.0f, size, size, 8, 8, 64, 64);
-            
-            context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, skinTexture, x, y, 40.0f, 8.0f, size, size, 8, 8, 64, 64);
-        } catch (Exception e) {
-            LOGGER.warn("[Leaderboard] Ошибка рендера головы для {}", playerName);
-        }
-    }
-    
-    private void renderFooter(GuiGraphicsExtractor context, int rightPanelLeft, int rightPanelRight) {
-        int footerY = height - PADDING - 45;
-        int centerX = rightPanelLeft + (rightPanelRight - rightPanelLeft) / 2 + 5;
-        Component footerText = com.randomrun.infrastructure.util.LanguageManager.text("randomrun.leaderboard.footer")
-            .withStyle(s -> s.withColor(COLOR_DARK_GRAY));
-        com.randomrun.ui.util.GuiText.centeredText(context, font, footerText, centerX, footerY - 3, COLOR_WHITE);
-    }
-    
-    private void renderPlayerTopRecords(GuiGraphicsExtractor context, int rightPanelLeft, int rightPanelRight, int startY, int mouseX, int mouseY) {
-        com.randomrun.core.profile.PlayerProfile profile = com.randomrun.core.profile.PlayerProfile.get();
-        if (profile == null) return;
-        
-        String playerName = profile.getPlayerName();
-        
-        List<PlayerRecordEntry> playerRecords = new ArrayList<>();
-        for (java.util.Map.Entry<String, List<LeaderboardEntry>> entry : leaderboardsCache.entrySet()) {
-            String itemId = entry.getKey();
-            List<LeaderboardEntry> records = entry.getValue();
-            
-            for (int i = 0; i < records.size(); i++) {
-                LeaderboardEntry record = records.get(i);
-                if (record.getPlayerName().equals(playerName)) {
-                    playerRecords.add(new PlayerRecordEntry(itemId, record.getCompletionTime(), i + 1));
-                    break;
-                }
-            }
-        }
-        
-        if (playerRecords.isEmpty()) {
-            int centerX = rightPanelLeft + (rightPanelRight - rightPanelLeft) / 2;
-            com.randomrun.ui.util.GuiText.centeredText(context, font, 
-                com.randomrun.infrastructure.util.LanguageManager.text("randomrun.leaderboard.no_personal_records")
-                    .withStyle(s -> s.withColor(COLOR_GRAY)), 
-                centerX, startY + 40, COLOR_WHITE);
+
+    private void renderItem(GuiGraphicsExtractor context, int mouseX, int mouseY, int left, int right) {
+        if (selected == null) {
+            GuiText.centeredText(context, font, LanguageManager.text("randomrun.leaderboard.pick_item"), (left + right) / 2, (TOP + panelBottom()) / 2, 0xFF000000 | MUTED);
             return;
         }
-        
-        playerRecords.sort((a, b) -> Long.compare(a.time, b.time));
-        
-        List<PlayerRecordEntry> top10 = playerRecords.stream().limit(10).collect(Collectors.toList());
-        
-        int itemX = rightPanelLeft + 30;
-        int timeX = rightPanelRight - 120;
-        int rankX = rightPanelRight - 60;
-        int listY = startY + 10;
-        
-        for (int i = 0; i < top10.size(); i++) {
-            PlayerRecordEntry record = top10.get(i);
-            
-            boolean isHovered = mouseX >= itemX - 5 && mouseX <= rightPanelRight - 20 &&
-                               mouseY >= listY - 3 && mouseY < listY + 15;
-            
-            record.bounds = new int[]{itemX - 5, listY - 3, rightPanelRight - 20, listY + 15};
-            
-            context.fill(itemX - 5, listY - 3, rightPanelRight - 20, listY + 15, 0x60000000);
-            
-            if (isHovered) {
-                int left = itemX - 5;
-                int top = listY - 3;
-                int right = rightPanelRight - 20;
-                int bottom = listY + 15;
-                int thickness = 1;
-                
-                context.fill(left, top, right, top + thickness, COLOR_GOLD_BORDER);
-                context.fill(left, bottom - thickness, right, bottom, COLOR_GOLD_BORDER);
-                context.fill(left, top, left + thickness, bottom, COLOR_GOLD_BORDER);
-                context.fill(right - thickness, top, right, bottom, COLOR_GOLD_BORDER);
+        List<LeaderboardEntry> board = boards.getOrDefault(selected, List.of());
+        int headerY = TOP + 26;
+        context.fill(left + 8, headerY, left + 44, headerY + 36, 0xFF000000 | CELL_BG);
+        Ui.border(context, left + 8, headerY, left + 44, headerY + 36, 1, 0xFF000000 | GOLD_BORDER);
+        ItemPreviewRenderer.extractLargeGui(context, stack(selected), left + 26, headerY + 18, 28);
+        GuiText.text(context, font, Ui.ellipsize(font, name(selected), right - left - 70), left + 52, headerY + 4, 0xFF000000 | GOLD, true);
+        if (board.isEmpty()) {
+            GuiText.text(context, font, LanguageManager.text("randomrun.leaderboard.no_records"), left + 52, headerY + 18, 0xFF000000 | MUTED, false);
+            GuiText.centeredText(context, font, LanguageManager.text("randomrun.leaderboard.be_first"), (left + right) / 2, (listTop() + listBottom()) / 2, 0xFF000000 | TEXT);
+            return;
+        }
+        LeaderboardEntry best = board.getFirst();
+        GuiText.text(context, font, LanguageManager.text("randomrun.leaderboard.item.record", time(best.getCompletionTime()), best.getPlayerName()), left + 52, headerY + 16, 0xFF000000 | TEXT, false);
+        GuiText.text(context, font, LanguageManager.text("randomrun.leaderboard.item.count", board.size()), left + 52, headerY + 27, 0xFF000000 | MUTED, false);
+
+        String me = me();
+        int rowLeft = left + 8, rowRight = right - 12;
+        int shown = Math.min(TOP_LIMIT, board.size());
+        beginList(context, left, right);
+        for (int i = 0; i < shown; i++) {
+            int y = listTop() + i * ROW - Math.round(listScroll);
+            if (y + ROW < listTop() || y > listBottom()) continue;
+            float fade = rowAppear(i);
+            if (fade <= 0) continue;
+            LeaderboardEntry entry = board.get(i);
+            boolean own = entry.getPlayerName() != null && entry.getPlayerName().equals(me);
+            context.pose().pushMatrix();
+            context.pose().translate((1f - fade) * 14f, 0);
+            rowFrame(context, rowLeft, y, rowRight, false, own, fade);
+            rankBadge(context, rowLeft + 4, y + 3, i + 1, fade);
+            Heads.draw(context, entry.getPlayerName(), rowLeft + 26, y + 2, 16, 0);
+            String t = time(entry.getCompletionTime());
+            String day = date(entry.getTimestamp());
+            int dateW = font.width(day);
+            GuiText.text(context, font, Ui.ellipsize(font, entry.getPlayerName(), rowRight - rowLeft - 200), rowLeft + 46, y + 7, Ui.argb(own ? OWN : TEXT, fade), false);
+            GuiText.text(context, font, day, rowRight - 8 - dateW, y + 7, Ui.argb(MUTED, fade), false);
+            int timeRight = rowRight - 16 - dateW;
+            GuiText.text(context, font, t, timeRight - font.width(t), y + 7, Ui.argb(i == 0 ? GOLD : GOLD_TEXT, fade), true);
+            if (i > 0) {
+                String gap = "+" + time(entry.getCompletionTime() - best.getCompletionTime());
+                GuiText.text(context, font, gap, timeRight - font.width(t) - 6 - font.width(gap), y + 7, Ui.argb(MUTED, fade), false);
             }
-            
-            try {
-                renderTarget(context, record.itemId, itemX, listY - 2, 16, itemX, listY);
-            } catch (Exception e) {
-                LOGGER.warn("[Leaderboard] Ошибка отрисовки цели {}", record.itemId);
-            }
-            
-            String itemName = getItemDisplayName(record.itemId);
-            com.randomrun.ui.util.GuiText.text(context, font, 
-                Component.literal(itemName).withStyle(s -> s.withColor(COLOR_WHITE)), 
-                itemX + 20, listY + 3, COLOR_WHITE);
-            
-            String timeStr = formatTime(record.time);
-            com.randomrun.ui.util.GuiText.text(context, font, 
-                Component.literal(timeStr).withStyle(s -> s.withColor(COLOR_GOLD_TEXT)), 
-                timeX, listY + 3, COLOR_WHITE);
-            
-            String rankText = "#" + record.rank;
-            int rankColor = switch (record.rank) {
-                case 1 -> COLOR_GOLD;
-                case 2 -> COLOR_SILVER;
-                case 3 -> COLOR_BRONZE;
-                default -> COLOR_GRAY;
-            };
-            com.randomrun.ui.util.GuiText.text(context, font, 
-                Component.literal(rankText).withStyle(s -> s.withColor(rankColor)), 
-                rankX, listY + 3, COLOR_WHITE);
-            
-            listY += 22;
+            context.pose().popMatrix();
         }
-        
-        this.playerTopRecords = top10;
+        endList(context, right);
+
+        int footY = panelBottom() - 22;
+        int place = -1;
+        for (int i = 0; i < board.size(); i++) if (board.get(i).getPlayerName() != null && board.get(i).getPlayerName().equals(me)) { place = i; break; }
+        Component foot;
+        if (place >= 0) foot = LanguageManager.text("randomrun.leaderboard.item.your_place", place + 1, time(board.get(place).getCompletionTime()));
+        else foot = LanguageManager.text("randomrun.leaderboard.item.not_ranked");
+        context.fill(rowLeft, footY, rowRight, footY + 16, 0x60000000);
+        GuiText.centeredText(context, font, foot, (rowLeft + rowRight) / 2, footY + 4, 0xFF000000 | (place >= 0 ? OWN : MUTED));
     }
-    
-    private static class PlayerRecordEntry {
-        String itemId;
-        long time;
-        int rank;
-        int[] bounds;
-        
-        PlayerRecordEntry(String itemId, long time, int rank) {
-            this.itemId = itemId;
-            this.time = time;
-            this.rank = rank;
-        }
-    }
-    
-    private String formatTime(long duration) {
-        long hours = duration / (1000 * 60 * 60);
-        long minutes = (duration / (1000 * 60)) % 60;
-        long seconds = (duration / 1000) % 60;
-        long millis = duration % 1000;
-        
-        if (hours > 0) {
-            return String.format("%d:%02d:%02d.%03d", hours, minutes, seconds, millis);
-        } else {
-            return String.format("%d:%02d.%03d", minutes, seconds, millis);
-        }
-    }
-    
-    private void renderGoldBorder(GuiGraphicsExtractor context, int left, int top, int right, int bottom, boolean animated) {
-        context.fill(left, top, right, top + BORDER_THICKNESS, COLOR_GOLD_BORDER);
-        context.fill(left, bottom - BORDER_THICKNESS, right, bottom, COLOR_GOLD_BORDER);
-        context.fill(left, top, left + BORDER_THICKNESS, bottom, COLOR_GOLD_BORDER);
-        context.fill(right - BORDER_THICKNESS, top, right, bottom, COLOR_GOLD_BORDER);
-        
-        if (animated && com.randomrun.infrastructure.RandomRunMod.getInstance().getConfig().isAnimationsEnabled()) {
-            renderAnimatedGoldBorder(context, left, top, right, bottom);
-        }
-    }
-    
-    private void renderAnimatedGoldBorder(GuiGraphicsExtractor context, int left, int top, int right, int bottom) {
-        long time = System.currentTimeMillis();
-        float animationProgress = ((time % ANIMATION_CYCLE_MS) / (float) ANIMATION_CYCLE_MS);
-        
-        int width = right - left;
-        int height = bottom - top;
-        int perimeter = 2 * (width + height);
-        float currentPos = animationProgress * perimeter;
-        
-        drawCircularGoldBorder(context, left, top, width, height, currentPos, GRADIENT_LENGTH, perimeter);
-    }
-    
-    private void drawCircularGoldBorder(GuiGraphicsExtractor context, int x, int y, int width, int height, 
-                                        float currentPos, int gradientLength, int perimeter) {
-        for (int i = 0; i < width; i++) {
-            float dist = getCircularDistance(i, currentPos, perimeter);
-            if (dist < gradientLength) {
-                float intensity = 1.0f - (dist / gradientLength);
-                int color = lerpColor(COLOR_GOLD_TEXT, COLOR_WHITE, intensity);
-                context.fill(x + i, y, x + i + 1, y + BORDER_THICKNESS, 0xFF000000 | color);
-            }
-        }
-        
-        int rightStart = width;
-        for (int i = 0; i < height; i++) {
-            float dist = getCircularDistance(rightStart + i, currentPos, perimeter);
-            if (dist < gradientLength) {
-                float intensity = 1.0f - (dist / gradientLength);
-                int color = lerpColor(COLOR_GOLD_TEXT, COLOR_WHITE, intensity);
-                context.fill(x + width - BORDER_THICKNESS, y + i, x + width, y + i + 1, 0xFF000000 | color);
-            }
-        }
-        
-        int bottomStart = width + height;
-        for (int i = 0; i < width; i++) {
-            float dist = getCircularDistance(bottomStart + i, currentPos, perimeter);
-            if (dist < gradientLength) {
-                float intensity = 1.0f - (dist / gradientLength);
-                int color = lerpColor(COLOR_GOLD_TEXT, COLOR_WHITE, intensity);
-                context.fill(x + width - i - 1, y + height - BORDER_THICKNESS, x + width - i, y + height, 0xFF000000 | color);
-            }
-        }
-        
-        int leftStart = 2 * width + height;
-        for (int i = 0; i < height; i++) {
-            float dist = getCircularDistance(leftStart + i, currentPos, perimeter);
-            if (dist < gradientLength) {
-                float intensity = 1.0f - (dist / gradientLength);
-                int color = lerpColor(COLOR_GOLD_TEXT, COLOR_WHITE, intensity);
-                context.fill(x, y + height - i - 1, x + BORDER_THICKNESS, y + height - i, 0xFF000000 | color);
-            }
-        }
-    }
-    
-    private float getCircularDistance(int pos, float currentPos, int perimeter) {
-        float dist = Math.abs(pos - currentPos);
-        if (dist > perimeter / 2) {
-            dist = perimeter - dist;
-        }
-        return dist;
-    }
-    
-    private int lerpColor(int color1, int color2, float t) {
-        int r1 = (color1 >> 16) & 0xFF;
-        int g1 = (color1 >> 8) & 0xFF;
-        int b1 = color1 & 0xFF;
-        
-        int r2 = (color2 >> 16) & 0xFF;
-        int g2 = (color2 >> 8) & 0xFF;
-        int b2 = color2 & 0xFF;
-        
-        int r = (int) (r1 + (r2 - r1) * t);
-        int g = (int) (g1 + (g2 - g1) * t);
-        int b = (int) (b1 + (b2 - b1) * t);
-        
-        return (r << 16) | (g << 8) | b;
-    }
-    
+
     @Override
-    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
-        double mouseX = event.x();
-        double mouseY = event.y();
-        int button = event.button();
-        if (super.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(mouseX, mouseY, event.buttonInfo()), doubleClick)) {
-            return true;
-        }
-        
-        if (selectedTarget == null && button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && !playerTopRecords.isEmpty()) {
-            for (PlayerRecordEntry record : playerTopRecords) {
-                if (record.bounds != null) {
-                    int left = record.bounds[0];
-                    int top = record.bounds[1];
-                    int right = record.bounds[2];
-                    int bottom = record.bounds[3];
-                    
-                    if (mouseX >= left && mouseX <= right && mouseY >= top && mouseY < bottom) {
-                        selectedTarget = record.itemId;
-                        showCachedRecords(record.itemId);
-                        return true;
-                    }
-                }
-            }
-        }
-        
-        int gridX = PADDING + 10;
-        int gridY = PADDING + 70;
-        int gridWidth = LEFT_PANEL_WIDTH - 20;
-        int panelBottom = height - 50;
-        int gridHeight = panelBottom - gridY - 30;
-        
-        {
-            int itemsPerRow = ITEMS_PER_ROW;
-            int totalRows = (int) Math.ceil((double) filteredTargets.size() / itemsPerRow);
-            
-            if (totalRows * (ITEM_SIZE + ITEM_SPACING) > gridHeight) {
-                int scrollBarX = gridX + gridWidth - 4;
-                
-                if (mouseX >= scrollBarX - 3 && mouseX <= scrollBarX + 6 && 
-                    mouseY >= gridY && mouseY <= gridY + gridHeight) {
-                    isDraggingScrollbar = true;
-                    dragStartY = (int) mouseY;
-                    dragStartScrollOffset = itemGridScrollOffset;
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
+            if (startDrag(1, event.x(), event.y()) || startDrag(2, event.x(), event.y())) return true;
+            for (Hit hit : new ArrayList<>(hits)) {
+                if (Ui.inside(event.x(), event.y(), hit.x(), hit.y(), hit.w(), hit.h())) {
+                    hit.action().run();
                     return true;
                 }
             }
+            if (search != null && !search.isMouseOver(event.x(), event.y())) search.setFocused(false);
         }
-        
-        int scrollBarX = gridX + gridWidth - 4;
-        if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && mouseX >= gridX && mouseX < scrollBarX - 3 && 
-            mouseY >= gridY && mouseY < gridY + gridHeight) {
-            int itemsPerRow = ITEMS_PER_ROW;
-            int col = (int) ((mouseX - gridX) / (ITEM_SIZE + ITEM_SPACING));
-            int row = (int) ((mouseY - gridY + smoothScrollOffset) / (ITEM_SIZE + ITEM_SPACING));
-            int index = row * itemsPerRow + col;
-            
-            if (index >= 0 && index < filteredTargets.size()) {
-                String itemId = filteredTargets.get(index);
-                if (!itemId.equals(selectedTarget)) {
-                    selectedTarget = itemId;
-                    showCachedRecords(itemId);
-                }
-                return true;
-            }
-        }
-        
-        return false;
+        return super.mouseClicked(event, doubleClick);
     }
-    
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) {
-            return true;
-        }
-        
-        int gridX = PADDING + 10;
-        int gridY = PADDING + 70;
-        int gridWidth = LEFT_PANEL_WIDTH - 20;
-        int panelBottom = height - 50;
-        int gridHeight = panelBottom - gridY - 30;
-        
-        if (mouseX >= gridX && mouseX < gridX + gridWidth && 
-            mouseY >= gridY && mouseY < gridY + gridHeight) {
-            int itemsPerRow = ITEMS_PER_ROW;
-            int totalRows = (int) Math.ceil((double) filteredTargets.size() / itemsPerRow);
-            int maxScroll = Math.max(0, totalRows * (ITEM_SIZE + ITEM_SPACING) - gridHeight);
-            
-            itemGridScrollOffset = (int) Math.max(0, Math.min(maxScroll, itemGridScrollOffset - verticalAmount * 20));
-            return true;
-        }
-        
-        return false;
+
+    private int[] scrollbar(int which) {
+        boolean grid = which == 1;
+        float max = grid ? maxGridScroll() : maxListScroll();
+        if (max <= 0) return null;
+        int right = grid ? leftRight() : width - PAD;
+        int top = grid ? gridTop() : listTop(), bottom = grid ? gridBottom() : listBottom(), trackH = bottom - top;
+        int thumbH = Math.max(16, (int) (trackH * trackH / (trackH + max)));
+        int thumbY = top + (int) ((trackH - thumbH) * ((grid ? gridScroll : listScroll) / max));
+        return new int[]{right - 11, top, right - 1, bottom, thumbY, thumbH};
     }
-    
-    @Override
-    public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
-        double mouseX = event.x();
-        double mouseY = event.y();
-        int button = event.button();
-        if (isDraggingScrollbar) {
-            isDraggingScrollbar = false;
-            return true;
-        }
-        return super.mouseReleased(new net.minecraft.client.input.MouseButtonEvent(mouseX, mouseY, event.buttonInfo()));
-    }
-    
-    @Override
-    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double deltaX, double deltaY) {
-        double mouseX = event.x();
-        double mouseY = event.y();
-        int button = event.button();
-        if (isDraggingScrollbar) {
-            int gridY = PADDING + 70;
-            int panelBottom = height - 50;
-            int gridHeight = panelBottom - gridY - 30;
-            
-            int itemsPerRow = ITEMS_PER_ROW;
-            int totalRows = (int) Math.ceil((double) filteredTargets.size() / itemsPerRow);
-            int maxScroll = Math.max(0, totalRows * (ITEM_SIZE + ITEM_SPACING) - gridHeight);
-            
-            int mouseDelta = (int) mouseY - dragStartY;
-            int scrollDelta = (int) ((float) mouseDelta / gridHeight * maxScroll);
-            
-            itemGridScrollOffset = Math.max(0, Math.min(maxScroll, dragStartScrollOffset + scrollDelta));
-            return true;
-        }
-        return super.mouseDragged(new net.minecraft.client.input.MouseButtonEvent(mouseX, mouseY, event.buttonInfo()), deltaX, deltaY);
-    }
-    
-    @Override
-    public boolean shouldCloseOnEsc() {
+
+    private boolean startDrag(int which, double mouseX, double mouseY) {
+        int[] bar = scrollbar(which);
+        if (bar == null || mouseX < bar[0] || mouseX >= bar[2] || mouseY < bar[1] || mouseY >= bar[3]) return false;
+        dragging = which;
+        dragOffset = mouseY >= bar[4] && mouseY < bar[4] + bar[5] ? mouseY - bar[4] : bar[5] / 2.0;
+        drag(mouseY);
         return true;
     }
-    
+
+    private void drag(double mouseY) {
+        int[] bar = scrollbar(dragging);
+        if (bar == null) return;
+        float max = dragging == 1 ? maxGridScroll() : maxListScroll();
+        float t = (float) ((mouseY - dragOffset - bar[1]) / Math.max(1, bar[3] - bar[1] - bar[5]));
+        float value = Math.max(0, Math.min(max, t * max));
+        if (dragging == 1) gridScroll = gridScrollTarget = value;
+        else listScroll = listScrollTarget = value;
+    }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        if (dragging != 0) {
+            drag(event.y());
+            return true;
+        }
+        return super.mouseDragged(event, deltaX, deltaY);
+    }
+
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        dragging = 0;
+        return super.mouseReleased(event);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (mouseX < leftRight()) gridScrollTarget = Math.max(0, Math.min(maxGridScroll(), gridScrollTarget - (float) verticalAmount * CELL * 2));
+        else listScrollTarget = Math.max(0, Math.min(maxListScroll(), listScrollTarget - (float) verticalAmount * ROW * 2));
+        return true;
+    }
+
     @Override
     public void onClose() {
         GlobalParticleSystem.getInstance().setYellowMode(false);
-        if (minecraft != null) {
-            minecraft.gui.setScreen(parent);
-        }
+        minecraft.gui.setScreen(parent);
     }
-    
+
     @Override
     public void removed() {
-        leaderboardsCache.clear();
-        itemsWithRecords.clear();
-        allLeaderboardsLoaded = false;
         GlobalParticleSystem.getInstance().setYellowMode(false);
         super.removed();
-    }
-    
-    private void renderTarget(GuiGraphicsExtractor context, String targetId, int x, int y, int size, float mouseX, float mouseY) {
-        Item item = BuiltInRegistries.ITEM.getValue(Identifier.tryParse(targetId));
-        context.item(com.randomrun.ui.util.PreviewItems.stack(item), x, y);
-    }
-    
-    private void renderTargetTooltip(GuiGraphicsExtractor context, String targetId, int mouseX, int mouseY) {
-        String displayName = getTargetDisplayName(targetId);
-        if (displayName != null) {
-            context.setTooltipForNextFrame(font, Component.literal(displayName), mouseX, mouseY);
-        }
-    }
-    
-    private String getTargetDisplayName(String targetId) {
-        Item item = BuiltInRegistries.ITEM.getValue(Identifier.tryParse(targetId));
-        return net.minecraft.network.chat.Component.translatable(item.getDescriptionId()).getString();
     }
 }

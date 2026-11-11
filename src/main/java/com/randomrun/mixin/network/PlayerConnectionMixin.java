@@ -15,16 +15,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(PlayerList.class)
 public class PlayerConnectionMixin {
     @Inject(method = "placeNewPlayer", at = @At("TAIL"))
-    private void onPlayerConnect(Connection connection, ServerPlayer player, CommonListenerCookie clientData, CallbackInfo ci) {
+    private void randomrun$onPlayerConnect(Connection connection, ServerPlayer player, CommonListenerCookie cookie, CallbackInfo ci) {
         BattleManager manager = BattleManager.getInstance();
         BattleRoom room = manager.getCurrentRoom();
-        
-        if (manager.isHost() && room != null && room.isSharedWorld()) {
-            String playerName = player.getName().getString();
-            
-            if (room.isPlayerDisconnected(playerName)) {
-                player.setGameMode(GameType.SPECTATOR);
-            }
+        if (manager.isHost() && room != null && room.isSharedWorld() && room.isPlayerDisconnected(player.getName().getString())) {
+            player.setGameMode(GameType.SPECTATOR);
         }
     }
 }

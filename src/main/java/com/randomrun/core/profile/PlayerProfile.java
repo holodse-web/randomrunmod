@@ -47,8 +47,6 @@ public class PlayerProfile {
     }
 
     public static class Security {
-        @SerializedName("hw")
-        public String hwidHash;
 
         @SerializedName("sf")
         public Integer suspiciousFlags;
@@ -65,11 +63,6 @@ public class PlayerProfile {
         @SerializedName("br")
         public String banReason;
 
-        @SerializedName("pwd")
-        public String passwordHash;
-
-        @SerializedName("npc")
-        public Boolean needsPasswordChange;
     }
 
     public static class Stats {
@@ -97,19 +90,16 @@ public class PlayerProfile {
         this.stats = new Stats();
 
         this.info.playerName = playerName;
-        this.info.uuid = com.randomrun.infrastructure.auth.PlayerUuidManager.getInstance().getPlayerUuid();
+        this.info.uuid = java.util.UUID.nameUUIDFromBytes(("OfflinePlayer:" + playerName).getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
         this.info.createdAt = System.currentTimeMillis();
         this.info.lastSeen = System.currentTimeMillis();
         this.info.modVersion = RandomRunMod.MOD_VERSION;
 
-        this.security.hwidHash = com.randomrun.infrastructure.security.HardwareIdGenerator.generateHWID();
         this.security.trustScore = 100;
         this.security.suspiciousFlags = null;
         this.security.lastCheatDetection = null;
         this.security.banned = false;
         this.security.banReason = null;
-        this.security.passwordHash = null;
-        this.security.needsPasswordChange = false;
 
         this.stats.totalRuns = 0;
         this.stats.firstTrustScoreShown = false;
@@ -133,8 +123,6 @@ public class PlayerProfile {
     public long getCreatedAt() { return info.createdAt; }
     public String getModVersion() { return info.modVersion; }
 
-    public String getHwidHash() { return security.hwidHash; }
-    public void setHwidHash(String hwid) { security.hwidHash = hwid; dirty.set(true); }
     public int getSuspiciousFlags() {
         return security.suspiciousFlags != null ? security.suspiciousFlags : 0;
     }
@@ -146,10 +134,6 @@ public class PlayerProfile {
         return security.banned != null && security.banned;
     }
     public String getBanReason() { return security.banReason; }
-    public String getPasswordHash() { return security.passwordHash; }
-    public boolean needsPasswordChange() {
-        return security.needsPasswordChange != null && security.needsPasswordChange;
-    }
 
     public int getTotalRuns() { return stats.totalRuns; }
     public boolean isFirstTrustScoreShown() { return stats.firstTrustScoreShown; }
@@ -205,16 +189,6 @@ public class PlayerProfile {
         markDirty();
     }
 
-    public void setPasswordHash(String passwordHash) {
-        this.security.passwordHash = passwordHash;
-        markDirty();
-    }
-
-    public void setNeedsPasswordChange(boolean needsChange) {
-        this.security.needsPasswordChange = needsChange;
-        markDirty();
-    }
-
     public void setTotalRuns(int totalRuns) {
         if (totalRuns < 0) {
             throw new IllegalArgumentException("totalRuns не может быть отрицательным");
@@ -250,22 +224,14 @@ public class PlayerProfile {
             TRUST_LOG_TAG, reason, penalty, oldScore, security.trustScore
         );
 
-        if (oldScore >= PlayerProfile.LEADERBOARD_THRESHOLD && security.trustScore < PlayerProfile.LEADERBOARD_THRESHOLD) {
-            com.randomrun.infrastructure.RandomRunMod.LOGGER.warn(
-                "{} Trust Score упал ниже {} - удаление всех рекордов из лидерборда",
-                TRUST_LOG_TAG, PlayerProfile.LEADERBOARD_THRESHOLD
-            );
-
-            String playerName = info.playerName;
-            if (playerName != null && !playerName.isEmpty()) {
-                com.randomrun.features.leaderboard.LeaderboardService.getInstance()
-                    .deleteAllPlayerRecords(playerName);
-            }
+        if (com.randomrun.network.BackendSession.owns(info.playerName)) {
+            String report = penalty == PENALTY_CREATIVE ? "CREATIVE" : penalty == PENALTY_CHEAT ? "CHEAT_MOD" : "UNTRUSTED_RUN";
+            HttpClient.getInstance().post("/security/report", java.util.Map.of("reason", report));
         }
     }
 
     public void applyTrustBonus(int bonus, String reason) {
-        int oldScore = security.trustScore;
+
         security.trustScore = Math.min(200, security.trustScore + bonus);
         markDirty();
     }
@@ -284,6 +250,8 @@ public class PlayerProfile {
         markDirty();
     }
 
+    public static void clear() { instance = null; currentPlayerName = null; }
+
     public static PlayerProfile get() {
         if (instance == null) {
             instance = new PlayerProfile(currentPlayerName != null ? currentPlayerName : "Player");
@@ -292,139 +260,35 @@ public class PlayerProfile {
     }
 
     public static CompletableFuture<Boolean> load(String playerName) {
-        if (playerName == null || playerName.isEmpty()) {
-            return CompletableFuture.completedFuture(false);
-        }
-
-        currentPlayerName = playerName;
-
+        if (playerName == null || playerName.isBlank()) return CompletableFuture.completedFuture(false);
         if (!RandomRunMod.getInstance().getConfig().isOnlineMode()) {
-            if (instance == null) {
-                instance = new PlayerProfile(playerName);
-            }
+            currentPlayerName = playerName;
+            instance = new PlayerProfile(playerName);
+            instance.readOnly = true;
             return CompletableFuture.completedFuture(true);
         }
-
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                CompletableFuture<JsonElement> loadFuture = HttpClient.getInstance()
-                    .get("/profiles/" + playerName + "/profile");
-                JsonElement result = loadFuture.get(LOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-
-                if (result == null || !result.isJsonObject()) {
-                    loadFuture = HttpClient.getInstance().get("/profiles/" + playerName);
-                    result = loadFuture.get(LOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-                }
-
-                if (result != null && result.isJsonObject()) {
-                    PlayerProfile loadedProfile = new com.google.gson.Gson().fromJson(result, PlayerProfile.class);
-
-                    if (loadedProfile != null && loadedProfile.info != null && loadedProfile.security != null && loadedProfile.stats != null) {
-                        int oldTrustScore = (instance != null && instance.security != null) ? instance.security.trustScore : 0;
-                        int newTrustScore = loadedProfile.security.trustScore;
-
-                        if (oldTrustScore > newTrustScore && oldTrustScore > 0) {
-                            CompactLogger.warn("{} ЗАЩИТА: Trust Score на сервере ({}) меньше локального ({}), сохраняем локальный",
-                                PROFILE_LOG_TAG, newTrustScore, oldTrustScore);
-                            loadedProfile.security.trustScore = oldTrustScore;
-                            loadedProfile.dirty.set(true);
-                        }
-
-                        instance = loadedProfile;
-                        instance.info.playerName = playerName;
-                        instance.readOnly = false;
-
-                        instance.info.lastSeen = System.currentTimeMillis();
-                        String oldVersion = instance.info.modVersion;
-                        boolean versionChanged = !RandomRunMod.MOD_VERSION.equals(oldVersion);
-
-                        if (versionChanged) {
-                            instance.info.modVersion = RandomRunMod.MOD_VERSION;
-                        }
-
-                        instance.dirty.set(true);
-
-                        com.randomrun.infrastructure.security.ProfileAntiCheat.checkProfile(instance);
-
-                        if (instance.needsSave()) {
-                            save().thenRun(() -> {
-                            });
-                        }
-                    } else {
-                        CompactLogger.error("{} Загруженный профиль поврежден (loadedProfile={}, info={}, security={}, stats={})",
-                            PROFILE_LOG_TAG,
-                            loadedProfile != null,
-                            loadedProfile != null && loadedProfile.info != null,
-                            loadedProfile != null && loadedProfile.security != null,
-                            loadedProfile != null && loadedProfile.stats != null);
-
-                        if (instance == null) {
-                            instance = new PlayerProfile(playerName);
-                            instance.readOnly = false;
-                            save();
-                        } else {
-                            CompactLogger.warn("{} Используем существующий профиль (TS={}, Runs={})",
-                                PROFILE_LOG_TAG, instance.security.trustScore, instance.stats.totalRuns);
-                        }
-                    }
-                } else {
-                    if (instance == null) {
-                        instance = new PlayerProfile(playerName);
-                        instance.readOnly = false;
-                        save();
-                    } else {
-                        CompactLogger.warn("{} Профиль не найден на сервере, сохраняем существующий (TS={}, Runs={})",
-                            PROFILE_LOG_TAG, instance.security.trustScore, instance.stats.totalRuns);
-                        instance.readOnly = false;
-                        save();
-                    }
-                }
-
-                return true;
-            } catch (Exception e) {
-                CompactLogger.firebaseError("{} Ошибка загрузки: {}", PROFILE_LOG_TAG, e.getMessage());
-
-                if (instance == null) {
-                    instance = new PlayerProfile(playerName);
-                    instance.readOnly = true;
-                    CompactLogger.warn("{} Создан локальный профиль (read-only)", PROFILE_LOG_TAG);
-                } else {
-                    instance.readOnly = true;
-                    CompactLogger.warn("{} Используем существующий профиль (read-only, TS={}, Runs={})",
-                        PROFILE_LOG_TAG, instance.security.trustScore, instance.stats.totalRuns);
-                }
-
-                return false;
+        if (!com.randomrun.network.BackendSession.owns(playerName)) return CompletableFuture.completedFuture(false);
+        var session = com.randomrun.network.BackendSession.current();
+        return HttpClient.getInstance().getNoCache("/profiles/" + session.name() + "/profile").thenApply(result -> {
+            PlayerProfile loaded = new com.google.gson.Gson().fromJson(result, PlayerProfile.class);
+            loaded.info.playerName = session.name();
+            loaded.readOnly = false;
+            synchronized (com.randomrun.network.BackendSession.class) {
+                if (session != com.randomrun.network.BackendSession.current()) return false;
+                currentPlayerName = session.name();
+                instance = loaded;
             }
-        });
+            return true;
+        }).exceptionally(error -> false);
     }
 
     public static CompletableFuture<Void> save() {
-        if (instance == null || !RandomRunMod.getInstance().getConfig().isOnlineMode() || instance.readOnly) {
-            return CompletableFuture.completedFuture(null);
-        }
-
-        if (!instance.needsSave()) {
-            return CompletableFuture.completedFuture(null);
-        }
-
-        return CompletableFuture.runAsync(() -> {
-            try {
-                instance.info.lastSeen = System.currentTimeMillis();
-
-                boolean success = HttpClient.getInstance()
-                    .put("/profiles/" + instance.info.playerName + "/profile", instance)
-                    .get(LOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-
-                if (success) {
-                    instance.dirty.set(false);
-                } else {
-                    CompactLogger.firebaseError("{} Ошибка сохранения", PROFILE_LOG_TAG);
-                }
-            } catch (Exception e) {
-                CompactLogger.firebaseError("{} Ошибка: {}", PROFILE_LOG_TAG, e.getMessage());
-            }
-        });
+        PlayerProfile profile = instance;
+        if (profile == null || profile.readOnly || !RandomRunMod.getInstance().getConfig().isOnlineMode()
+                || !com.randomrun.network.BackendSession.owns(profile.info.playerName)) return CompletableFuture.completedFuture(null);
+        return HttpClient.getInstance().put("/profiles/" + profile.info.playerName + "/profile",
+            java.util.Map.of("stats", java.util.Map.of("fts", profile.stats.firstTrustScoreShown)))
+            .thenAccept(saved -> { if (instance == profile && saved) profile.dirty.set(false); });
     }
 
     @Override

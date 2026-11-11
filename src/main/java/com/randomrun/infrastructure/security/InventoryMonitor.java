@@ -84,7 +84,7 @@ public class InventoryMonitor {
 
         Minecraft client = Minecraft.getInstance();
         if (client.player != null) {
-            com.randomrun.infrastructure.util.ClientMessages.send(client.player, net.minecraft.network.chat.Component.literal("§c§l[RandomRun] §cОбнаружены читерские предметы!"), false);
+            com.randomrun.infrastructure.util.ClientMessages.send(client.player, com.randomrun.infrastructure.util.LanguageManager.text("randomrun.anticheat.items"), false);
         }
 
         RandomRunMod.getInstance().getRunDataManager().failRun();

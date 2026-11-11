@@ -34,7 +34,13 @@ public class ModConfig {
     private static final long SAVE_DEBOUNCE_MS = 1000;
 
     private static final Object SAVE_LOCK = new Object();
-    private long lastSaveTime = 0;
+    private static final java.util.concurrent.ScheduledExecutorService SAVER = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(task -> {
+        Thread thread = new Thread(task, "RandomRun-Config");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private transient long lastSaveTime = 0;
+    private transient boolean savePending;
 
     @SerializedName("configVersion")
     private int configVersion = 1;
@@ -99,11 +105,8 @@ public class ModConfig {
     @SerializedName("hudStyle")
     private HudStyle hudStyle = HudStyle.PLEASANT;
 
-    @SerializedName("verboseLogging")
-    private boolean verboseLogging = false;
-
-    @SerializedName("logLevel")
-    private String logLevel = "NORMAL";
+    @SerializedName("theme")
+    private String theme = "amethyst";
 
     public enum HudStyle {
         PROFESSIONAL, PLEASANT;
@@ -250,6 +253,8 @@ public class ModConfig {
     public void setOnlineMode(boolean onlineMode) {
         if (this.onlineMode != onlineMode) {
             this.onlineMode = onlineMode;
+            com.randomrun.network.BackendSession.clear();
+            com.randomrun.core.profile.PlayerProfile.clear();
             reloadPlayerProfile();
         }
     }
@@ -291,11 +296,8 @@ public class ModConfig {
         }
     }
 
-    public boolean isVerboseLogging() { return verboseLogging; }
-    public void setVerboseLogging(boolean verboseLogging) { this.verboseLogging = verboseLogging; }
-
-    public String getLogLevel() { return logLevel; }
-    public void setLogLevel(String logLevel) { this.logLevel = logLevel; }
+    public String getTheme() { return theme; }
+    public void setTheme(String theme) { this.theme = theme; }
 
     public void reset() {
         ModConfig defaults = new ModConfig();
@@ -305,19 +307,29 @@ public class ModConfig {
 
     public void save() {
         synchronized (SAVE_LOCK) {
-            long now = System.currentTimeMillis();
-            if (now - lastSaveTime < SAVE_DEBOUNCE_MS) {
-                return;
+            long wait = lastSaveTime + SAVE_DEBOUNCE_MS - System.currentTimeMillis();
+            if (wait <= 0) {
+                writeNow();
+            } else if (!savePending) {
+                savePending = true;
+                SAVER.schedule(() -> {
+                    synchronized (SAVE_LOCK) {
+                        savePending = false;
+                        writeNow();
+                    }
+                }, wait, java.util.concurrent.TimeUnit.MILLISECONDS);
             }
-            lastSaveTime = now;
+        }
+    }
 
-            try {
-                Files.createDirectories(CONFIG_DIR);
-                backupCurrentFile();
-                saveToFile();
-            } catch (Exception e) {
-                RandomRunMod.LOGGER.error("{} Ошибка сохранения", LOG_TAG, e);
-            }
+    private void writeNow() {
+        lastSaveTime = System.currentTimeMillis();
+        try {
+            Files.createDirectories(CONFIG_DIR);
+            backupCurrentFile();
+            saveToFile();
+        } catch (Exception e) {
+            RandomRunMod.LOGGER.error("{} Ошибка сохранения", LOG_TAG, e);
         }
     }
 
@@ -424,13 +436,13 @@ public class ModConfig {
         if (uiStyle == null) uiStyle = UIStyle.getDefault();
         if (language == null || language.isBlank()) language = "ru_ru";
         if (customSeed == null) customSeed = "";
-        if (logLevel == null || logLevel.isBlank()) logLevel = "NORMAL";
+        if (theme == null || theme.isBlank()) theme = "amethyst";
     }
 
     private void reloadPlayerProfile() {
         try {
             if (net.minecraft.client.Minecraft.getInstance().getUser() != null) {
-                String playerName = net.minecraft.client.Minecraft.getInstance().getUser().getName();
+                String playerName = com.randomrun.network.BackendSession.playerName();
                 com.randomrun.core.profile.PlayerProfile.load(playerName).thenRun(() -> {
                     if (RandomRunMod.getInstance().getRunDataManager() != null) {
                         RandomRunMod.getInstance().getRunDataManager().reloadResults();
@@ -438,7 +450,6 @@ public class ModConfig {
                 });
             }
         } catch (Exception e) {
-            RandomRunMod.LOGGER.debug("{} Session недоступен для перезагрузки профиля", LOG_TAG);
         }
     }
 
@@ -464,8 +475,7 @@ public class ModConfig {
         this.upgraderHintSeen = other.upgraderHintSeen;
         this.uiStyle = other.uiStyle;
         this.hudStyle = other.hudStyle;
-        this.verboseLogging = other.verboseLogging;
-        this.logLevel = other.logLevel;
+        this.theme = other.theme;
     }
 
     private static int clamp(int value, int min, int max) {

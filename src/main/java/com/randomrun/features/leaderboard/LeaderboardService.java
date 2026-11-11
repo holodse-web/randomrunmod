@@ -55,184 +55,12 @@ public class LeaderboardService {
         }, CACHE_TTL_MS, CACHE_TTL_MS, TimeUnit.MILLISECONDS);
     }
     
-    public CompletableFuture<Boolean> submitRecord(Run record, String playerName) {
-        return submitRecordWithRetry(record, playerName, 0);
-    }
+
     
-    private CompletableFuture<Boolean> submitRecordWithRetry(Run record, String playerName, int attempt) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                com.randomrun.infrastructure.security.ModScannerService scanner = 
-                    com.randomrun.infrastructure.security.ModScannerService.getInstance();
-                if (!scanner.isTrusted()) {
-                    RandomRunMod.LOGGER.warn("{} Блокировка: Untrusted режим", LOG_TAG);
-                    return false;
-                }
-                
-                com.randomrun.core.profile.PlayerProfile profile = com.randomrun.core.profile.PlayerProfile.get();
-                if (profile == null) {
-                    RandomRunMod.LOGGER.warn("{} Блокировка: нет профиля", LOG_TAG);
-                    return false;
-                }
-                
-                if (!profile.canSubmitToLeaderboard()) {
-                    RandomRunMod.LOGGER.warn("{} Блокировка: низкий Trust Score ({}/{})", 
-                        LOG_TAG, profile.getTrustScore(), com.randomrun.core.profile.PlayerProfile.LEADERBOARD_THRESHOLD);
-                    return false;
-                }
-                
-                if (!record.isEligibleForLeaderboard()) {
-                    RandomRunMod.LOGGER.warn("{} Блокировка: рекорд не подходит для лидерборда", LOG_TAG);
-                    return false;
-                }
-                
-                List<LeaderboardEntry> currentTop10 = getTopRecords(record.getTargetId(), 10).join();
-                
-                LeaderboardEntry myCurrentRecord = currentTop10.stream()
-                    .filter(e -> e.getPlayerName().equals(playerName))
-                    .findFirst()
-                    .orElse(null);
-                
-                if (myCurrentRecord != null && record.getDuration() >= myCurrentRecord.getCompletionTime()) {
-                    return false;
-                }
-                
-                if (currentTop10.size() >= 10) {
-                    long tenthBestTime = currentTop10.get(9).getCompletionTime();
-                    if (record.getDuration() >= tenthBestTime) {
-                        return false;
-                    }
-                }
-                
-                LeaderboardEntry entry = createEntry(record, playerName);
-                
-                if (!entry.verifyIntegrity()) {
-                    RandomRunMod.LOGGER.error("{} Провал валидации", LOG_TAG);
-                    return false;
-                }
-                
-                JsonObject submitData = new JsonObject();
-                submitData.addProperty("t", record.getDuration());
-                submitData.addProperty("ts", record.getTimestamp());
-                submitData.addProperty("s", record.getWorldSeed() != null ? record.getWorldSeed() : "0");
-                
-                if (record.getTargetType() != null) {
-                    submitData.addProperty("tt", record.getTargetType().name());
-                }
-                if (record.getMobVariant() != null) {
-                    submitData.addProperty("mv", record.getMobVariant());
-                }
-                
-                String sanitizedTargetId = sanitizeId(IdCompressor.compress(record.getTargetId()));
-                String path = "/leaderboards/" + sanitizedTargetId + "/" + playerName;
-                
-                boolean success = executeWithRetry(() -> 
-                    httpClient.put(path, submitData)
-                        .orTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                        .join()
-                );
-                
-                if (success) {
-                    invalidateCache(record.getTargetId());
-                    submitToLatestRuns(record, playerName);
-                } else {
-                    RandomRunMod.LOGGER.warn("{} Отправка провалена", LOG_TAG);
-                }
-                
-                return success;
-            } catch (Exception e) {
-                if (attempt < MAX_RETRIES - 1) {
-                    RandomRunMod.LOGGER.warn("{} Повтор {}/{}", LOG_TAG, attempt + 1, MAX_RETRIES);
-                    try {
-                        Thread.sleep(1000 * (attempt + 1));
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                    }
-                    return submitRecordWithRetry(record, playerName, attempt + 1).join();
-                }
-                
-                RandomRunMod.LOGGER.error("{} Ошибка отправки: {}", LOG_TAG, e.getMessage());
-                return false;
-            }
-        });
-    }
 
-    public enum LatestRunsSubmissionStatus {
-        SUCCESS,
-        ERROR
-    }
-    
-    public CompletableFuture<LatestRunsSubmissionStatus> submitToLatestRuns(Run record, String playerName) {
-        if (record == null || record.isUpgrader()) {
-            return CompletableFuture.completedFuture(LatestRunsSubmissionStatus.ERROR);
-        }
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                LatestRunEntry latestEntry = new LatestRunEntry(
-                    IdCompressor.compress(record.getTargetId()), 
-                    record.getDuration(), 
-                    record.getTimestamp(),
-                    record.getTargetType() != null ? record.getTargetType().name() : null,
-                    record.getMobVariant()
-                );
-                
-                String id = sanitizeName(playerName);
-                
-                JsonElement currentData = executeWithRetry(() -> 
-                    httpClient.get("/latest_runs/" + id)
-                        .orTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                        .join()
-                );
-                
-                List<LatestRunEntry> entries = new ArrayList<>();
-                
-                if (currentData != null && currentData.isJsonObject()) {
-                    JsonObject obj = currentData.getAsJsonObject();
-                    for (String key : obj.keySet()) {
-                        try {
-                            JsonObject entryObj = obj.getAsJsonObject(key);
-                            LatestRunEntry entry = GSON.fromJson(entryObj, LatestRunEntry.class);
-                            if (entry != null) {
-                                entries.add(entry);
-                            }
-                        } catch (Exception e) {
-                            RandomRunMod.LOGGER.warn("{} Ошибка парсинга latest entry: {}", LOG_TAG, key);
-                        }
-                    }
-                }
-                
-                entries.add(latestEntry);
-                entries.sort((a, b) -> Long.compare(b.getTimestamp(), a.getTimestamp()));
-                
-                if (entries.size() > 5) {
-                    entries = entries.subList(0, 5);
-                }
-                
-                JsonObject dataToSend = new JsonObject();
-                for (int i = 0; i < entries.size(); i++) {
-                    JsonObject entryJson = GSON.toJsonTree(entries.get(i)).getAsJsonObject();
-                    dataToSend.add(String.valueOf(i), entryJson);
-                }
-                
-                String path = "/latest_runs/" + id;
 
-                boolean success = executeWithRetry(() -> 
-                    httpClient.put(path, dataToSend)
-                        .orTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                        .join()
-                );
 
-                if (success) {
-                    return LatestRunsSubmissionStatus.SUCCESS;
-                }
-                RandomRunMod.LOGGER.warn("{} Latest runs провалено", LOG_TAG);
-                return LatestRunsSubmissionStatus.ERROR;
-            } catch (Exception e) {
-                RandomRunMod.LOGGER.error("{} Ошибка latest runs: {}", LOG_TAG, e.getMessage());
-                return LatestRunsSubmissionStatus.ERROR;
-            }
-        });
-    }
+
     
     public CompletableFuture<List<LatestRunEntry>> getLatestRuns(int limit) {
         return CompletableFuture.supplyAsync(() -> {
@@ -388,40 +216,8 @@ public class LeaderboardService {
     }
     
     public CompletableFuture<LeaderboardEntry> getPlayerRecord(String targetId, String playerName) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                String sanitizedTargetId = sanitizeId(IdCompressor.compress(targetId));
-                String path = "/leaderboards/" + sanitizedTargetId + "/" + playerName;
-                
-                JsonElement dataElement = executeWithRetry(() -> 
-                    httpClient.get(path)
-                        .orTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                        .join()
-                );
-                
-                if (dataElement == null || !dataElement.isJsonObject()) {
-                    return null;
-                }
-                
-                JsonObject obj = dataElement.getAsJsonObject();
-                long time = obj.get("t").getAsLong();
-                
-                LeaderboardEntry entry = new LeaderboardEntry.Builder()
-                    .targetId(targetId)
-                    .completionTime(time)
-                    .worldSeed(obj.has("s") ? obj.get("s").getAsString() : "unknown")
-                    .modVersion("unknown")
-                    .attempts(1)
-                    .build();
-                entry.setTargetId(targetId);
-                entry.setPlayerName(playerName);
-                
-                return entry;
-            } catch (Exception e) {
-                RandomRunMod.LOGGER.error("{} Ошибка поиска рекорда {}: {}", LOG_TAG, playerName, e.getMessage());
-                return null;
-            }
-        });
+        return getTopRecords(targetId, MAX_LIMIT).thenApply(entries -> entries.stream()
+            .filter(entry -> entry.getPlayerName().equalsIgnoreCase(playerName)).findFirst().orElse(null));
     }
     
     public CompletableFuture<List<String>> getPlayerRecordItems(String playerName) {
@@ -673,32 +469,7 @@ public class LeaderboardService {
         });
     }
     
-    public CompletableFuture<Boolean> deleteAllPlayerRecords(String playerName) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                RandomRunMod.LOGGER.warn("{} Удаление всех рекордов: {}", LOG_TAG, playerName);
-                
-                String profilePath = "/profiles/" + sanitizeName(playerName) + "/leaderboard";
-                
-                boolean success = executeWithRetry(() -> 
-                    httpClient.delete(profilePath)
-                        .orTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                        .join()
-                );
-                
-                if (success) {
-                    cache.clear();
-                } else {
-                    RandomRunMod.LOGGER.error("{} Ошибка удаления рекордов {}", LOG_TAG, playerName);
-                }
-                
-                return success;
-            } catch (Exception e) {
-                RandomRunMod.LOGGER.error("{} Ошибка удаления: {}", LOG_TAG, e.getMessage());
-                return false;
-            }
-        });
-    }
+
     
     private <T> T executeWithRetry(java.util.function.Supplier<T> operation) {
         Exception lastException = null;
@@ -721,24 +492,9 @@ public class LeaderboardService {
         throw new RuntimeException("Retry failed", lastException);
     }
     
-    private LeaderboardEntry createEntry(Run record, String playerName) {
-        String worldSeed = record.getWorldSeed();
-        if (worldSeed == null || worldSeed.isEmpty()) {
-            worldSeed = "0";
-        }
-        
-        return new LeaderboardEntry.Builder()
-            .targetId(record.getTargetId())
-            .completionTime(record.getDuration())
-            .worldSeed(worldSeed)
-            .modVersion(record.getModVersion())
-            .attempts(record.getAttemptNumber())
-            .build();
-    }
+
     
-    private String sanitizeName(String name) {
-        return name.replaceAll("[^a-zA-Z0-9_-]", "_");
-    }
+
     
     private String sanitizeId(String id) {
         return id.replace(":", "_").replace("/", "_").replace(".", "_");

@@ -16,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class PlayerSkinWidget {
     private static final int MAX_CACHE_SIZE = 50;
-    private static final int FULL_BRIGHTNESS = 15728880;
+
     private static final float SCALE_MULTIPLIER = 0.55f;
     private static final float MODEL_Y_OFFSET = -2.3f;
     private static final float WALK_SPEED = 5f;
@@ -27,9 +27,8 @@ public class PlayerSkinWidget {
     private static final float MIN_ZOOM = 0.4f;
     private static final float MAX_ZOOM = 1.2f;
     private static final float ZOOM_STEP = 0.1f;
-    private static final int HOVER_GLOW_COLOR = 0x40FFFFFF;
     private static final int LOADING_SPINNER_COLOR = 0xFFFFFFFF;
-    
+
     private static final Map<String, GameProfile> profileCache = new LinkedHashMap<String, GameProfile>(MAX_CACHE_SIZE, 0.75f, true) {
         @Override
         protected boolean removeEldestEntry(Map.Entry<String, GameProfile> eldest) {
@@ -43,17 +42,17 @@ public class PlayerSkinWidget {
         }
     };
     private static final Map<String, UUID> uuidCache = new HashMap<>();
-    
+
     private final String playerName;
     private final UUID playerUUID;
     private GameProfile gameProfile;
-    
+
     private PlayerModel model;
     private PlayerModel slimModel;
-    
+
     private float rotationY = 0f;
     private final long creationTime;
-    
+
     private boolean isDragging = false;
     private long lastDragTime = 0;
     private long lastClickTime = 0;
@@ -62,12 +61,12 @@ public class PlayerSkinWidget {
     private boolean autoRotationEnabled = true;
     private float zoomLevel = 1.0f;
     private AnimationPose currentPose = AnimationPose.WALK;
-    
+
     private boolean isHovered = false;
     private boolean isLoading = true;
-    
+
     private int lastX, lastY, lastSize;
-    
+
     public enum AnimationPose {
         IDLE, WALK, RUN
     }
@@ -78,7 +77,7 @@ public class PlayerSkinWidget {
         this.creationTime = System.currentTimeMillis();
         loadProfile();
     }
-    
+
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
         double mouseX = event.x();
         double mouseY = event.y();
@@ -86,33 +85,33 @@ public class PlayerSkinWidget {
         if (mouseX >= lastX - lastSize / 2 && mouseX <= lastX + lastSize / 2 &&
             mouseY >= lastY - lastSize && mouseY <= lastY + lastSize / 2) {
             long currentTime = System.currentTimeMillis();
-            
+
             if (currentTime - lastClickTime < DOUBLE_CLICK_DELAY) {
                 resetRotation();
                 playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value());
                 lastClickTime = 0;
                 return true;
             }
-            
+
             if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_RIGHT) {
                 cyclePose();
                 playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
-            
+
             if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
                 isDragging = true;
                 lastDragTime = currentTime;
                 currentAutoRotationSpeed = 0f;
                 playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value());
             }
-            
+
             lastClickTime = currentTime;
             return true;
         }
         return false;
     }
-    
+
     public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
         if (mouseX >= lastX - lastSize / 2 && mouseX <= lastX + lastSize / 2 &&
             mouseY >= lastY - lastSize && mouseY <= lastY + lastSize / 2) {
@@ -123,7 +122,7 @@ public class PlayerSkinWidget {
         }
         return false;
     }
-    
+
     public void updateHover(double mouseX, double mouseY) {
         isHovered = mouseX >= lastX - lastSize / 2 && mouseX <= lastX + lastSize / 2 &&
                     mouseY >= lastY - lastSize && mouseY <= lastY + lastSize / 2;
@@ -137,17 +136,17 @@ public class PlayerSkinWidget {
         }
         return false;
     }
-    
+
     public void mouseReleased() {
         if (isDragging) {
             isDragging = false;
             lastDragTime = System.currentTimeMillis();
         }
     }
-    
+
     private void initModels() {
         if (model != null && slimModel != null) return;
-        
+
         try {
             var loader = Minecraft.getInstance().getEntityModels();
             this.model = new PlayerModel(loader.bakeLayer(ModelLayers.PLAYER), false);
@@ -156,19 +155,19 @@ public class PlayerSkinWidget {
             RandomRunMod.LOGGER.error("[PlayerSkin] Ошибка загрузки моделей: {}", e.getMessage());
         }
     }
-    
+
     private static UUID getOrCreateUUID(String playerName) {
         return uuidCache.computeIfAbsent(playerName, 
             name -> UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes()));
     }
-    
+
     private void loadProfile() {
         if (profileCache.containsKey(playerName)) {
             this.gameProfile = profileCache.get(playerName);
             loadSkin();
             return;
         }
-        
+
         Minecraft client = Minecraft.getInstance();
         if (client.getConnection() != null) {
             PlayerInfo entry = client.getConnection().getPlayerInfo(playerName);
@@ -179,7 +178,7 @@ public class PlayerSkinWidget {
                 return;
             }
         }
-        
+
         CompletableFuture.runAsync(() -> {
             GameProfile profile = new GameProfile(playerUUID, playerName);
             synchronized(profileCache) {
@@ -189,7 +188,7 @@ public class PlayerSkinWidget {
             loadSkin();
         });
     }
-    
+
     private void loadSkin() {
         if (gameProfile == null) return;
         Minecraft client = Minecraft.getInstance();
@@ -197,18 +196,14 @@ public class PlayerSkinWidget {
             textures.ifPresent(skin -> client.execute(() -> skinCache.put(playerName, skin)));
         });
     }
-    
+
     public void extractRenderState(GuiGraphicsExtractor context, int x, int y, int size, float delta) {
         updateRotation(delta);
-        
+
         this.lastX = x;
         this.lastY = y;
         this.lastSize = size;
-        
-        if (isHovered) {
-            renderHoverGlow(context, x, y, size);
-        }
-        
+
         if (isLoading && gameProfile == null) {
             renderLoadingSpinner(context, x, y, size, delta);
         } else {
@@ -216,32 +211,26 @@ public class PlayerSkinWidget {
             renderModel(context, x, y, size);
         }
     }
-    
-    private void renderHoverGlow(GuiGraphicsExtractor context, int x, int y, int size) {
-        int halfSize = size / 2;
-        context.fill(x - halfSize - 2, y - size - 2, 
-                    x + halfSize + 2, y + 2, HOVER_GLOW_COLOR);
-    }
-    
+
     private void renderLoadingSpinner(GuiGraphicsExtractor context, int x, int y, int size, float delta) {
         long time = System.currentTimeMillis();
         float angle = (time % 1000) / 1000f * 360f;
-        
+
         int centerY = y - size / 2;
         int radius = size / 4;
-        
+
         for (int i = 0; i < 8; i++) {
             float a = (float) Math.toRadians(angle + i * 45);
             int px = x + (int)(Math.cos(a) * radius);
             int py = centerY + (int)(Math.sin(a) * radius);
-            
+
             int alpha = (int)(255 * (1 - i / 8f));
             int color = (alpha << 24) | (LOADING_SPINNER_COLOR & 0x00FFFFFF);
-            
+
             context.fill(px - 2, py - 2, px + 2, py + 2, color);
         }
     }
-    
+
     private void updateRotation(float delta) {
         if (!isDragging && autoRotationEnabled) {
             long timeSinceDrag = System.currentTimeMillis() - lastDragTime;
@@ -254,7 +243,7 @@ public class PlayerSkinWidget {
             rotationY += delta * currentAutoRotationSpeed;
         }
     }
-    
+
     private void renderModel(GuiGraphicsExtractor context, int x, int y, int size) {
         initModels();
         if (model == null || slimModel == null) return;
@@ -268,7 +257,7 @@ public class PlayerSkinWidget {
         context.skin(new net.minecraft.client.model.Model.Simple(currentModel.root(), net.minecraft.client.renderer.rendertype.RenderTypes::entityTranslucent),
             textures.body().texturePath(), scale, 0, -rotationY, -1.0625f, x - radius, bottom - radius * 2, x + radius, bottom);
     }
-    
+
 private void setupModelParts(PlayerModel model) {
         model.allParts().forEach(part -> part.visible = true);
         model.hat.visible = true;
@@ -277,15 +266,15 @@ private void setupModelParts(PlayerModel model) {
         model.rightPants.visible = true;
         model.leftSleeve.visible = true;
         model.rightSleeve.visible = true;
-        
+
         model.head.yRot = 0;
         model.head.xRot = 0;
         model.body.yRot = 0;
     }
-    
+
     private void applyAnimation(PlayerModel model) {
         float time = (System.currentTimeMillis() - creationTime) / 1000f * animationSpeed;
-        
+
         switch (currentPose) {
             case IDLE:
                 applyIdleAnimation(model, time);
@@ -298,79 +287,79 @@ private void setupModelParts(PlayerModel model) {
                 break;
         }
     }
-    
+
     private void applyIdleAnimation(PlayerModel model, float time) {
         float breathe = (float) Math.sin(time * 2) * 0.05f;
         model.body.xRot = breathe;
         model.head.xRot = breathe * 0.5f;
-        
+
         model.leftArm.xRot = 0;
         model.rightArm.xRot = 0;
         model.leftLeg.xRot = 0;
         model.rightLeg.xRot = 0;
     }
-    
+
     private void applyWalkAnimation(PlayerModel model, float time) {
         float swing = (float) Math.cos(time * WALK_SPEED) * WALK_AMPLITUDE;
-        
+
         model.leftArm.xRot = swing;
         model.rightArm.xRot = -swing;
         model.leftLeg.xRot = -swing;
         model.rightLeg.xRot = swing;
     }
-    
+
     private void applyRunAnimation(PlayerModel model, float time) {
         float swing = (float) Math.cos(time * WALK_SPEED * 1.5f) * WALK_AMPLITUDE * 1.5f;
-        
+
         model.leftArm.xRot = swing;
         model.rightArm.xRot = -swing;
         model.leftLeg.xRot = -swing;
         model.rightLeg.xRot = swing;
-        
+
         model.body.xRot = -0.2f;
     }
-    
+
     public void setAnimationSpeed(float speed) {
         this.animationSpeed = Math.max(0.1f, Math.min(3.0f, speed));
     }
-    
+
     public void setAutoRotation(boolean enabled) {
         this.autoRotationEnabled = enabled;
         if (!enabled) {
             currentAutoRotationSpeed = 0f;
         }
     }
-    
+
     public void resetRotation() {
         rotationY = 0f;
         currentAutoRotationSpeed = AUTO_ROTATION_SPEED;
     }
-    
+
     public void resetZoom() {
         zoomLevel = 1.0f;
     }
-    
+
     public void setPose(AnimationPose pose) {
         this.currentPose = pose;
     }
-    
+
     public void cyclePose() {
         AnimationPose[] poses = AnimationPose.values();
         int currentIndex = Arrays.asList(poses).indexOf(currentPose);
         currentPose = poses[(currentIndex + 1) % poses.length];
     }
-    
+
     public AnimationPose getCurrentPose() {
         return currentPose;
     }
-    
+
     public boolean isLoading() {
         return isLoading;
     }
-    
+
     private void playSound(net.minecraft.sounds.SoundEvent sound) {
         if (!RandomRunMod.getInstance().getConfig().isSoundEffectsEnabled()) return;
-        
+
         float volume = RandomRunMod.getInstance().getConfig().getSoundVolume() / 100f;
         Minecraft.getInstance().getSoundManager().play(
             net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(sound, 1.0f, volume * 0.3f)

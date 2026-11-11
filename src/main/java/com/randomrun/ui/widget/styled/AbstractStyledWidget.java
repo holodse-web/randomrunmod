@@ -25,8 +25,6 @@ public abstract class AbstractStyledWidget {
     protected static final float SOUND_HOVER_PITCH = 1.8f;
     protected static final float SOUND_HOVER_VOLUME = 0.25f;
     
-    protected static final int COLOR_BASE_DEFAULT = 0x302b63;
-    protected static final int COLOR_HOVER_DEFAULT = 0x6930c3;
     
     protected float hoverProgress = 0f;
     protected float borderAnimation = 0f;

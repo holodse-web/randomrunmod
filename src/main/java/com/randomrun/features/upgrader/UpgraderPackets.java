@@ -41,22 +41,23 @@ public final class UpgraderPackets {
         @Override public Type<Catalog> type() { return TYPE; }
     }
 
-    public record Roll(long id, String room, String target, List<Slot> slots) implements CustomPacketPayload {
-        public static final Type<Roll> TYPE = UpgraderPackets.type("roll_v1");
+    public record Roll(long id, String room, String target, int targetCount, List<Slot> slots) implements CustomPacketPayload {
+        public static final Type<Roll> TYPE = UpgraderPackets.type("roll_v2");
         public static final StreamCodec<RegistryFriendlyByteBuf, Roll> CODEC = StreamCodec.of((b, p) -> {
-            b.writeVarLong(p.id); b.writeUtf(p.room, 32); b.writeUtf(p.target, 128); b.writeVarInt(p.slots.size());
+            b.writeVarLong(p.id); b.writeUtf(p.room, 32); b.writeUtf(p.target, 128); b.writeVarInt(p.targetCount); b.writeVarInt(p.slots.size());
             for (Slot slot : p.slots) {
                 b.writeVarInt(slot.index); b.writeVarInt(slot.count);
                 ItemStack.OPTIONAL_UNTRUSTED_STREAM_CODEC.encode(b, slot.expected);
             }
         }, b -> {
-            long id = b.readVarLong(); String room = b.readUtf(32); String target = b.readUtf(128); int count = b.readVarInt();
+            long id = b.readVarLong(); String room = b.readUtf(32); String target = b.readUtf(128); int targetCount = b.readVarInt(); int count = b.readVarInt();
+            if (targetCount < 1 || targetCount > 64) throw new DecoderException("Invalid upgrader target count");
             if (count < 1 || count > UpgraderTransaction.MAX_SELECTED_ITEMS) throw new DecoderException("Invalid upgrader selection size");
             List<Slot> slots = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
                 slots.add(new Slot(b.readVarInt(), b.readVarInt(), ItemStack.OPTIONAL_UNTRUSTED_STREAM_CODEC.decode(b)));
             }
-            return new Roll(id, room, target, List.copyOf(slots));
+            return new Roll(id, room, target, targetCount, List.copyOf(slots));
         });
         @Override public Type<Roll> type() { return TYPE; }
     }
@@ -74,14 +75,24 @@ public final class UpgraderPackets {
     }
 
     public record Reply(long id, boolean accepted, boolean success, double chance, double roll,
-                        String message, ItemStack reward) implements CustomPacketPayload {
-        public static final Type<Reply> TYPE = UpgraderPackets.type("reply_v1");
+                        String message, ItemStack reward, double bonus, boolean bonusHit, int streak, int flips) implements CustomPacketPayload {
+        public Reply(long id, boolean accepted, boolean success, double chance, double roll, String message, ItemStack reward) {
+            this(id, accepted, success, chance, roll, message, reward, 0, false, 0, 0);
+        }
+        public static final Type<Reply> TYPE = UpgraderPackets.type("reply_v2");
         public static final StreamCodec<RegistryFriendlyByteBuf, Reply> CODEC = StreamCodec.of((b, p) -> {
             b.writeVarLong(p.id); b.writeBoolean(p.accepted); b.writeBoolean(p.success);
             b.writeDouble(p.chance); b.writeDouble(p.roll); b.writeUtf(p.message, 96);
             ItemStack.OPTIONAL_STREAM_CODEC.encode(b, p.reward);
-        }, b -> new Reply(b.readVarLong(), b.readBoolean(), b.readBoolean(), b.readDouble(), b.readDouble(),
-            b.readUtf(96), ItemStack.OPTIONAL_STREAM_CODEC.decode(b)));
+            b.writeDouble(p.bonus); b.writeBoolean(p.bonusHit); b.writeVarInt(p.streak); b.writeVarInt(p.flips);
+        }, b -> {
+            Reply reply = new Reply(b.readVarLong(), b.readBoolean(), b.readBoolean(), b.readDouble(), b.readDouble(),
+                b.readUtf(96), ItemStack.OPTIONAL_STREAM_CODEC.decode(b), b.readDouble(), b.readBoolean(), b.readVarInt(), b.readVarInt());
+            if (!Double.isFinite(reply.bonus) || reply.bonus < 0 || reply.bonus > .25
+                    || reply.streak < 0 || reply.streak > UpgraderMath.MAX_STREAK
+                    || reply.flips < 0 || reply.flips > UpgraderMath.MAX_STREAK + 1) throw new DecoderException("Invalid upgrader reply");
+            return reply;
+        });
         @Override public Type<Reply> type() { return TYPE; }
     }
 

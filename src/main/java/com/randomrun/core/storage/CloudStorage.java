@@ -209,51 +209,25 @@ public enum CloudStorage implements StorageAdapter {
     
     @Override
     public CompletableFuture<Boolean> saveHistory(String playerName, List<Run> records) {
-        if (!validatePlayerName(playerName)) {
-            return CompletableFuture.completedFuture(false);
-        }
-        
-        if (records.isEmpty()) {
-            return CompletableFuture.completedFuture(true);
-        }
-        
-        requestCount.incrementAndGet();
-        
-        Map<String, Object> batchData = new HashMap<>();
-        
+        if (!validatePlayerName(playerName)) return CompletableFuture.completedFuture(false);
+        var owner = com.randomrun.network.BackendSession.current();
+        CompletableFuture<Boolean> result = CompletableFuture.completedFuture(true);
         for (Run record : records) {
             if (record.isUpgrader()) continue;
-            Map<String, Object> recordData = buildRecordData(record);
-            
-            String compressedItemId = com.randomrun.infrastructure.util.IdCompressor.compress(record.getTargetId());
-            String recordId = String.valueOf(record.getAttemptNumber());
-            String path = "profiles/" + playerName + "/history/" + compressedItemId + "/" + recordId;
-            
-            batchData.put(path, recordData);
+            result = result.thenCompose(saved -> !saved || owner != com.randomrun.network.BackendSession.current()
+                ? CompletableFuture.completedFuture(false) : saveRecord(playerName, record));
         }
-
-        if (batchData.isEmpty()) return CompletableFuture.completedFuture(true);
-        
-        return httpClient.patch("/", batchData)
-            .thenApply(success -> {
-                if (!success) {
-                    failedRequests.incrementAndGet();
-                    RandomRunMod.LOGGER.warn("{} Синхронизация истории - ОШИБКА", LOG_TAG);
-                }
-                return success;
-            })
-            .exceptionally(e -> {
-                failedRequests.incrementAndGet();
-                RandomRunMod.LOGGER.error("{} Синхронизация - ОШИБКА: {}", LOG_TAG, e.getMessage());
-                return false;
-            });
+        return result;
     }
     
     private Map<String, Object> buildRecordData(Run record) {
         Map<String, Object> recordData = new HashMap<>();
         recordData.put(FIELD_DURATION, record.getDuration());
+        recordData.put("rd", record.isRandomDrop());
+        if (record.isSurvivor()) recordData.put("sv", true);
         recordData.put(FIELD_TIME, record.getTimestamp());
         recordData.put(FIELD_RESULT, record.getResult().getCode());
+        com.randomrun.network.RunVerifier.attach(record.getTimestamp(), recordData);
         recordData.put(FIELD_SEED, record.getWorldSeed() != null && !record.getWorldSeed().isEmpty() 
             ? record.getWorldSeed() : "0");
         
@@ -303,7 +277,7 @@ public enum CloudStorage implements StorageAdapter {
     
     @Override
     public String getType() {
-        return "firebase";
+        return "cloudflare";
     }
     
     @Override
@@ -315,9 +289,6 @@ public enum CloudStorage implements StorageAdapter {
     }
     
     private boolean validatePlayerName(String playerName) {
-        if (playerName == null || playerName.trim().isEmpty()) {
-            return false;
-        }
-        return true;
+        return com.randomrun.network.BackendSession.owns(playerName);
     }
 }

@@ -1,5 +1,7 @@
 package com.randomrun.features.battle.manager;
 
+
+import com.randomrun.features.battle.manager.BattleSupport.BattleConstants;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.data.RunDataManager;
 import com.randomrun.infrastructure.util.CompactLogger;
@@ -73,34 +75,36 @@ public class BattleStateController {
                 if (!success) {
                     loadingTriggered.set(false);
                     CompactLogger.error(LOG_TAG, "Failed to set LOADING status");
+                    com.randomrun.ui.overlay.LoadingCurtain.abort();
                     return;
                 }
+                if (currentRoom.isSharedWorld() && isHost) com.randomrun.network.WebRtcTransport.getInstance().prefetch();
                 
-                if (currentRoom.isSharedWorld() && isHost) {
-                    Minecraft client = Minecraft.getInstance();
-                    if (client != null) {
-                        client.execute(() -> {
-                            if (!worldCreationInitiated.compareAndSet(false, true)) return;
-                            waitingForWorldLoad.set(true);
-                            
-                            com.randomrun.features.challenges.classic.world.WorldCreationRequest request = createWorldRequest(currentRoom);
-                            com.randomrun.features.challenges.classic.world.WorldCreator.getInstance().createWorld(request);
-                        });
-                    }
-                }
+                if (isHost) createOwnWorld(currentRoom);
             } catch (Exception e) {
                 loadingTriggered.set(false);
+                com.randomrun.ui.overlay.LoadingCurtain.abort();
                 CompactLogger.error(LOG_TAG, "Error setting LOADING: " + e.getMessage());
             }
         }, scheduler);
     }
     
+    public void createOwnWorld(BattleRoom room) {
+        Minecraft client = Minecraft.getInstance();
+        if (client == null || room == null) return;
+        client.execute(() -> {
+            if (!worldCreationInitiated.compareAndSet(false, true)) return;
+            waitingForWorldLoad.set(true);
+            com.randomrun.features.challenges.classic.world.WorldCreator.getInstance().createWorld(createWorldRequest(room));
+        });
+    }
+
     public void setPlayerLoaded(String roomId, BattleRoom currentRoom) {
         if (roomId == null) return;
         
         CompletableFuture.runAsync(() -> {
             try {
-                String playerName = Minecraft.getInstance().getUser().getName();
+                String playerName = com.randomrun.network.BackendSession.playerName();
                 boolean isHost = currentRoom != null && currentRoom.isHost(playerName);
                 
                 Map<String, Object> update = new HashMap<>();
@@ -129,7 +133,7 @@ public class BattleStateController {
         
         CompletableFuture.runAsync(() -> {
             try {
-                String playerName = Minecraft.getInstance().getUser().getName();
+                String playerName = com.randomrun.network.BackendSession.playerName();
                 
                 Map<String, Object> updates = new HashMap<>();
                 String readyPath = isHost ? "h/" + playerName + "/r" : "g/" + playerName + "/r";
@@ -153,7 +157,7 @@ public class BattleStateController {
                 currentRoom.markUpdated();
                 
                 if (!isLobby) {
-                    sendPlayerMessage("§a✓ Вы готовы! Ожидание других игроков...");
+                    sendPlayerMessage(com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.battle.you_ready"));
                 }
             } catch (Exception e) {
                 CompactLogger.error(LOG_TAG, "Error in sendReady: " + e.getMessage());
@@ -162,37 +166,21 @@ public class BattleStateController {
     }
     
     public void handleBattleStart(String roomId, BattleRoom latestRoom, Runnable onAllReady) {
-        try {
-            Map<String, Object> statusUpdate = new HashMap<>();
-            statusUpdate.put("st", "STARTED");
-            
-            long startDelay = BattleConstants.BATTLE_START_DELAY_MS;
-            long serverStartTime = System.currentTimeMillis() + startDelay;
-            statusUpdate.put("srv_start", serverStartTime);
-            
-            if (latestRoom.isSharedWorld()) {
-                Minecraft client = Minecraft.getInstance();
-                if (client != null && client.level != null) {
-                    long targetWorldTime = client.level.getGameTime() + 120;
-                    statusUpdate.put("swt", targetWorldTime);
-                    latestRoom.setSharedWorldStartTime(targetWorldTime);
+        long sent = System.currentTimeMillis();
+        com.randomrun.network.HttpClient.getInstance().request("PATCH", "/rooms/" + roomId, Map.of("st", "STARTED"), true)
+            .thenAccept(response -> {
+                if (response.getAsJsonObject().has("serverTime")) {
+                    com.randomrun.network.RealtimeClient.getInstance().observeServerTime(
+                        response.getAsJsonObject().get("serverTime").getAsLong(), sent, System.currentTimeMillis());
                 }
-            }
-            
-            latestRoom.setServerStartTime(serverStartTime);
-            latestRoom.setStatus(BattleRoom.RoomStatus.STARTED);
-            
-            boolean success = apiHelper.updateRoomFields(roomId, statusUpdate).join();
-            
-            if (!success) {
-                CompactLogger.error(LOG_TAG, "Failed to set STARTED status");
-                return;
-            }
-            
-            Minecraft.getInstance().execute(onAllReady);
-        } catch (Exception e) {
-            CompactLogger.error(LOG_TAG, "Error in handleBattleStart: " + e.getMessage());
-        }
+                latestRoom.setServerStartTime(response.getAsJsonObject().getAsJsonObject("room").get("srv_start").getAsLong());
+                latestRoom.setStatus(BattleRoom.RoomStatus.STARTED);
+                Minecraft.getInstance().execute(onAllReady);
+            }).exceptionally(error -> {
+                BattleManager.getInstance().startFailed();
+                CompactLogger.error(LOG_TAG, "Failed to start battle: " + error.getClass().getSimpleName());
+                return null;
+            });
     }
     
     public void transitionToFrozen(String roomCode, BattleRoom currentRoom) {
@@ -212,31 +200,7 @@ public class BattleStateController {
         }, scheduler);
     }
     
-    public void handleSeparateWorldCreation(BattleRoom updatedRoom) {
-        Minecraft client = Minecraft.getInstance();
-        if (client == null) return;
-        
-        client.execute(() -> {
-            String decompressedItem = IdCompressor.decompress(updatedRoom.getTargetItem());
-            Item targetItem = BuiltInRegistries.ITEM.getValue(Identifier.parse(decompressedItem));
-            String seed = updatedRoom.getSeed();
-            
-            if (seed == null || seed.isEmpty() || seed.equals("null")) {
-                CompactLogger.error(LOG_TAG, "Invalid seed for separate world");
-                sendPlayerMessage("\u00A7cОшибка: неверный сид!");
-                Minecraft.getInstance().gui.setScreen(
-                    new com.randomrun.ui.screen.main.MainModScreen(
-                        new net.minecraft.client.gui.screens.TitleScreen()));
-                return;
-            }
-            
-            Minecraft.getInstance().gui.setScreen(null);
-            RandomRunMod.getInstance().getRunDataManager().setTargetItem(targetItem);
-            
-            com.randomrun.features.challenges.classic.world.WorldCreationRequest request = createWorldRequest(updatedRoom);
-            com.randomrun.features.challenges.classic.world.WorldCreator.getInstance().createWorld(request);
-        });
-    }
+
     
     public void notifyPlayerReadiness(BattleRoom updatedRoom, BattleRoom currentRoom, String playerName) {
         List<String> oldReady = currentRoom != null ? currentRoom.getReadyPlayers() : new ArrayList<>();
@@ -245,7 +209,7 @@ public class BattleStateController {
         if (newReady != null) {
             for (String readyPlayer : newReady) {
                 if (!oldReady.contains(readyPlayer) && !readyPlayer.equals(playerName)) {
-                    sendPlayerMessage("\u00A7a✓ Игрок " + readyPlayer + " готов!");
+                    sendPlayerMessage(com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.battle.player_ready", readyPlayer));
                 }
             }
         }
@@ -255,17 +219,27 @@ public class BattleStateController {
         int readyCount = newReady != null ? newReady.size() : 0;
         
         if (!amIReady && readyCount == totalPlayers - 1) {
-            sendPlayerMessage("\u00A7eВсе готовы! Напишите /go для старта", true);
+            sendPlayerMessage(com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.battle.all_ready"), true);
         }
     }
 
     public void scheduleStart(BattleRoom room, Runnable onUnfreeze) {
+        scheduleStart(room, onUnfreeze, 0);
+    }
+
+    private void scheduleStart(BattleRoom room, Runnable onUnfreeze, int attempt) {
         var session = com.randomrun.core.session.RunSessionManager.getInstance().getCurrentSession();
-        if (session == null || session.getStatus() != com.randomrun.core.session.RunStatus.FROZEN) return;
+        if (session == null || session.getStatus() != com.randomrun.core.session.RunStatus.FROZEN) {
+            if (attempt < 300 && scheduler != null && !scheduler.isShutdown()) {
+                scheduler.schedule(() -> Minecraft.getInstance().execute(() -> {
+                    if (!countdownCancelled) scheduleStart(room, onUnfreeze, attempt + 1);
+                }), 100, TimeUnit.MILLISECONDS);
+            }
+            return;
+        }
         if (scheduledSession.getAndSet(session) == session) return;
         
         countdownCancelled = false;
-        calibrateClockIfNeeded(room);
         long delayToStart = calculateStartDelay(room);
         
         startCountdown(delayToStart);
@@ -292,84 +266,17 @@ public class BattleStateController {
         }, delayToStart, TimeUnit.MILLISECONDS);
     }
     
-    private void calibrateClockIfNeeded(BattleRoom room) {
-        long now = System.currentTimeMillis();
-        
-        if (room.getStatus() == BattleRoom.RoomStatus.FROZEN) {
-            performCalibration(room);
-            return;
-        }
-        
-        if (now - lastCalibration < BattleConstants.SYNC_CALIBRATION_INTERVAL_MS) {
-            return;
-        }
-        
-        performCalibration(room);
-    }
+
     
-    private void performCalibration(BattleRoom room) {
-        if (!room.isSharedWorld() && room.getServerStartTime() > 0) {
-            long serverTime = room.getServerStartTime();
-            long localTime = System.currentTimeMillis();
-            long estimatedOffset = serverTime - localTime;
-            
-            if (Math.abs(estimatedOffset) < BattleConstants.SYNC_MAX_CLOCK_SKEW_MS) {
-                if (lastCalibration == 0) {
-                    clockOffset = estimatedOffset;
-                } else {
-                    clockOffset = (long) (clockOffset * 0.7 + estimatedOffset * 0.3);
-                }
-                lastCalibration = System.currentTimeMillis();
-            }
-        }
-    }
+
 
     private long calculateStartDelay(BattleRoom room) {
-        if (room.isSharedWorld() && room.getSharedWorldStartTime() > 0) {
-            Long sharedDelay = trySharedWorldSync(room);
-            if (sharedDelay != null) return sharedDelay;
-        }
-        
-        Long serverDelay = trySeparateWorldSync(room);
-        if (serverDelay != null) return serverDelay;
-        
-        CompactLogger.warn(LOG_TAG, "Using fallback delay");
-        return BattleConstants.SYNC_DEFAULT_DELAY_MS;
+        return Math.max(0, room.getServerStartTime() - com.randomrun.network.RealtimeClient.getInstance().serverNow());
     }
     
-    private Long trySharedWorldSync(BattleRoom room) {
-        Minecraft client = Minecraft.getInstance();
-        if (client == null || client.level == null) {
-            CompactLogger.warn(LOG_TAG, "World unavailable for shared sync");
-            return null;
-        }
-        
-        long diffTicks = room.getSharedWorldStartTime() - client.level.getGameTime();
-        
-        if (Math.abs(diffTicks) >= BattleConstants.SYNC_MAX_TICK_DIFF) {
-            CompactLogger.warn(LOG_TAG, "Tick diff too large: " + diffTicks);
-            return null;
-        }
-        
-        long delay = diffTicks * 50;
-        return delay;
-    }
+
     
-    private Long trySeparateWorldSync(BattleRoom room) {
-        long serverStartTime = room.getServerStartTime();
-        if (serverStartTime <= 0) return null;
-        
-        long now = System.currentTimeMillis();
-        long calculatedDelay = serverStartTime - (now + clockOffset);
-        
-        if (calculatedDelay > BattleConstants.SYNC_MAX_CLOCK_SKEW_MS || 
-            calculatedDelay < BattleConstants.SYNC_MIN_CLOCK_SKEW_MS) {
-            CompactLogger.warn(LOG_TAG, "Clock desync: " + calculatedDelay + "ms (offset: " + clockOffset + "ms)");
-            return null;
-        }
-        
-        return calculatedDelay;
-    }
+
 
     private void startCountdown(long totalDelay) {
         if (scheduler == null || scheduler.isShutdown()) {
@@ -467,12 +374,14 @@ public class BattleStateController {
         if (client.getSingleplayerServer() != null) {
             try {
                 var playerManager = client.getSingleplayerServer().getPlayerList();
+                client.getSingleplayerServer().execute(() -> {
                 for (var serverPlayer : playerManager.getPlayers()) {
                     serverPlayer.setHealth(serverPlayer.getMaxHealth());
                     serverPlayer.getFoodData().setFoodLevel(20);
                     serverPlayer.getFoodData().setSaturation(5.0f);
                     serverPlayer.removeAllEffects();
                 }
+                });
             } catch (Exception e) {
                 CompactLogger.error(LOG_TAG, "Error healing players: " + e.getMessage());
             }

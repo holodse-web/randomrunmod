@@ -166,10 +166,12 @@ public class GlobalParticleSystem {
     public void extractRenderState(GuiGraphicsExtractor context) {
         if (particles.isEmpty()) return;
         
-        int baseColor = colorMode.getColor();
+        int baseColor = colorMode == ColorMode.DEFAULT ? com.randomrun.ui.theme.Theme.current().buttonHover : colorMode.getColor();
+        com.randomrun.ui.util.GuiQuadBatch.Builder batch = new com.randomrun.ui.util.GuiQuadBatch.Builder(particles.size());
         for (Particle particle : particles) {
-            particle.extractRenderState(context, baseColor);
+            particle.extractRenderState(batch, baseColor);
         }
+        batch.build().extract(context);
     }
     
     private boolean isSimplifiedUI() {
@@ -288,7 +290,7 @@ public class GlobalParticleSystem {
             }
         }
         
-        public void extractRenderState(GuiGraphicsExtractor context, int baseColor) {
+        public void extractRenderState(com.randomrun.ui.util.GuiQuadBatch.Builder context, int baseColor) {
             int alphaInt = (int) (alpha * 255);
             if (alphaInt > 0) {
                 int finalColor = colorOverride != -1 ? colorOverride : baseColor;

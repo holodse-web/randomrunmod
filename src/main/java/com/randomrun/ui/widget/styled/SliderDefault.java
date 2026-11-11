@@ -7,12 +7,8 @@ import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.network.chat.Component;
 
 public class SliderDefault extends AbstractSliderButton {
-    private static final int COLOR_BASE = 0x302b63;
-    private static final int COLOR_ACTIVE = 0x6930c3;
     private static final int COLOR_HANDLE = 0xFFFFFFFF;
-    private static final int COLOR_BORDER = 0x6930c3;
     private static final int COLOR_CURSOR = 0xFFFFFF;
-    private static final int COLOR_OVERLAY = 0xd042ff;
     
     private static final int HANDLE_WIDTH = 8;
     
@@ -66,15 +62,17 @@ public class SliderDefault extends AbstractSliderButton {
         }
         styledHelper.wasHovered = hovered;
         
+        com.randomrun.ui.theme.Theme theme = com.randomrun.ui.theme.Theme.current();
+        int colorBase = theme.buttonBase, colorActive = theme.buttonHover, colorBorder = theme.buttonHover, colorOverlay = theme.overlay;
         int bgAlpha = (int) (alpha * AbstractStyledWidget.ALPHA_BACKGROUND);
-        int finalBgColor = (bgAlpha << 24) | (COLOR_BASE & 0x00FFFFFF);
+        int finalBgColor = (bgAlpha << 24) | (colorBase & 0x00FFFFFF);
         context.fill(animatedX, animatedY, animatedX + width, animatedY + height, finalBgColor);
         
         int handleX = animatedX + (int)(this.value * (double)(this.width - HANDLE_WIDTH));
         int activeWidth = handleX - animatedX + HANDLE_WIDTH / 2;
         
         int activeAlpha = (int) (alpha * 255);
-        int finalActiveColor = (activeAlpha << 24) | (COLOR_ACTIVE & 0x00FFFFFF);
+        int finalActiveColor = (activeAlpha << 24) | (colorActive & 0x00FFFFFF);
         context.fill(animatedX, animatedY, animatedX + activeWidth, animatedY + height, finalActiveColor);
         
         int finalHandleColor = (activeAlpha << 24) | (COLOR_HANDLE & 0x00FFFFFF);
@@ -82,7 +80,7 @@ public class SliderDefault extends AbstractSliderButton {
         
         styledHelper.renderBorderWithCursorEffect(context, animatedX, animatedY, 
                                                   animatedX + width, animatedY + height, 
-                                                  COLOR_BORDER, COLOR_CURSOR, alpha);
+                                                  colorBorder, COLOR_CURSOR, alpha);
         
         Minecraft client = Minecraft.getInstance();
         int textAlpha = (int) (alpha * 255);
@@ -98,7 +96,7 @@ public class SliderDefault extends AbstractSliderButton {
         
         if (styledHelper.hoverProgress > 0.01f) {
             int whiteAlpha = (int) (styledHelper.hoverProgress * alpha * AbstractStyledWidget.ALPHA_OVERLAY);
-            int whiteOverlay = (whiteAlpha << 24) | (COLOR_OVERLAY & 0x00FFFFFF);
+            int whiteOverlay = (whiteAlpha << 24) | (colorOverlay & 0x00FFFFFF);
             context.fill(animatedX, animatedY, animatedX + width, animatedY + height, whiteOverlay);
         }
     }

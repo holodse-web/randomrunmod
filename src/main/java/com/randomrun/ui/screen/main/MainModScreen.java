@@ -1,9 +1,18 @@
 package com.randomrun.ui.screen.main;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+
+
+import com.randomrun.ui.widget.overlay.OverlayWidgets.LanguageDropdownWidget;
+import com.randomrun.ui.widget.overlay.OverlayWidgets.ThemeSwitchWidget;
+import com.randomrun.ui.widget.styled.Buttons.ButtonGreen;
+import com.randomrun.ui.widget.styled.Buttons.ButtonMenu;
+import com.randomrun.ui.widget.styled.Buttons.ButtonYellow;
 import com.randomrun.core.init.CoreInitializer;
 import com.randomrun.core.profile.PlayerProfile;
+import com.randomrun.features.battle.screen.lobby.LobbyScreen;
+import com.randomrun.features.battle.screen.room.RoomHostScreenCreateImproved;
+import com.randomrun.features.challenges.classic.screen.SpeedrunScreen;
+import com.randomrun.features.challenges.classic.world.WorldCreator;
 import com.randomrun.features.leaderboard.LatestRunEntry;
 import com.randomrun.features.leaderboard.LeaderboardService;
 import com.randomrun.infrastructure.RandomRunMod;
@@ -11,904 +20,342 @@ import com.randomrun.infrastructure.config.ModConfig;
 import com.randomrun.infrastructure.security.ModScannerService;
 import com.randomrun.infrastructure.util.CompactLogger;
 import com.randomrun.infrastructure.util.LanguageManager;
-import com.randomrun.infrastructure.util.IdCompressor;
-import com.randomrun.core.history.RunHistory;
-import com.randomrun.network.HttpClient;
+import com.randomrun.network.BackendSession;
+import com.randomrun.network.RealtimeClient;
 import com.randomrun.ui.screen.auth.ProfileAuthScreen;
-import com.randomrun.ui.screen.info.TrustScoreInfoScreen;
 import com.randomrun.ui.screen.info.ModBlockScreen;
+import com.randomrun.ui.screen.info.TrustScoreInfoScreen;
 import com.randomrun.ui.screen.settings.SettingsScreen;
+import com.randomrun.ui.util.GuiText;
+import com.randomrun.ui.util.Heads;
+import com.randomrun.ui.util.Logo;
+import com.randomrun.ui.util.Ui;
 import com.randomrun.ui.widget.overlay.ToggleSwitchWidget;
-import com.randomrun.ui.widget.overlay.LanguageDropdownWidget;
-import com.randomrun.ui.widget.styled.ButtonMenu;
-import com.randomrun.ui.widget.styled.ButtonYellow;
-import com.randomrun.features.challenges.classic.world.WorldCreator;
-import com.randomrun.features.challenges.classic.screen.SpeedrunScreen;
-import com.randomrun.infrastructure.util.PlayerSkinHelper;
+import com.randomrun.ui.widget.social.FriendsPanel;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.Items;
 
 public class MainModScreen extends AbstractRandomRunScreen {
-    private static final Identifier LOGO_TEXTURE = Identifier.fromNamespaceAndPath("randomrun", "textures/gui/logo.png");
-    
     private static final int LOGO_WIDTH = 120;
     private static final int LOGO_HEIGHT = 60;
-    private static final float FADE_SPEED = 0.08F;
     private static final long LEADERBOARD_REFRESH_MS = 60000L;
-    private static final int BUTTON_WIDTH = 200;
-    private static final int BUTTON_HEIGHT = 20;
-    private static final int BUTTON_SPACING = 25;
-    private static final int PANEL_PADDING = 15;
-    private static final int SHADOW_LAYERS = 10;
-    private static final int BORDER_WIDTH = 2;
-    private static final int GRADIENT_LENGTH = 30;
-    private static final long ANIMATION_CYCLE_MS = 5000L;
-    private static final int COLOR_PANEL_BG = 0x150030;
-    private static final int COLOR_LEADERBOARD_BG = 0x3D3410;  
-    private static final int COLOR_ONLINE_BG = 0x0d2b0d;  
-    private static final int COLOR_BORDER_PURPLE = 0x6A0DAD;
-    private static final int COLOR_BORDER_GOLD = 0xDAA520;
-    private static final int COLOR_BORDER_GREEN = 0x32CD32;  
-    private static final int COLOR_GOLD = 0xFFD700;
-    private static final int COLOR_GREEN = 0x32CD32;  
-    private static final int COLOR_PLAYER_NAME = 0x55FFFF;  
-    private static final int COLOR_TIME = 0xFFCC00;
-    
-    private final List<AbstractWidget> mainWidgets = new ArrayList<>();
-    
-    private final Screen parent;
-    private boolean versionValidated;
-    private float logoScale = 1.0F;
-    private float targetLogoScale = 1.0F;
-    private boolean logoHovered = false;
-    private float fadeProgress = 0.0F;
-    
-    private long openTime;
-    
-    private static boolean profileAuthChecked = false;
-    private static boolean profileAuthenticated = false;
-    private static boolean hasSeenWarning = false;
-    private static boolean profileCreatedThisSession = false;
-    private static long globalLastRunsFetchTime = 0L;
-    
     private static final int MAX_UPDATES_PER_WINDOW = 5;
     private static final long UPDATE_WINDOW_MS = 180000L;
+    private static final int GOLD_BG = 0x3D3410;
+    private static final int GOLD_BORDER = 0xDAA520;
+    private static final int GREEN_BG = 0x0D2B0D;
+    private static final int GREEN_BORDER = 0x32CD32;
+
+    private static String warnedFindings = "";
+    private static long globalLastRunsFetchTime = 0L;
     private static long updateWindowStartTime = 0L;
     private static int updatesInCurrentWindow = 0;
-    
+
+    private final Screen parent;
+    private float logoScale = 1.0F;
+    private long openTime;
     private List<LatestRunEntry> latestRuns = new ArrayList<>();
     private boolean isFetchingRuns = false;
-    
-    private static final int REFRESH_BUTTON_SIZE = 16;
-    private int refreshButtonX = 0;
-    private int refreshButtonY = 0;
-    private boolean isRefreshButtonHovered = false;
+    private FriendsPanel friendsPanel;
+    private int refreshX, refreshY, refreshW;
 
-    private static final long AFK_TIMEOUT_MS = 180000L;
-    private long lastUserActivityTime = System.currentTimeMillis();
-
-    private boolean isPasswordWarningHovered = false;
-    private int passwordWarningLeft = 0;
-    private int passwordWarningRight = 0;
-    private int passwordWarningTop = 0;
-    private int passwordWarningBottom = 0;
-    
     public MainModScreen(Screen parent) {
         super(LanguageManager.text("randomrun.screen.main.title"));
         this.parent = parent;
     }
-    
+
+    private boolean online() {
+        return RandomRunMod.getInstance().getConfig().isOnlineMode();
+    }
+
     @Override
     protected void init() {
-        if (RandomRunMod.getInstance().getConfig().isOnlineMode() && !versionValidated) {
-            minecraft.gui.setScreen(new VersionCheckScreen(parent, () -> {
-                versionValidated = true;
-                minecraft.gui.setScreen(this);
-            }));
+        if (online()) {
+            com.randomrun.infrastructure.version.VersionGate.start(false);
+            if (com.randomrun.infrastructure.version.VersionGate.state() == com.randomrun.infrastructure.version.VersionGate.State.UPDATE_REQUIRED) {
+                minecraft.gui.setScreen(new UpdateRequiredScreen());
+                return;
+            }
+        }
+        String playerName = BackendSession.playerName();
+        String banned = BackendSession.takeBanned();
+        if (banned != null) {
+            minecraft.gui.setScreen(new com.randomrun.ui.screen.info.BanScreen(parent, banned, com.randomrun.ui.screen.info.BanScreen.Kind.BANNED, this));
             return;
         }
-        String playerName = Minecraft.getInstance().getUser().getName();
-        
-        if (!CoreInitializer.isInitialized()) {
-            RunHistory.getInstance().clear();
-            CoreInitializer.initialize(playerName);
-        }
-        
         ModScannerService scanner = ModScannerService.getInstance();
-        if (!scanner.isScanned()) {
-            scanner.scan();
-        }
-        
-        if (!scanner.isTrusted() && !hasSeenWarning) {
-            hasSeenWarning = true;
-            Minecraft.getInstance().gui.setScreen(new ModBlockScreen(this));
+        if (!scanner.isScanned()) scanner.scan();
+        else scanner.refreshPacks();
+        String findings = scanner.findings().keySet().toString();
+        if (!scanner.isTrusted() && !findings.equals(warnedFindings)) {
+            warnedFindings = findings;
+            minecraft.gui.setScreen(new ModBlockScreen(this));
             return;
         }
-        
-        if (RandomRunMod.getInstance().getConfig().isOnlineMode() && !profileAuthenticated) {
-            if (!profileAuthChecked) {
-                profileAuthChecked = true;
-            }
-            checkProfileAuth();
+        if (online() && !BackendSession.owns(playerName)) {
+            minecraft.execute(() -> minecraft.gui.setScreen(new ProfileAuthScreen(parent, playerName, this)));
             return;
         }
-        
+        if (!CoreInitializer.isInitialized()) CoreInitializer.initialize(playerName);
         LanguageManager.ensureLanguage();
-        
-        if (this.minecraft != null && this.minecraft.level == null) {
-            if (!WorldCreator.hasPendingRun()) {
-                WorldCreator.clearPendingData();
-                if (RandomRunMod.getInstance().getRunDataManager() != null) {
-                    RandomRunMod.getInstance().getRunDataManager().cancelRun();
-                }
-            }
+        if (minecraft.level == null && !WorldCreator.hasPendingRun()) {
+            WorldCreator.clearPendingData();
+            if (RandomRunMod.getInstance().getRunDataManager() != null) RandomRunMod.getInstance().getRunDataManager().cancelRun();
         }
-        
         super.init();
-        this.openTime = System.currentTimeMillis();
-        initButtons();
+        openTime = System.currentTimeMillis();
+        if (online()) RealtimeClient.getInstance().setPresence("menu", null);
+        checkFirstLaunchTrustScoreInfo();
+        initMainButtons();
+        initSidePanels();
+        initCornerWidgets();
     }
-    
+
     @Override
     public void removed() {
         super.removed();
-        versionValidated = false;
     }
 
     @Override
     public void tick() {
         super.tick();
-
-        if (this.minecraft == null || !this.minecraft.isWindowActive()) {
-            return;
-        }
-        
-        if (!RandomRunMod.getInstance().getConfig().isOnlineMode()) {
-            return;
-        }
-        
+        if (minecraft == null || !minecraft.isWindowActive() || !online()) return;
         long now = System.currentTimeMillis();
-
-        long timeSinceActivity = now - lastUserActivityTime;
-        boolean isAfk = timeSinceActivity > AFK_TIMEOUT_MS;
-        
-        if (globalLastRunsFetchTime == 0L) {
-            globalLastRunsFetchTime = now;
-            if (!this.isFetchingRuns && !isAfk) {
-                fetchLatestRuns();
-            }
-            return;
-        }
-        
-        long timeSinceLastFetch = now - globalLastRunsFetchTime;
-
-        if (timeSinceLastFetch > LEADERBOARD_REFRESH_MS && !this.isFetchingRuns && !isAfk) {
-            fetchLatestRuns();
+        if (globalLastRunsFetchTime == 0L || now - globalLastRunsFetchTime > LEADERBOARD_REFRESH_MS) {
+            if (!isFetchingRuns) fetchLatestRuns(false);
         }
     }
-    
-    private void fetchLatestRuns() {
+
+    private void fetchLatestRuns(boolean manual) {
         long now = System.currentTimeMillis();
-        
         if (updateWindowStartTime == 0L || now - updateWindowStartTime >= UPDATE_WINDOW_MS) {
             updateWindowStartTime = now;
             updatesInCurrentWindow = 0;
         }
-        
         if (updatesInCurrentWindow >= MAX_UPDATES_PER_WINDOW) {
             globalLastRunsFetchTime = now;
             return;
         }
-        
-        this.isFetchingRuns = true;
+        isFetchingRuns = true;
         globalLastRunsFetchTime = now;
         updatesInCurrentWindow++;
-        
+        if (manual) Ui.click();
         LeaderboardService.getInstance().getLatestRuns(5)
             .thenAccept(runs -> Minecraft.getInstance().execute(() -> {
-                this.latestRuns = runs;
-                this.isFetchingRuns = false;
+                latestRuns = runs;
+                isFetchingRuns = false;
             }))
-            .exceptionally(e -> {
-                this.isFetchingRuns = false;
-                com.randomrun.infrastructure.util.CompactLogger.error("Failed to fetch runs: {}", e.getMessage());
+            .exceptionally(error -> {
+                isFetchingRuns = false;
+                CompactLogger.warn("Failed to fetch runs: {}", error.getMessage());
                 return null;
             });
     }
-    
-    private void initButtons() {
-        continueToMainScreen();
-    }
-    
-    private void checkProfileAuth() {
-        String playerName = Minecraft.getInstance().getUser().getName();
-        
-        if (!RandomRunMod.getInstance().getConfig().isOnlineMode()) {
-            profileAuthenticated = true;
-            Minecraft.getInstance().execute(this::continueToMainScreen);
-            return;
-        }
-        
-        if (profileCreatedThisSession) {
-            profileAuthenticated = true;
-            Minecraft.getInstance().execute(this::continueToMainScreen);
-            return;
-        }
-        
-        CompletableFuture.runAsync(() -> {
-            try {
-                JsonElement result = HttpClient.getInstance().get("/profiles/" + playerName + "/profile").join();
 
-                if (result == null || !result.isJsonObject()) {
-                    result = HttpClient.getInstance().get("/profiles/" + playerName).join();
-                }
-                
-                boolean profileExists = false;
-                
-                if (result != null && result.isJsonObject()) {
-                    JsonObject profile = result.getAsJsonObject();
-
-                    if (profile.has("sec") && profile.getAsJsonObject("sec").has("pwd")) {
-                        String passwordHash = profile.getAsJsonObject("sec").get("pwd").getAsString();
-                        profileExists = (passwordHash != null && !passwordHash.isEmpty());
-                    } else if (profile.has("profile") && profile.getAsJsonObject("profile").has("sec")) {
-                        JsonObject innerProfile = profile.getAsJsonObject("profile");
-                        if (innerProfile.has("sec") && innerProfile.getAsJsonObject("sec").has("pwd")) {
-                            String passwordHash = innerProfile.getAsJsonObject("sec").get("pwd").getAsString();
-                            profileExists = (passwordHash != null && !passwordHash.isEmpty());
-                        }
-                    } else if (profile.has("info") || profile.has("sec") || profile.has("stats")) {
-                        profileExists = false;
-                    }
-                }
-                
-                boolean finalProfileExists = profileExists;
-                
-                Minecraft.getInstance().execute(() -> {
-                    Minecraft.getInstance().gui.setScreen(new ProfileAuthScreen(this.parent, playerName, finalProfileExists, this));
-                });
-            } catch (Exception e) {
-                com.randomrun.infrastructure.util.CompactLogger.authError("Profile check failed: {}", e.getMessage());
-                Minecraft.getInstance().execute(() -> {
-                    Minecraft.getInstance().gui.setScreen(new ProfileAuthScreen(this.parent, playerName, false, this));
-                });
-            }
-        });
-    }
-    
-    public static void onAuthenticationSuccess() {
-        profileAuthenticated = true;
-        profileCreatedThisSession = true;
-    }
-    
-    public static void resetAuthentication() {
-        profileAuthenticated = false;
-        profileCreatedThisSession = false;
-    }
-    
     public static void resetLeaderboardTimer() {
         globalLastRunsFetchTime = 0L;
     }
-    
-    private void continueToMainScreen() {
-        super.init();
-        this.mainWidgets.clear();
-        this.openTime = System.currentTimeMillis();
-        this.fadeProgress = 0.0F;
-        this.lastUserActivityTime = System.currentTimeMillis(); 
-        
-        if (!checkBanStatusBeforeMenu()) {
-            return;
-        }
-        
-        checkFirstLaunchTrustScoreInfo();
-        
-        initMainButtons();
-        initLeftPanelButton();
-        initLeaderboardButton();
-        initSettingsWidgets();
-    }
-    
-    private boolean checkBanStatusBeforeMenu() {
-        return true;
-    }
-    
+
     private void checkFirstLaunchTrustScoreInfo() {
-        if (!RandomRunMod.getInstance().getConfig().isOnlineMode()) {
-            return;
-        }
-        
+        if (!online()) return;
         PlayerProfile profile = PlayerProfile.get();
-        if (profile == null) {
-            return;
-        }
-        
-        if (!profile.isFirstTrustScoreShown()) {
-            profile.setFirstTrustScoreShown(true);
-            PlayerProfile.save();
-            
-            Minecraft.getInstance().execute(() -> {
-                if (this.minecraft != null) {
-                    this.minecraft.gui.setScreen(new TrustScoreInfoScreen(this));
-                }
-            });
-        }
+        if (profile == null || profile.isFirstTrustScoreShown()) return;
+        profile.setFirstTrustScoreShown(true);
+        PlayerProfile.save();
+        minecraft.execute(() -> minecraft.gui.setScreen(new TrustScoreInfoScreen(this)));
     }
-    
+
+    private int contentTop() { return height / 2 - 100; }
+    private int contentBottom() { return height / 2 + 85; }
+    private int contentLeft() { return width / 2 - 120; }
+    private int contentRight() { return width / 2 + 120; }
+    private boolean sidePanels() { return online() && contentLeft() - 20 > 15 + 110; }
+
     private void initMainButtons() {
-        int centerX = this.width / 2;
-        int startY = this.height / 2 - 10;
-        String playerName = Minecraft.getInstance().getUser().getName();
-        
-        this.mainWidgets.add(addRenderableWidget(new ButtonMenu(
-            centerX - 100, startY, 200, 20,
+        int centerX = width / 2;
+        int startY = height / 2 - 10;
+        addRenderableWidget(new ButtonMenu(centerX - 100, startY, 200, 20,
             LanguageManager.text("randomrun.button.speedrun"),
-            button -> Minecraft.getInstance().gui.setScreen(new SpeedrunScreen(this)),
-            0, 0.1F
-        )));
-        
-        this.mainWidgets.add(addRenderableWidget(new ButtonMenu(
-            centerX - 100, startY + 25, 200, 20,
-            Component.literal(playerName),
-            button -> Minecraft.getInstance().gui.setScreen(new ResultsScreen(this)),
-            1, 0.15F
-        )));
-        
-        this.mainWidgets.add(addRenderableWidget(new ButtonMenu(
-            centerX - 100, startY + 50, 200, 20,
+            button -> minecraft.gui.setScreen(new SpeedrunScreen(this)), 0, 0.1F));
+        addRenderableWidget(new ButtonMenu(centerX - 100, startY + 25, 200, 20,
+            LanguageManager.text("randomrun.button.statistics", BackendSession.playerName()),
+            button -> minecraft.gui.setScreen(new ResultsScreen(this)), 1, 0.15F));
+        addRenderableWidget(new ButtonMenu(centerX - 100, startY + 50, 200, 20,
             LanguageManager.text("randomrun.button.settings"),
-            button -> Minecraft.getInstance().gui.setScreen(new SettingsScreen(this)),
-            2, 0.2F
-        )));
-        
-        this.mainWidgets.add(addRenderableWidget(new ButtonMenu(
-            centerX - 100, this.height - 30, 200, 20,
+            button -> minecraft.gui.setScreen(new SettingsScreen(this)), 2, 0.2F));
+        addRenderableWidget(new ButtonMenu(centerX - 100, height - 30, 200, 20,
             LanguageManager.text("randomrun.button.back"),
-            button -> Minecraft.getInstance().gui.setScreen(this.parent),
-            3, 0.25F
-        )));
+            button -> minecraft.gui.setScreen(parent), 3, 0.25F));
     }
-    
-    private void initLeaderboardButton() {
-        if (!RandomRunMod.getInstance().getConfig().isOnlineMode()) {
-            return;
-        }
-        
-        int contentRight = this.width / 2 + 120;
-        int lbLeft = contentRight + 20;
-        int lbRight = this.width - 15;
-        
-        if (lbLeft < this.width - 50) {
-            int lbWidth = lbRight - lbLeft;
-            
-            int contentBottom = this.height / 2 + 85;
-            int buttonY = contentBottom - 18;
-            
-            this.mainWidgets.add(addRenderableWidget(new ButtonYellow(
-                lbLeft, buttonY, lbWidth, 18,
-                LanguageManager.text("randomrun.main.leaderboard_title"),
-                button -> Minecraft.getInstance().gui.setScreen(new LeaderboardScreen(this))
-            )));
-        }
+
+    private void initSidePanels() {
+        friendsPanel = null;
+        if (!sidePanels()) return;
+        int buttonY = contentBottom() - 22;
+        int lpLeft = 15, lpRight = contentLeft() - 20;
+        friendsPanel = new FriendsPanel(this, FriendsPanel.Context.MENU,
+            () -> { if (com.randomrun.infrastructure.version.VersionGate.requireOnline()) minecraft.gui.setScreen(new RoomHostScreenCreateImproved(new LobbyScreen(this), null)); });
+        friendsPanel.layout(lpLeft, contentTop(), lpRight, contentBottom(), this::addRenderableWidget);
+        addRenderableWidget(new ButtonGreen(lpLeft + 4, buttonY, lpRight - lpLeft - 8, 18,
+            LanguageManager.text("randomrun.main.lobby"),
+            button -> { if (com.randomrun.infrastructure.version.VersionGate.requireOnline()) minecraft.gui.setScreen(new LobbyScreen(this)); }));
+        int lbLeft = contentRight() + 20, lbRight = width - 15;
+        addRenderableWidget(new ButtonYellow(lbLeft + 4, buttonY, lbRight - lbLeft - 8, 18,
+            LanguageManager.text("randomrun.main.leaderboard_title"),
+            button -> minecraft.gui.setScreen(new LeaderboardScreen(this))));
     }
-    
-    private void initLeftPanelButton() {
-        if (!RandomRunMod.getInstance().getConfig().isOnlineMode()) {
-            return;
-        }
-        
-        int contentLeft = this.width / 2 - 120;
-        int lpRight = contentLeft - 20;
-        int lpLeft = 15;
-        
-        if (lpRight > lpLeft + 50) {
-            int lpWidth = lpRight - lpLeft;
-            
-            int contentBottom = this.height / 2 + 85;
-            int buttonY = contentBottom - 18;
-            
-            this.mainWidgets.add(addRenderableWidget(new com.randomrun.ui.widget.styled.ButtonGreen(
-                lpLeft, buttonY, lpWidth, 18,
-                Component.literal("Лобби"),
-                button -> Minecraft.getInstance().gui.setScreen(new com.randomrun.features.battle.screen.lobby.LobbyScreen(this))
-            )));
-        }
-    }
-    
-    private void initSettingsWidgets() {
+
+    private void initCornerWidgets() {
         ModConfig config = RandomRunMod.getInstance().getConfig();
-        
-        this.mainWidgets.add(addRenderableWidget(new ToggleSwitchWidget(
-            10, 10,
-            config.isOnlineMode(),
-            this::handleOnlineModeToggle
-        )));
-        
-        this.mainWidgets.add(addRenderableWidget(new LanguageDropdownWidget(
-            10, this.height - 30,
-            this, 0.35F
-        )));
+        addRenderableWidget(new ToggleSwitchWidget(10, 10, config.isOnlineMode(), this::handleOnlineModeToggle));
+        addRenderableWidget(new LanguageDropdownWidget(10, height - 30, this, 0.35F));
+        addRenderableWidget(new ThemeSwitchWidget(34, height - 30, 0.4F));
     }
-    
+
     private void handleOnlineModeToggle() {
         ModConfig config = RandomRunMod.getInstance().getConfig();
-        boolean currentMode = config.isOnlineMode();
-        
-        if (!currentMode) {
-            minecraft.gui.setScreen(new VersionCheckScreen(this, this::enableOnlineMode));
-        } else {
-            config.setOnlineMode(false);
-            RandomRunMod.getInstance().saveConfig();
-            CoreInitializer.reset();
-            
-            if (this.minecraft != null) {
-                this.minecraft.gui.setScreen(new MainModScreen(this.parent));
-            }
+        if (!config.isOnlineMode()) {
+            enableOnlineMode();
+            com.randomrun.infrastructure.version.VersionGate.start(true);
+            return;
         }
+        config.setOnlineMode(false);
+        RandomRunMod.getInstance().saveConfig();
+        CoreInitializer.reset();
+        minecraft.gui.setScreen(new MainModScreen(parent));
     }
 
     private void enableOnlineMode() {
-        profileAuthenticated = false;
-        profileCreatedThisSession = false;
         RandomRunMod.getInstance().getConfig().setOnlineMode(true);
         RandomRunMod.getInstance().saveConfig();
         CoreInitializer.reset();
-        versionValidated = true;
         minecraft.gui.setScreen(this);
     }
-    
-    @Override
-    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        long elapsed = System.currentTimeMillis() - this.openTime;
-        this.fadeProgress = Math.min(1.0F, (float)elapsed / 1000.0F * (1.0F / FADE_SPEED));
 
-        lastUserActivityTime = System.currentTimeMillis();
-        
-        if (RandomRunMod.getInstance().getConfig().isOnlineMode()) {
-            this.isRefreshButtonHovered = (mouseX >= this.refreshButtonX && mouseX <= this.refreshButtonX + REFRESH_BUTTON_SIZE &&
-                                          mouseY >= this.refreshButtonY && mouseY <= this.refreshButtonY + REFRESH_BUTTON_SIZE);
-            
-            this.isPasswordWarningHovered = (mouseX >= this.passwordWarningLeft && mouseX <= this.passwordWarningRight &&
-                                            mouseY >= this.passwordWarningTop && mouseY <= this.passwordWarningBottom);
-        }
-        
-        super.extractRenderState(context, mouseX, mouseY, delta);
-        
-        renderPasswordWarning(context);
-        
-        if (this.isPasswordWarningHovered) {
-            java.util.List<Component> tooltipLines = new java.util.ArrayList<>();
-            tooltipLines.add(LanguageManager.text("randomrun.main.password_tooltip_line1"));
-            tooltipLines.add(Component.literal("§c" + LanguageManager.text("randomrun.main.password_tooltip_line2").getString()));
-            context.setComponentTooltipForNextFrame(this.font, tooltipLines, mouseX, mouseY);
-        }
-        
-        if (this.isRefreshButtonHovered && RandomRunMod.getInstance().getConfig().isOnlineMode()) {
-            context.setTooltipForNextFrame(this.font, Component.literal("Нажмите — обновить"), mouseX, mouseY);
-        }
+    private float fade() {
+        return Math.min(1f, (System.currentTimeMillis() - openTime) / 350f);
     }
-    
+
     @Override
     public void extractBackground(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         super.extractBackground(context, mouseX, mouseY, delta);
+        float fade = fade();
+        Ui.panel(context, contentLeft(), contentTop(), contentRight(), contentBottom(), fade);
+        if (sidePanels()) {
+            Ui.panel(context, 15, contentTop(), contentLeft() - 20, contentBottom(), GREEN_BG, GREEN_BORDER, fade);
+            Ui.panel(context, contentRight() + 20, contentTop(), width - 15, contentBottom(), GOLD_BG, GOLD_BORDER, fade);
+        }
+        renderLogo(context, width / 2 - LOGO_WIDTH / 2, height / 2 - 85, mouseX, mouseY, fade);
+    }
 
-        int logoX = this.width / 2 - 60;
-        int logoY = this.height / 2 - 85;
-        int contentTop = logoY - 15;
-        int contentBottom = this.height / 2 + 85;
-        int contentLeft = this.width / 2 - 120;
-        int contentRight = this.width / 2 + 120;
-        
-        renderPanel(context, contentLeft, contentTop, contentRight, contentBottom, COLOR_PANEL_BG, COLOR_BORDER_PURPLE);
-        renderLeftPanel(context, contentLeft, contentTop, contentBottom);
-        renderLeaderboardPanel(context, contentRight, contentTop, contentBottom);
-        renderLogo(context, logoX, logoY, mouseX, mouseY);
-    }
-    
-    private void renderPanel(GuiGraphicsExtractor context, int left, int top, int right, int bottom, int bgColor, int borderColor) {
-        for (int i = 0; i < SHADOW_LAYERS; i++) {
-            int shadowAlpha = (int)((SHADOW_LAYERS - i) * 2.5F * this.fadeProgress);
-            context.fill(left - i, top - i, right + i, bottom + i, shadowAlpha << 24);
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        super.extractRenderState(context, mouseX, mouseY, delta);
+        float fade = fade();
+        if (sidePanels()) {
+            if (friendsPanel != null) friendsPanel.extract(context, mouseX, mouseY, fade);
+            renderLeaderboardContent(context, contentRight() + 20, contentTop(), width - 15, contentBottom(), mouseX, mouseY, fade);
         }
-        
-        int panelAlpha = (int)(0xD0 * this.fadeProgress);
-        context.fill(left, top, right, bottom, panelAlpha << 24 | bgColor);
-        
-        renderBorder(context, left, top, right, bottom, borderColor, false);
+        renderOnlineBadge(context, mouseX, mouseY, fade);
     }
-    
-    private void renderLeftPanel(GuiGraphicsExtractor context, int contentLeft, int contentTop, int contentBottom) {
-        if (!RandomRunMod.getInstance().getConfig().isOnlineMode()) {
-            return;
-        }
-        
-        int lpRight = contentLeft - 20;
-        int lpLeft = 15;
-        
-        if (lpRight <= lpLeft + 50) {
-            return;
-        }
-        
-        renderPanel(context, lpLeft, contentTop, lpRight, contentBottom, COLOR_ONLINE_BG, COLOR_BORDER_GREEN);
-        renderLeftPanelContent(context, lpLeft, contentTop, lpRight, contentBottom);
-    }
-    
-    private void renderLeftPanelContent(GuiGraphicsExtractor context, int left, int top, int right, int bottom) {
-        MutableComponent titleText = Component.literal("Онлайн").withStyle(s -> s.withColor(COLOR_GREEN));
-        int titleWidth = this.font.width(titleText);
-        int titleX = left + (right - left) / 2 - titleWidth / 2;
-        com.randomrun.ui.util.GuiText.text(context, this.font, titleText, titleX, top + 10, 0xFFFFFF, true);
-        
-        context.fill(left + 10, top + 25, right - 10, top + 27, 0xFF32CD32);  
-        
-        int yOffset = top + 35;
 
-        MutableComponent emptyText = Component.literal("Скоро здесь будет контент").withStyle(s -> s.withColor(0xAAAAAA));
-        int emptyWidth = this.font.width(emptyText);
-        int emptyX = left + (right - left) / 2 - emptyWidth / 2;
-        com.randomrun.ui.util.GuiText.text(context, this.font, emptyText, emptyX, yOffset, 0xFFFFFF, false);
-    }
-    
-    private void renderLeaderboardPanel(GuiGraphicsExtractor context, int contentRight, int contentTop, int contentBottom) {
-        if (!RandomRunMod.getInstance().getConfig().isOnlineMode()) {
-            return;
+    private void renderOnlineBadge(GuiGraphicsExtractor context, int mouseX, int mouseY, float fade) {
+        if (!RandomRunMod.getInstance().getConfig().isOnlineMode() || !BackendSession.isAuthenticated()) return;
+        int count = com.randomrun.network.RealtimeClient.getInstance().onlineCount();
+        boolean live = count > 0;
+        String text = live ? LanguageManager.translate("randomrun.main.online_now", count) : LanguageManager.translate("randomrun.main.online_connecting");
+        int w = font.width(text) + 20, h = 16;
+        int x = width - 10 - w, y = 10;
+        context.fill(x, y, x + w, y + h, Ui.argb(0x000000, 0.55f * fade));
+        Ui.border(context, x, y, x + w, y + h, 1, Ui.argb(live ? 0x4ADE80 : 0x71717A, 0.35f * fade));
+        int dot = live ? 0x4ADE80 : 0xA1A1AA;
+        context.fill(x + 6, y + 6, x + 10, y + 10, Ui.argb(dot, fade));
+        if (live) {
+            float pulse = 0.5f + 0.5f * (float) Math.sin(System.currentTimeMillis() / 350.0);
+            int ring = Math.round(pulse * 2);
+            Ui.border(context, x + 5 - ring, y + 5 - ring, x + 11 + ring, y + 11 + ring, 1, Ui.argb(dot, (1f - pulse) * 0.6f * fade));
         }
-        
-        int lbLeft = contentRight + 20;
-        int lbRight = this.width - 15;
-        
-        if (lbLeft >= this.width - 50) {
-            return;
-        }
-        
-        renderPanel(context, lbLeft, contentTop, lbRight, contentBottom, COLOR_LEADERBOARD_BG, COLOR_BORDER_GOLD);
-        renderLeaderboardContent(context, lbLeft, contentTop, lbRight, contentBottom);
+        GuiText.text(context, font, text, x + 15, y + 4, Ui.argb(live ? 0xFFFFFF : 0xA1A1AA, fade), false);
+        if (Ui.inside(mouseX, mouseY, x, y, w, h)) context.setTooltipForNextFrame(font, LanguageManager.text("randomrun.main.online_tooltip"), mouseX, mouseY);
     }
-    
-    private void renderLeaderboardContent(GuiGraphicsExtractor context, int left, int top, int right, int bottom) {
-        MutableComponent titleText = LanguageManager.text("randomrun.main.leaderboard_title").withStyle(s -> s.withColor(COLOR_GOLD));
-        int titleWidth = this.font.width(titleText);
-        int titleX = left + (right - left) / 2 - titleWidth / 2;
-        com.randomrun.ui.util.GuiText.text(context, this.font, titleText, titleX, top + 10, 0xFFFFFF, true);
-        
-        long timeSinceLastFetch = System.currentTimeMillis() - globalLastRunsFetchTime;
-        long timeUntilNextRefresh = LEADERBOARD_REFRESH_MS - timeSinceLastFetch;
-        int secondsLeft = (int)Math.max(0L, timeUntilNextRefresh / 1000L);
-        
-        this.refreshButtonX = right - 10 - this.font.width("" + secondsLeft + "с");
-        this.refreshButtonY = top + 10;
-        
-        this.isRefreshButtonHovered = false;
-        
-        String timerStr = "" + secondsLeft + "с";
-        int timerColor = this.isRefreshButtonHovered ? 0xFFFFFF : COLOR_GOLD;
-        com.randomrun.ui.util.GuiText.text(context, this.font, Component.literal(timerStr).withStyle(s -> s.withColor(timerColor)), 
-            this.refreshButtonX, this.refreshButtonY, 0xFFFFFF, true);
-        
-        context.fill(left + 10, top + 25, right - 10, top + 27, 0xFFFFD700);  
-        
-        int yOffset = top + 30;
-        
-        if (this.latestRuns.isEmpty()) {
-            MutableComponent emptyText = this.isFetchingRuns ? 
-                LanguageManager.text("randomrun.main.loading") : 
-                LanguageManager.text("randomrun.main.no_data");
-            com.randomrun.ui.util.GuiText.text(context, this.font, emptyText, left + 10, yOffset, 0xAAAAAA, false);
-        } else {
-            for (LatestRunEntry run : this.latestRuns) {
-                if (yOffset > bottom - 40) {
-                    break;
-                }
-                
-                int headSize = 20;
-                int headX = left + 10;
-                int headY = yOffset - 2;
-                renderPlayerHead(context, run.getPlayerName(), null, headX, headY, headSize);
-                
-                int textX = headX + headSize + 6;
-                
-                MutableComponent playerText = Component.literal(run.getPlayerName()).withStyle(s -> s.withColor(COLOR_PLAYER_NAME));
-                MutableComponent itemText = Component.literal(getItemDisplayName(run.getTargetId()));
-                MutableComponent timeText = Component.literal(run.getFormattedDuration()).withStyle(s -> s.withColor(COLOR_TIME));
-                
-                com.randomrun.ui.util.GuiText.text(context, this.font, playerText, textX, yOffset, 0xFFFFFF, true);
-                com.randomrun.ui.util.GuiText.text(context, this.font, timeText, 
-                    right - 10 - this.font.width(timeText), yOffset, 0xFFFFFF, true);
-                com.randomrun.ui.util.GuiText.text(context, this.font, itemText, textX, yOffset + 10, 0xDDDDDD, false);
-                
-                yOffset += 28;
-            }
-        }
-    }
-    
-    private void renderPlayerHead(GuiGraphicsExtractor context, String playerName, String playerId, int x, int y, int size) {
-        try {
-            UUID playerUuid = (playerId != null && !playerId.isEmpty()) ? 
-                UUID.fromString(playerId) : 
-                PlayerSkinHelper.getOfflineUUID(playerName);
-            
-            Identifier skinTexture = PlayerSkinHelper.getPlayerSkin(playerName, playerUuid);
-            
-            context.fill(x - 1, y - 1, x + size + 1, y, COLOR_BORDER_PURPLE);
-            context.fill(x - 1, y + size, x + size + 1, y + size + 1, COLOR_BORDER_PURPLE);
-            context.fill(x - 1, y, x, y + size, COLOR_BORDER_PURPLE);
-            context.fill(x + size, y, x + size + 1, y + size, COLOR_BORDER_PURPLE);
-            
-            context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, skinTexture, x, y, 8.0F, 8.0F, size, size, 8, 8, 64, 64);
-            context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, skinTexture, x, y, 40.0F, 8.0F, size, size, 8, 8, 64, 64);
-        } catch (Exception e) {
-        }
-    }
-    
-    private String getItemDisplayName(String itemId) {
-        try {
-            String fullId = itemId;
-            if (!itemId.contains(":")) {
-                fullId = IdCompressor.decompress(itemId);
-            }
-            
-            Identifier id = Identifier.tryParse(fullId);
-            if (id != null) {
-                Item item = BuiltInRegistries.ITEM.getValue(id);
-                if (item != null && item != Items.AIR) {
-                    return net.minecraft.network.chat.Component.translatable(item.getDescriptionId()).getString();
-                }
-            }
-        } catch (Exception e) {
-            com.randomrun.infrastructure.util.CompactLogger.warn("Failed to get item name for: {}", itemId);
-        }
-        
-        return LanguageManager.translateItem(itemId);
-    }
-    
-    private void renderLogo(GuiGraphicsExtractor context, int x, int y, int mouseX, int mouseY) {
-        this.logoHovered = (mouseX >= x && mouseX <= x + LOGO_WIDTH && mouseY >= y && mouseY <= y + LOGO_HEIGHT);
-        
-        this.targetLogoScale = this.logoHovered ? 1.08F : 1.0F;
-        this.logoScale = Mth.lerp(0.2F, this.logoScale, this.targetLogoScale);
 
-        context.pose().pushMatrix();
-        
+    private void renderLeaderboardContent(GuiGraphicsExtractor context, int left, int top, int right, int bottom, int mouseX, int mouseY, float fade) {
+        GuiText.text(context, font, LanguageManager.text("randomrun.main.latest_runs"), left + 8, top + 8, Ui.argb(Ui.GOLD, fade), true);
+        int secondsLeft = (int) Math.max(0L, (LEADERBOARD_REFRESH_MS - (System.currentTimeMillis() - globalLastRunsFetchTime)) / 1000L);
+        String timer = isFetchingRuns ? "…" : LanguageManager.translate("randomrun.main.refresh_in", secondsLeft);
+        refreshW = font.width(timer);
+        refreshX = right - 8 - refreshW;
+        refreshY = top + 8;
+        boolean hover = Ui.inside(mouseX, mouseY, refreshX - 2, refreshY - 2, refreshW + 4, 12);
+        GuiText.text(context, font, timer, refreshX, refreshY, Ui.argb(hover ? 0xFFFFFF : 0xC9A030, fade), false);
+        if (hover) context.setTooltipForNextFrame(font, LanguageManager.text("randomrun.main.refresh_now"), mouseX, mouseY);
+        Ui.divider(context, left + 8, right - 8, top + 21, GOLD_BORDER, fade);
+
+        int y = top + 28;
+        if (latestRuns.isEmpty()) {
+            Component empty = LanguageManager.text(isFetchingRuns ? "randomrun.main.loading" : "randomrun.main.no_data");
+            GuiText.centeredText(context, font, empty, (left + right) / 2, y + 20, Ui.argb(0xAAAAAA, fade));
+            return;
+        }
+        int index = 0;
+        for (LatestRunEntry run : latestRuns) {
+            if (y > bottom - 50) break;
+            float appear = Ui.easeOut((System.currentTimeMillis() - openTime - 150L - index++ * 60L) / 320f);
+            if (appear <= 0f) { y += 28; continue; }
+            context.pose().pushMatrix();
+            context.pose().translate((1f - appear) * -16f, 0);
+            float rowFade = fade * appear;
+            boolean rowHover = Ui.inside(mouseX, mouseY, left + 4, y - 3, right - left - 8, 26);
+            if (rowHover) context.fill(left + 4, y - 3, right - 4, y + 23, Ui.argb(0xFFFFFF, 0.06f * rowFade));
+            Heads.draw(context, run.getPlayerName(), left + 9, y, 18, Ui.argb(GOLD_BORDER, rowFade));
+            int textX = left + 33;
+            String time = run.getFormattedDuration();
+            int timeWidth = font.width(time);
+            GuiText.text(context, font, time, right - 9 - timeWidth, y + 1, Ui.argb(0xFFCC00, rowFade), true);
+            GuiText.text(context, font, Ui.ellipsize(font, run.getPlayerName(), right - textX - timeWidth - 14), textX, y + 1, Ui.argb(0x55FFFF, rowFade), true);
+            GuiText.text(context, font, Ui.ellipsize(font, LanguageManager.translateItem(run.getTargetId()), right - textX - 10), textX, y + 11, Ui.argb(0xDDDDDD, rowFade), false);
+            context.pose().popMatrix();
+            y += 28;
+        }
+    }
+
+    private void renderLogo(GuiGraphicsExtractor context, int x, int y, int mouseX, int mouseY, float fade) {
+        boolean hovered = Ui.inside(mouseX, mouseY, x, y, LOGO_WIDTH, LOGO_HEIGHT);
+        logoScale = Mth.lerp(0.2F, logoScale, hovered ? 1.06F : 1.0F);
         float centerX = x + LOGO_WIDTH / 2.0F;
         float centerY = y + LOGO_HEIGHT / 2.0F;
-        
+        context.pose().pushMatrix();
         context.pose().translate(centerX, centerY);
-        context.pose().scale(this.logoScale, this.logoScale);
-        context.pose().translate(-centerX, -centerY);
-
-        try {
-            context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, LOGO_TEXTURE, x, y, 0.0F, 0.0F, LOGO_WIDTH, LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT, net.minecraft.util.ARGB.white(this.fadeProgress));
-        } catch (Exception e) {
-            com.randomrun.ui.util.GuiText.centeredText(context, this.font, "RandomRun", (int)centerX, (int)centerY, 0x6930C3);
-        }
-        
+        context.pose().scale(logoScale, logoScale);
+        Logo.draw(context, -LOGO_WIDTH / 2, -LOGO_HEIGHT / 2, LOGO_WIDTH, LOGO_HEIGHT, fade);
         context.pose().popMatrix();
     }
 
-    private void renderPasswordWarning(GuiGraphicsExtractor context) {
-        if (!RandomRunMod.getInstance().getConfig().isOnlineMode()) {
-            return;
-        }
-        
-        try {
-            com.randomrun.core.profile.PlayerProfile profile = com.randomrun.core.profile.PlayerProfile.get();
-            if (profile == null || !profile.needsPasswordChange()) {
-                return;
-            }
-            
-            int contentLeft = this.width / 2 - 120;
-            int contentRight = this.width / 2 + 120;
-            
-            int warningTop = 10;
-            int warningHeight = 42;
-            int warningBottom = warningTop + warningHeight;
-            
-            this.passwordWarningLeft = contentLeft;
-            this.passwordWarningRight = contentRight;
-            this.passwordWarningTop = warningTop;
-            this.passwordWarningBottom = warningBottom;
-            
-            int bgAlpha = (int) (0xC0 * this.fadeProgress);
-            int bgColor = this.isPasswordWarningHovered ? 
-                (bgAlpha << 24) | 0x4D0000 :
-                (bgAlpha << 24) | 0x3D0000;
-            context.fill(contentLeft, warningTop, contentRight, warningBottom, bgColor);
-            
-            int borderColor = this.isPasswordWarningHovered ? 0xFFFF3333 : 0xFFFF0000;
-            context.fill(contentLeft, warningTop, contentRight, warningTop + 2, borderColor);
-            context.fill(contentLeft, warningBottom - 2, contentRight, warningBottom, borderColor);
-            context.fill(contentLeft, warningTop, contentLeft + 2, warningBottom, borderColor);
-            context.fill(contentRight - 2, warningTop, contentRight, warningBottom, borderColor);
-            
-            int centerX = this.width / 2;
-            int line1Y = warningTop + 6;
-            int line2Y = warningTop + 17;
-            int line3Y = warningTop + 28;
-            
-            MutableComponent line1 = LanguageManager.text("randomrun.main.password_warning_line1");
-            MutableComponent line2 = LanguageManager.text("randomrun.main.password_warning_line2");
-            MutableComponent line3 = LanguageManager.text("randomrun.main.password_warning_line3");
-            
-            com.randomrun.ui.util.GuiText.centeredText(context, this.font, line1, centerX, line1Y, 0xFFFFFFFF);
-            com.randomrun.ui.util.GuiText.centeredText(context, this.font, line2, centerX, line2Y, 0xFFCCCCCC);
-            com.randomrun.ui.util.GuiText.centeredText(context, this.font, line3, centerX, line3Y, 0xFFAAAA88);
-        } catch (Exception e) {
-        }
-    }
-    
-    private void renderBorder(GuiGraphicsExtractor context, int left, int top, int right, int bottom, int baseColor, boolean animated) {
-        context.fill(left, top, right, top + BORDER_WIDTH, 0xFF000000 | baseColor);
-        context.fill(left, bottom - BORDER_WIDTH, right, bottom, 0xFF000000 | baseColor);
-        context.fill(left, top, left + BORDER_WIDTH, bottom, 0xFF000000 | baseColor);
-        context.fill(right - BORDER_WIDTH, top, right, bottom, 0xFF000000 | baseColor);
-        
-        if (animated && RandomRunMod.getInstance().getConfig().isAnimationsEnabled()) {
-            renderAnimatedBorder(context, left, top, right, bottom);
-        }
-    }
-    
-    public static void renderStaticBorder(GuiGraphicsExtractor context, int left, int top, int right, int bottom, int borderWidth) {
-        int borderColor = 0xFF6A0DAD;
-        context.fill(left, top, right, top + borderWidth, borderColor);
-        context.fill(left, bottom - borderWidth, right, bottom, borderColor);
-        context.fill(left, top, left + borderWidth, bottom, borderColor);
-        context.fill(right - borderWidth, top, right, bottom, borderColor);
-    }
-    
-    public static void renderStaticYellowBorder(GuiGraphicsExtractor context, int left, int top, int right, int bottom, int borderWidth) {
-        int borderColor = 0xFFDAA520;
-        context.fill(left, top, right, top + borderWidth, borderColor);
-        context.fill(left, bottom - borderWidth, right, bottom, borderColor);
-        context.fill(left, top, left + borderWidth, bottom, borderColor);
-        context.fill(right - borderWidth, top, right, bottom, borderColor);
-    }
-    
-    public static void renderAnimatedBorder(GuiGraphicsExtractor context, int left, int top, int right, int bottom, int borderWidth) {
-        if (!RandomRunMod.getInstance().getConfig().isAnimationsEnabled()) {
-            return;
-        }
-        
-        long time = System.currentTimeMillis();
-        float animationProgress = (float)(time % ANIMATION_CYCLE_MS) / (float)ANIMATION_CYCLE_MS;
-        
-        int width = right - left;
-        int height = bottom - top;
-        int perimeter = 2 * (width + height);
-        float currentPos = animationProgress * perimeter;
-        
-        drawCircularBorder(context, left, top, width, height, borderWidth, currentPos, GRADIENT_LENGTH, perimeter, 0xFFFFFF);
-    }
-    
-    public static void renderAnimatedYellowBorder(GuiGraphicsExtractor context, int left, int top, int right, int bottom, int borderWidth) {
-        if (!RandomRunMod.getInstance().getConfig().isAnimationsEnabled()) {
-            return;
-        }
-        
-        long time = System.currentTimeMillis();
-        float animationProgress = (float)(time % ANIMATION_CYCLE_MS) / (float)ANIMATION_CYCLE_MS;
-        
-        int width = right - left;
-        int height = bottom - top;
-        int perimeter = 2 * (width + height);
-        float currentPos = animationProgress * perimeter;
-        
-        drawCircularBorder(context, left, top, width, height, borderWidth, currentPos, GRADIENT_LENGTH, perimeter, 0xFFFF55);
-    }
-    
-    private void renderAnimatedBorder(GuiGraphicsExtractor context, int left, int top, int right, int bottom) {
-        long time = System.currentTimeMillis();
-        float animationProgress = (float)(time % ANIMATION_CYCLE_MS) / (float)ANIMATION_CYCLE_MS;
-        
-        int width = right - left;
-        int height = bottom - top;
-        int perimeter = 2 * (width + height);
-        float currentPos = animationProgress * perimeter;
-        
-        drawCircularBorder(context, left, top, width, height, BORDER_WIDTH, currentPos, GRADIENT_LENGTH, perimeter, 0xFFFFFF);
-    }
-    
-    private static void drawCircularBorder(GuiGraphicsExtractor context, int x, int y, int width, int height, int thickness, 
-                                          float currentPos, int gradientLength, int perimeter, int glowColor) {
-        for (int i = 0; i < width; i++) {
-            float dist = getCircularDistance(i, currentPos, perimeter);
-            if (dist < gradientLength) {
-                float intensity = 1.0F - dist / gradientLength;
-                int alpha = (int)(255.0F * intensity);
-                context.fill(x + i, y, x + i + 1, y + thickness, alpha << 24 | glowColor);
-            }
-        }
-        
-        int rightStart = width;
-        for (int j = 0; j < height; j++) {
-            float dist = getCircularDistance(rightStart + j, currentPos, perimeter);
-            if (dist < gradientLength) {
-                float intensity = 1.0F - dist / gradientLength;
-                int alpha = (int)(255.0F * intensity);
-                context.fill(x + width - thickness, y + j, x + width, y + j + 1, alpha << 24 | glowColor);
-            }
-        }
-        
-        int bottomStart = width + height;
-        for (int k = 0; k < width; k++) {
-            float dist = getCircularDistance(bottomStart + k, currentPos, perimeter);
-            if (dist < gradientLength) {
-                float intensity = 1.0F - dist / gradientLength;
-                int alpha = (int)(255.0F * intensity);
-                context.fill(x + width - k - 1, y + height - thickness, x + width - k, y + height, alpha << 24 | glowColor);
-            }
-        }
-        
-        int leftStart = 2 * width + height;
-        for (int m = 0; m < height; m++) {
-            float dist = getCircularDistance(leftStart + m, currentPos, perimeter);
-            if (dist < gradientLength) {
-                float intensity = 1.0F - dist / gradientLength;
-                int alpha = (int)(255.0F * intensity);
-                context.fill(x, y + height - m - 1, x + thickness, y + height - m, alpha << 24 | glowColor);
-            }
-        }
-    }
-    
-    private static float getCircularDistance(int pos, float currentPos, int perimeter) {
-        float dist = Math.abs(pos - currentPos);
-        if (dist > (perimeter / 2)) {
-            dist = perimeter - dist;
-        }
-        return dist;
-    }
-    
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
-        double mouseX = event.x();
-        double mouseY = event.y();
-        int button = event.button();
-        
-        lastUserActivityTime = System.currentTimeMillis();
-        
-        if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && RandomRunMod.getInstance().getConfig().isOnlineMode() &&
-            mouseX >= this.refreshButtonX && mouseX <= (this.refreshButtonX + REFRESH_BUTTON_SIZE) &&
-            mouseY >= this.refreshButtonY && mouseY <= (this.refreshButtonY + REFRESH_BUTTON_SIZE)) {
-            if (!this.isFetchingRuns) {
-                fetchLatestRuns();
+        if (sidePanels()) {
+            if (friendsPanel != null && friendsPanel.mouseClicked(event.x(), event.y())) return true;
+            if (Ui.inside(event.x(), event.y(), refreshX - 2, refreshY - 2, refreshW + 4, 12) && !isFetchingRuns) {
+                fetchLatestRuns(true);
+                return true;
             }
-            return true;
         }
-        
-        if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && this.isPasswordWarningHovered) {
-            String playerName = Minecraft.getInstance().getUser().getName();
-            Minecraft.getInstance().gui.setScreen(new com.randomrun.ui.screen.auth.ChangePasswordScreen(this, playerName));
-            return true;
-        }
-        
-        return super.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(mouseX, mouseY, event.buttonInfo()), doubleClick);
+        return super.mouseClicked(event, doubleClick);
     }
-    
-    @Override
-    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
-        int keyCode = event.key();
-        int scanCode = event.keycode();
-        int modifiers = event.modifiers();
-        
-        lastUserActivityTime = System.currentTimeMillis();
-        return super.keyPressed(new net.minecraft.client.input.KeyEvent(keyCode, scanCode, modifiers));
-    }
-    
+
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        lastUserActivityTime = System.currentTimeMillis();
+        if (friendsPanel != null && friendsPanel.mouseScrolled(mouseX, mouseY, verticalAmount)) return true;
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+    }
+
+    @Override
+    public void onClose() {
+        minecraft.gui.setScreen(parent);
     }
 }

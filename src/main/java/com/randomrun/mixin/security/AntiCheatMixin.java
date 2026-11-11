@@ -148,15 +148,7 @@ public class AntiCheatMixin {
                 if (session != null) {
                     targetItem = session.getTargetItem();
                     
-                    if (targetItem == null && session.getTargetType() == com.randomrun.core.session.TargetType.MOB) {
-                        net.minecraft.world.entity.EntityType<?> mobType = session.getTargetMob();
-                        if (mobType != null) {
-                            net.minecraft.world.item.Item spawnEgg = net.minecraft.world.item.SpawnEggItem.byId(mobType).map(net.minecraft.core.Holder::value).orElse(null);
-                            if (spawnEgg != null) {
-                                targetItem = spawnEgg;
-                            }
-                        }
-                    }
+
                 }
             }
             
@@ -167,7 +159,7 @@ public class AntiCheatMixin {
         
         private void notifyPlayer() {
             if (Minecraft.getInstance().player != null) {
-                com.randomrun.infrastructure.util.ClientMessages.send(Minecraft.getInstance().player, Component.literal("§c§l[RandomRun] §cОткрытие LAN запрещено!"), false);
+                com.randomrun.infrastructure.util.ClientMessages.send(Minecraft.getInstance().player, com.randomrun.infrastructure.util.LanguageManager.text("randomrun.anticheat.lan"), false);
             }
         }
     }

@@ -81,9 +81,10 @@ public final class UpgraderNetwork {
             }
             Identifier target = Identifier.tryParse(packet.target());
             UpgraderServer.request(context.server(), player, packet.id(), packet.room(), amounts, expected,
-                target == null ? null : BuiltInRegistries.ITEM.getValue(target), result -> {
+                target == null ? null : BuiltInRegistries.ITEM.getValue(target), packet.targetCount(), result -> {
                     request.reply = new UpgraderPackets.Reply(packet.id(), result.accepted(), result.success(),
-                        result.chance(), result.roll(), result.message(), result.reward());
+                        result.chance(), result.roll(), result.message(), result.reward(),
+                        result.bonus(), result.bonusHit(), result.streak(), result.flips());
                     ServerPlayNetworking.send(player, request.reply);
                 }, completed -> {
                     request.settled = completed;
@@ -115,7 +116,8 @@ public final class UpgraderNetwork {
         });
         ClientPlayNetworking.registerGlobalReceiver(UpgraderPackets.Reply.TYPE, (packet, context) ->
             UpgraderClient.receiveResult(packet.id(), new UpgraderClient.RollResult(packet.accepted(), packet.success(),
-                packet.chance(), packet.roll(), packet.message(), packet.reward())));
+                packet.chance(), packet.roll(), packet.message(), packet.reward(),
+                packet.bonus(), packet.bonusHit(), packet.streak(), packet.flips())));
         ClientPlayNetworking.registerGlobalReceiver(UpgraderPackets.Settled.TYPE,
             (packet, context) -> UpgraderClient.receiveSettled(packet.id(), packet.completed()));
     }

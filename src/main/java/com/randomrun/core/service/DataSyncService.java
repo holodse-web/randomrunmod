@@ -36,6 +36,14 @@ public class DataSyncService {
         private static final DataSyncService INSTANCE = new DataSyncService();
     }
 
+    public static void resetCache() {
+        DataSyncService service = Holder.INSTANCE;
+        service.lastLoadedPlayer = null;
+        service.dataLoaded = false;
+        service.isLoading.set(false);
+        service.runHistory.setRecords(new java.util.ArrayList<>());
+    }
+
     public static DataSyncService getInstance() {
         return Holder.INSTANCE;
     }
@@ -60,6 +68,7 @@ public class DataSyncService {
 
     private CompletableFuture<Boolean> loadWithRetry(String playerName, int attemptNumber) {
         isLoading.set(true);
+        long generation = com.randomrun.network.BackendSession.generation();
 
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -84,32 +93,38 @@ public class DataSyncService {
                 }
 
                 mergeLocalUpgraderHistory(playerName, allRecords);
-                runHistory.setRecords(allRecords);
-                lastLoadedPlayer = playerName;
-                dataLoaded = true;
+                synchronized (com.randomrun.network.BackendSession.class) {
+                    if (generation != com.randomrun.network.BackendSession.generation()) return false;
+                    runHistory.setRecords(allRecords);
+                    lastLoadedPlayer = playerName;
+                    dataLoaded = true;
+                }
 
                 return true;
             } catch (Exception e) {
                 CompactLogger.error("{} Init failed (attempt {}): {}", LOG_TAG, attemptNumber + 1, e.getMessage());
 
+                if (generation != com.randomrun.network.BackendSession.generation()) return false;
                 if (attemptNumber < MAX_RETRY_ATTEMPTS - 1) {
                     try {
                         Thread.sleep(2000);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                     }
+                    if (generation != com.randomrun.network.BackendSession.generation()) return false;
                     isLoading.set(false);
                     return loadWithRetry(playerName, attemptNumber + 1).join();
                 }
 
                 return false;
             } finally {
-                isLoading.set(false);
+                if (generation == com.randomrun.network.BackendSession.generation()) isLoading.set(false);
             }
         });
     }
 
     public CompletableFuture<Boolean> loadHistoryOnDemand() {
+        long generation = com.randomrun.network.BackendSession.generation();
         String playerName = lastLoadedPlayer != null ? lastLoadedPlayer : getCurrentPlayerName();
 
         if (playerName == null || playerName.isEmpty()) {
@@ -146,7 +161,10 @@ public class DataSyncService {
                 }
 
                 mergeLocalUpgraderHistory(playerName, allRecords);
-                runHistory.setRecords(allRecords);
+                synchronized (com.randomrun.network.BackendSession.class) {
+                    if (generation != com.randomrun.network.BackendSession.generation()) return false;
+                    runHistory.setRecords(allRecords);
+                }
                 return true;
             } catch (Exception e) {
                 CompactLogger.error("{} History load failed: {}", LOG_TAG, e.getMessage(), e);
@@ -160,7 +178,7 @@ public class DataSyncService {
         if (client.player != null) {
             return client.player.getName().getString();
         } else if (client.getUser() != null) {
-            return client.getUser().getName();
+            return com.randomrun.network.BackendSession.playerName();
         }
         return "Unknown";
     }

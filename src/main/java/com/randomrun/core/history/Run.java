@@ -45,9 +45,9 @@ public class Run {
     
     @SerializedName("target_type")
     private com.randomrun.core.session.TargetType targetType;
+
+    private boolean survivor;
     
-    @SerializedName("mob_variant")
-    private String mobVariant;
     
     public Run() {}
     
@@ -55,7 +55,7 @@ public class Run {
                     RunResult result, String worldSeed, String customSeed,
                     boolean isBattle, String battleRoomId, boolean isHardcore, boolean isRandomDrop, boolean isUpgrader,
                     String modVersion, int attemptNumber,
-                    com.randomrun.core.session.TargetType targetType, String mobVariant) {
+                    com.randomrun.core.session.TargetType targetType) {
         this.targetId = targetId;
         this.timestamp = timestamp;
         this.duration = duration;
@@ -70,7 +70,6 @@ public class Run {
         this.modVersion = modVersion;
         this.attemptNumber = attemptNumber;
         this.targetType = targetType;
-        this.mobVariant = mobVariant;
     }
     
     public static class Builder {
@@ -88,7 +87,6 @@ public class Run {
         private String modVersion;
         private int attemptNumber = 1;
         private com.randomrun.core.session.TargetType targetType = com.randomrun.core.session.TargetType.ITEM;
-        private String mobVariant;
         
         public Builder targetId(String targetId) {
             this.targetId = targetId;
@@ -169,10 +167,7 @@ public class Run {
             return this;
         }
         
-        public Builder mobVariant(String mobVariant) {
-            this.mobVariant = mobVariant;
-            return this;
-        }
+
         
         public Run build() {
             if (targetId == null || targetId.isEmpty()) {
@@ -184,7 +179,7 @@ public class Run {
             
             return new Run(targetId, timestamp, duration,
                 result, worldSeed, customSeed, isBattle, battleRoomId,
-                isHardcore, isRandomDrop, isUpgrader, modVersion, attemptNumber, targetType, mobVariant);
+                isHardcore, isRandomDrop, isUpgrader, modVersion, attemptNumber, targetType);
         }
     }
     
@@ -197,9 +192,12 @@ public class Run {
             && customSeed == null
             && isHardcore
             && !isRandomDrop
-            && !isUpgrader;
+            && !isUpgrader
+            && !survivor;
     }
     
+    public boolean isSurvivor() { return survivor; }
+    public void markSurvivor() { survivor = true; }
     public String getTargetId() { return targetId; }
     public long getTimestamp() { return timestamp; }
     public long getDuration() { return duration; }
@@ -214,7 +212,7 @@ public class Run {
     public String getModVersion() { return modVersion; }
     public int getAttemptNumber() { return attemptNumber; }
     public com.randomrun.core.session.TargetType getTargetType() { return targetType; }
-    public String getMobVariant() { return mobVariant; }
+
     
     @Override
     public boolean equals(Object o) {

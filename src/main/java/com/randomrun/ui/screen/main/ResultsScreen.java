@@ -1,580 +1,346 @@
 package com.randomrun.ui.screen.main;
 
-import com.randomrun.infrastructure.data.RunDataManager;
-import com.randomrun.core.history.RunHistory;
+
+
+import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
+import com.randomrun.ui.util.Previews.PreviewItems;
 import com.randomrun.core.history.Run;
-import com.randomrun.ui.widget.styled.ButtonDefault;
+import com.randomrun.core.history.RunHistory;
+import com.randomrun.core.profile.PlayerProfile;
+import com.randomrun.core.service.DataSyncService;
+import com.randomrun.infrastructure.RandomRunMod;
+import com.randomrun.infrastructure.data.RunDataManager;
+import com.randomrun.infrastructure.util.LanguageManager;
+import com.randomrun.network.BackendSession;
+import com.randomrun.ui.theme.Theme;
+import com.randomrun.ui.util.GuiText;
+import com.randomrun.ui.util.Heads;
+import com.randomrun.ui.util.Ui;
 import com.randomrun.ui.widget.styled.TextFieldStyled;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Items;
 
 public class ResultsScreen extends AbstractRandomRunScreen {
-    private static final int RESULTS_PER_PAGE = 8;
-    private static final int RESULT_HEIGHT = 30;
-    private static final int LIST_X = 20;
-    private static final int LIST_Y = 85;
-    
-    private static final int INITIAL_LOAD_COUNT = 30;
-    private static final int LOAD_MORE_COUNT = 30;
-    
-    private static final int COLOR_BG_PANEL = 0x80000000;
-    private static final int COLOR_BG_STATS = 0xA0000000;
-    private static final int COLOR_ACCENT = 0xFF6930c3;
-    private static final int COLOR_HOVER = 0x40FFFFFF;
-    private static final int COLOR_SCROLLBAR_BG = 0x40000000;
-    private static final int COLOR_TEXT_GRAY = 0x888888;
-    private static final int COLOR_TEXT_WHITE = 0xFFFFFF;
-    private static final int COLOR_TEXT_LIGHT_GRAY = 0xAAAAAA;
-    private static final int COLOR_SUCCESS = 0x55FF55;
-    private static final int COLOR_WARNING = 0xFFFF55;
-    private static final int COLOR_DANGER = 0xFF5555;
-    private static final int COLOR_INFO = 0x55FFFF;
-    private static final int COLOR_STAT_LABEL = 0xAAAAFF;
-    
-    private static final long MAX_VALID_TIME = 359999000L;
-    private static final int MAX_ITEM_NAME_LENGTH = 25;
-    private static final int MAX_BEST_ITEM_NAME_LENGTH = 20;
-    
-    private static List<Run> cachedHistory = null;
-    private static int loadedRecordsCount = 0;
-    
+    private static final int ROW_HEIGHT = 26;
+    private static final int MARGIN = 20;
+    private static final long MAX_VALID_TIME = 359_999_000L;
+
+    private enum Sort { TIME, NAME, ATTEMPTS }
+
+    private record Summary(String targetId, Item item, ItemStack stack, String name, long bestTime, int attempts, int wins) {
+        boolean hasBest() { return bestTime > 0 && bestTime <= MAX_VALID_TIME; }
+        int winRate() { return attempts > 0 ? Math.round(wins * 100f / attempts) : 0; }
+    }
+
+    private record Segment(int x, int y, int w, int h, Runnable action) {}
+
+    private final Screen parent;
+    private static boolean upgraderMode;
+    private static Sort sort = Sort.TIME;
+    private boolean loading = true;
+    private List<Run> records = List.of();
+    private final List<Summary> all = new ArrayList<>();
+    private final List<Summary> filtered = new ArrayList<>();
+    private final List<Segment> segments = new ArrayList<>();
     private TextFieldStyled searchField;
-    private List<TargetSummary> filteredResults = new ArrayList<>();
-    private List<TargetSummary> allResults = new ArrayList<>();
-    private Map<String, String> itemNameCache = new HashMap<>();
-    
-    private Stats cachedStats = null;
-    private boolean showingUpgrader = false;
-    
-    private int scrollOffset = 0;
-    private double scrollAmount = 0;
-    private SortMode sortMode = SortMode.TIME;
-    
-    private boolean isLoadingMore = false;
-    private boolean hasMoreRecords = false;
-    
-    public static void clearCache() {
-        cachedHistory = null;
-        loadedRecordsCount = 0;
-    }
-    
-    private enum SortMode {
-        TIME, ALPHABETICAL, ATTEMPTS
-    }
-    
-    private record TargetSummary(String targetId, long bestTime, int totalAttempts, int victories) {
-        float getWinRate() {
-            return totalAttempts > 0 ? (victories * 100.0f / totalAttempts) : 0;
-        }
-        
-        boolean hasValidBestTime() {
-            return bestTime > 0 && bestTime <= MAX_VALID_TIME;
-        }
-    }
-    
-    private static class Stats {
-        int totalRuns;
-        int totalWins;
-        long totalPlayTime;
-        long bestOverallTime = Long.MAX_VALUE;
-        String bestOverallItem;
-        float winRate;
-        long avgTime;
-    }
-    
+    private double scroll;
+    private double targetScroll;
+    private int totalRuns, totalWins;
+    private long totalTime, bestTime = -1, avgTime;
+    private String bestItem;
+    private long openTime;
+
     public ResultsScreen(Screen parent) {
-        super(com.randomrun.infrastructure.util.LanguageManager.text("randomrun.screen.results.title"));
+        super(LanguageManager.text("randomrun.screen.results.title"));
+        this.parent = parent;
     }
-    
+
+    public static void clearCache() {}
+
     @Override
     protected void init() {
         super.init();
-        loadAndProcessData();
-        initializeUI();
-    }
-    
-    private void loadAndProcessData() {
-        loadAndProcessData(false);
-    }
-    
-    private void loadAndProcessData(boolean loadMore) {
-        List<Run> allRecords;
-        
-        if (cachedHistory != null && !cachedHistory.isEmpty() && !loadMore) {
-            allRecords = cachedHistory.subList(0, Math.min(loadedRecordsCount, cachedHistory.size()));
-            hasMoreRecords = loadedRecordsCount < cachedHistory.size();
-        } else {
-            try {
-                com.randomrun.core.service.DataSyncService syncService = com.randomrun.core.service.DataSyncService.getInstance();
-                syncService.loadHistoryOnDemand().join();
-            } catch (Exception e) {
-                com.randomrun.infrastructure.RandomRunMod.LOGGER.error("[Results] Ошибка загрузки истории", e);
-            }
-            
-            List<Run> fullHistory = RunHistory.getInstance().getAllRecords();
-            
-            if (cachedHistory == null) {
-                cachedHistory = fullHistory;
-                loadedRecordsCount = Math.min(INITIAL_LOAD_COUNT, fullHistory.size());
-            } else if (loadMore) {
-                loadedRecordsCount = Math.min(loadedRecordsCount + LOAD_MORE_COUNT, cachedHistory.size());
-            }
-            
-            allRecords = cachedHistory.subList(0, Math.min(loadedRecordsCount, cachedHistory.size()));
-            hasMoreRecords = loadedRecordsCount < cachedHistory.size();
-            
-            if (!loadMore) {
-                for (int i = 0; i < Math.min(5, allRecords.size()); i++) {
-                    Run r = allRecords.get(i);
-                }
-            }
+        if (openTime == 0) {
+            openTime = System.currentTimeMillis();
+            DataSyncService.getInstance().loadHistoryOnDemand().whenComplete((ok, error) -> minecraft.execute(() -> {
+                records = RunHistory.getInstance().getAllRecords();
+                loading = false;
+                rebuildData();
+            }));
         }
-        
-        Map<String, List<Run>> byTarget = allRecords.stream()
-            .filter(record -> record.isUpgrader() == showingUpgrader)
-            .collect(Collectors.groupingBy(Run::getTargetId));
-        
-        allResults.clear();
-        itemNameCache.clear();
-        
-        for (Map.Entry<String, List<Run>> entry : byTarget.entrySet()) {
-            String targetId = entry.getKey();
-            List<Run> records = entry.getValue();
-            
-            long bestTime = records.stream()
-                .filter(Run::isVictory)
-                .mapToLong(Run::getDuration)
-                .min()
-                .orElse(Long.MAX_VALUE);
-            
-            int totalAttempts = records.size();
-            int victories = (int) records.stream().filter(Run::isVictory).count();
-            
-            allResults.add(new TargetSummary(targetId, bestTime, totalAttempts, victories));
-        }
-        
-        sortResults();
-        filteredResults = new ArrayList<>(allResults);
-    }
-    
-    private void initializeUI() {
-        int centerX = width / 2;
-        
-        searchField = new TextFieldStyled(
-            font, centerX - 100, 30, 200, 20,
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.search"), 0.05f
-        );
-        searchField.setCenteredPlaceholder(
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.search.placeholder")
-        );
-        searchField.setResponder(this::onSearchChanged);
+        int toolbarY = toolbarY();
+        String previous = searchField != null ? searchField.getValue() : "";
+        searchField = new TextFieldStyled(font, MARGIN, toolbarY, Math.min(170, width / 3), 18, LanguageManager.text("randomrun.search"), 0f);
+        searchField.setCenteredPlaceholder(LanguageManager.text("randomrun.search.placeholder"));
+        searchField.setValue(previous);
+        searchField.setResponder(value -> applyFilter());
         addRenderableWidget(searchField);
+        addRenderableWidget(new ButtonDefault(width / 2 - 100, height - 30, 200, 20,
+            LanguageManager.text("randomrun.button.back"), button -> onClose(), 0, 0.1f));
+    }
 
-        addRenderableWidget(new ButtonDefault(
-            centerX + 110, 30, 125, 20,
-            Component.literal(showingUpgrader ? "§eRRM Upgrader" : "Классика"),
-            button -> {
-                showingUpgrader = !showingUpgrader;
-                if (cachedHistory != null) loadedRecordsCount = cachedHistory.size();
-                cachedStats = null;
-                scrollOffset = 0;
-                scrollAmount = 0;
-                loadAndProcessData();
-                button.setMessage(Component.literal(showingUpgrader ? "§eRRM Upgrader" : "Классика"));
-                filterResults(searchField.getValue());
-            }
-        ));
-        
-        addSortButtons(centerX);
-        addBackButton(centerX);
-    }
-    
-    private void addSortButtons(int centerX) {
-        int btnWidth = 80;
-        int btnSpacing = 5;
-        int totalBtnWidth = (btnWidth * 3) + (btnSpacing * 2);
-        int startX = centerX - (totalBtnWidth / 2);
-        int btnY = 55;
+    private int toolbarY() { return 76; }
+    private int listTop() { return toolbarY() + 26; }
+    private int listBottom() { return height - 36; }
 
-        addRenderableWidget(new ButtonDefault(
-            startX, btnY, btnWidth, 20,
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.sort.time"),
-            button -> changeSortMode(SortMode.TIME)
-        ));
-        
-        addRenderableWidget(new ButtonDefault(
-            startX + btnWidth + btnSpacing, btnY, btnWidth, 20,
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.sort.name"),
-            button -> changeSortMode(SortMode.ALPHABETICAL)
-        ));
-        
-        addRenderableWidget(new ButtonDefault(
-            startX + 2 * (btnWidth + btnSpacing), btnY, btnWidth, 20,
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.sort.attempts"),
-            button -> changeSortMode(SortMode.ATTEMPTS)
-        ));
-    }
-    
-    private void addBackButton(int centerX) {
-        addRenderableWidget(new ButtonDefault(
-            centerX - 100, height - 30, 200, 20,
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.button.back"),
-            button -> Minecraft.getInstance().gui.setScreen(new MainModScreen(null))
-        ));
-        
-        if (hasMoreRecords) {
-            addRenderableWidget(new ButtonDefault(
-                20, height - 30, 120, 20,
-                com.randomrun.infrastructure.util.LanguageManager.text("randomrun.button.load_more"),
-                button -> loadMoreRecords()
-            ));
-        }
-    }
-    
-    private void loadMoreRecords() {
-        if (isLoadingMore || !hasMoreRecords) return;
-        
-        isLoadingMore = true;
-        CompletableFuture.runAsync(() -> {
-            loadAndProcessData(true);
-            Minecraft.getInstance().execute(() -> {
-                isLoadingMore = false;
-                rebuildWidgets();
-            });
-        });
-    }
-    
-    private void changeSortMode(SortMode mode) {
-        sortMode = mode;
-        sortResults();
-        filterResults(searchField.getValue());
-    }
-    
-    private void sortResults() {
-        switch (sortMode) {
-            case TIME -> allResults.sort(Comparator.comparingLong(TargetSummary::bestTime));
-            case ALPHABETICAL -> allResults.sort(Comparator.comparing(r -> getItemName(r.targetId)));
-            case ATTEMPTS -> allResults.sort(Comparator.comparingInt(r -> -r.totalAttempts));
-        }
-    }
-    
-    private void onSearchChanged(String text) {
-        filterResults(text);
-    }
-    
-    private void filterResults(String text) {
-        filteredResults.clear();
-        String searchLower = text.toLowerCase();
-        
-        for (TargetSummary result : allResults) {
-            String itemName = getItemName(result.targetId).toLowerCase();
-            if (itemName.contains(searchLower) || result.targetId.toLowerCase().contains(searchLower)) {
-                filteredResults.add(result);
+    private void rebuildData() {
+        Map<String, List<Run>> byTarget = records.stream()
+            .filter(run -> run.isUpgrader() == upgraderMode)
+            .collect(Collectors.groupingBy(Run::getTargetId));
+        all.clear();
+        totalRuns = 0;
+        totalWins = 0;
+        totalTime = 0;
+        bestTime = -1;
+        bestItem = null;
+        long winTime = 0;
+        Map<String, String> names = new HashMap<>();
+        for (Map.Entry<String, List<Run>> entry : byTarget.entrySet()) {
+            List<Run> runs = entry.getValue();
+            long best = runs.stream().filter(Run::isVictory).mapToLong(Run::getDuration).filter(d -> d > 0).min().orElse(-1);
+            int wins = (int) runs.stream().filter(Run::isVictory).count();
+            Item item = resolve(entry.getKey());
+            String name = names.computeIfAbsent(entry.getKey(), id -> item == null ? id : Component.translatable(item.getDescriptionId()).getString());
+            all.add(new Summary(entry.getKey(), item, item == null ? ItemStack.EMPTY : PreviewItems.stack(item), name, best, runs.size(), wins));
+            totalRuns += runs.size();
+            totalWins += wins;
+            for (Run run : runs) {
+                if (run.getDuration() > 0 && run.getDuration() <= MAX_VALID_TIME) totalTime += run.getDuration();
+                if (run.isVictory() && run.getDuration() > 0) winTime += run.getDuration();
+            }
+            if (best > 0 && best <= MAX_VALID_TIME && (bestTime < 0 || best < bestTime)) {
+                bestTime = best;
+                bestItem = name;
             }
         }
-        
-        scrollOffset = 0;
-        scrollAmount = 0;
+        avgTime = totalWins > 0 ? winTime / totalWins : 0;
+        applySort();
     }
-    
-    private String getItemName(String itemId) {
-        return itemNameCache.computeIfAbsent(itemId, id -> {
-            try {
-                Item item = BuiltInRegistries.ITEM.getValue(Identifier.parse(id));
-                if (item == net.minecraft.world.item.Items.AIR) {
-                    return "Unknown Item";
-                }
-                String name = net.minecraft.network.chat.Component.translatable(item.getDescriptionId()).getString();
-                if (name == null || name.trim().isEmpty()) {
-                    return "Unknown Item";
-                }
-                return name;
-            } catch (Exception e) {
-                return id;
-            }
-        });
+
+    private static Item resolve(String id) {
+        try {
+            Identifier identifier = Identifier.tryParse(id);
+            Item item = identifier == null ? null : BuiltInRegistries.ITEM.getValue(identifier);
+            return item == null || item == Items.AIR ? null : item;
+        } catch (RuntimeException error) {
+            return null;
+        }
     }
-    
+
+    private void applySort() {
+        Comparator<Summary> comparator = switch (sort) {
+            case TIME -> Comparator.comparingLong((Summary s) -> s.hasBest() ? s.bestTime() : Long.MAX_VALUE).thenComparing(Summary::name);
+            case NAME -> Comparator.comparing(Summary::name, String.CASE_INSENSITIVE_ORDER);
+            case ATTEMPTS -> Comparator.comparingInt(Summary::attempts).reversed().thenComparing(Summary::name);
+        };
+        all.sort(comparator);
+        applyFilter();
+    }
+
+    private void applyFilter() {
+        String query = searchField == null ? "" : searchField.getValue().toLowerCase(Locale.ROOT).trim();
+        filtered.clear();
+        for (Summary summary : all) {
+            if (query.isEmpty() || summary.name().toLowerCase(Locale.ROOT).contains(query) || summary.targetId().contains(query)) filtered.add(summary);
+        }
+        scroll = targetScroll = 0;
+    }
+
+    private float fade() {
+        return Math.min(1f, (System.currentTimeMillis() - openTime) / 300f);
+    }
+
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        super.extractBackground(context, mouseX, mouseY, delta);
-        
-        String playerName = Minecraft.getInstance().getUser().getName();
-        com.randomrun.ui.util.GuiText.centeredText(context, font, 
-            com.randomrun.infrastructure.util.LanguageManager.text("randomrun.results.title", playerName), 
-            width / 2, 10, COLOR_TEXT_WHITE);
-        
+        segments.clear();
+        float fade = fade();
+        Theme theme = Theme.current();
+        renderHeader(context, theme, fade);
+        renderCards(context, theme, fade);
+        renderToolbar(context, theme, mouseX, mouseY, fade);
+        renderList(context, theme, mouseX, mouseY, fade);
         super.extractRenderState(context, mouseX, mouseY, delta);
-        
-        renderResultsList(context, mouseX, mouseY);
-        renderStatsSummary(context);
     }
-    
-    private void renderResultsList(GuiGraphicsExtractor context, int mouseX, int mouseY) {
-        int listWidth = width - 40;
-        context.fill(LIST_X, LIST_Y, LIST_X + listWidth, LIST_Y + RESULTS_PER_PAGE * RESULT_HEIGHT, COLOR_BG_PANEL);
-        
-        if (filteredResults.isEmpty()) {
-            com.randomrun.ui.util.GuiText.centeredText(context, font, 
-                com.randomrun.infrastructure.util.LanguageManager.text("randomrun.results.empty"), 
-                width / 2, LIST_Y + 50, COLOR_TEXT_GRAY);
+
+    private void renderHeader(GuiGraphicsExtractor context, Theme theme, float fade) {
+        String name = BackendSession.playerName();
+        Heads.draw(context, name, MARGIN, 10, 18, Ui.argb(theme.accent, fade));
+        GuiText.text(context, font, Component.literal(name), MARGIN + 24, 10, Ui.argb(0xFFFFFF, fade), true);
+        GuiText.text(context, font, LanguageManager.text("randomrun.results.subtitle"), MARGIN + 24, 20, Ui.argb(0xA1A1AA, fade), false);
+        if (RandomRunMod.getInstance().getConfig().isOnlineMode() && PlayerProfile.get() != null) {
+            int trust = PlayerProfile.get().getTrustScore();
+            int color = trust >= 150 ? 0x4ADE80 : trust >= 100 ? 0xFACC15 : trust >= PlayerProfile.LEADERBOARD_THRESHOLD ? 0xFB923C : 0xF87171;
+            Component chip = Component.literal("Trust " + trust + "/200");
+            int w = font.width(chip) + 8;
+            Ui.chip(context, font, chip, width - MARGIN - w, 12, Ui.argb(0x000000, 0.55f * fade), Ui.argb(color, fade));
+        }
+        String mode = upgraderMode ? "RRM Upgrader" : LanguageManager.translate("randomrun.results.mode.classic");
+        Component title = LanguageManager.text("randomrun.results.heading", mode);
+        GuiText.centeredText(context, font, title, width / 2, 14, Ui.argb(0xFFFFFF, fade));
+    }
+
+    private void renderCards(GuiGraphicsExtractor context, Theme theme, float fade) {
+        List<String[]> cards = new ArrayList<>();
+        cards.add(new String[] {LanguageManager.translate("randomrun.results.card.items"), String.valueOf(all.size()), "C4B5FD"});
+        cards.add(new String[] {LanguageManager.translate("randomrun.results.card.runs"), totalRuns + "  §a" + totalWins + "§7/§c" + (totalRuns - totalWins), "FFFFFF"});
+        int rate = totalRuns > 0 ? Math.round(totalWins * 100f / totalRuns) : 0;
+        cards.add(new String[] {LanguageManager.translate("randomrun.results.card.winrate"), rate + "%", rate >= 50 ? "4ADE80" : rate >= 25 ? "FACC15" : "F87171"});
+        cards.add(new String[] {LanguageManager.translate("randomrun.results.card.best"), bestTime > 0 ? RunDataManager.formatTime(bestTime) : "—", "FFD700"});
+        cards.add(new String[] {LanguageManager.translate("randomrun.results.card.avg"), avgTime > 0 ? RunDataManager.formatTime(avgTime) : "—", "FACC15"});
+        cards.add(new String[] {LanguageManager.translate("randomrun.results.card.time"), formatPlaytime(totalTime), "67E8F9"});
+        int available = width - MARGIN * 2;
+        int count = cards.size();
+        while (count > 3 && (available - (count - 1) * 6) / count < 78) count--;
+        int cardW = (available - (count - 1) * 6) / count;
+        int y = 38;
+        for (int i = 0; i < count; i++) {
+            int x = MARGIN + i * (cardW + 6);
+            String[] card = cards.get(i);
+            int color = Integer.parseInt(card[2], 16);
+            Ui.card(context, x, y, x + cardW, y + 30, color, fade);
+            GuiText.text(context, font, Ui.ellipsize(font, card[0], cardW - 10), x + 6, y + 5, Ui.argb(0xA1A1AA, fade), false);
+            GuiText.text(context, font, Component.literal(card[1]), x + 6, y + 17, Ui.argb(color, fade), true);
+        }
+    }
+
+    private static String formatPlaytime(long millis) {
+        long minutes = millis / 60000;
+        if (minutes < 60) return minutes + LanguageManager.translate("randomrun.results.unit.min");
+        return (minutes / 60) + LanguageManager.translate("randomrun.results.unit.hour") + " " + (minutes % 60) + LanguageManager.translate("randomrun.results.unit.min");
+    }
+
+    private void renderToolbar(GuiGraphicsExtractor context, Theme theme, int mouseX, int mouseY, float fade) {
+        int y = toolbarY();
+        int right = width - MARGIN;
+        String[] sorts = {LanguageManager.translate("randomrun.sort.time"), LanguageManager.translate("randomrun.sort.name"), LanguageManager.translate("randomrun.sort.attempts")};
+        int x = right;
+        for (int i = sorts.length - 1; i >= 0; i--) {
+            int w = font.width(sorts[i]) + 14;
+            x -= w;
+            final Sort value = Sort.values()[i];
+            segment(context, theme, sorts[i], x, y, w, sort == value, mouseX, mouseY, fade, () -> { sort = value; applySort(); });
+        }
+        GuiText.text(context, font, LanguageManager.text("randomrun.results.sort_by"), x - font.width(LanguageManager.translate("randomrun.results.sort_by")) - 6, y + 5, Ui.argb(0x8A8A93, fade), false);
+        int modeX = searchField.getX() + searchField.getWidth() + 10;
+        String classic = LanguageManager.translate("randomrun.results.mode.classic");
+        int w1 = font.width(classic) + 14;
+        segment(context, theme, classic, modeX, y, w1, !upgraderMode, mouseX, mouseY, fade, () -> { upgraderMode = false; rebuildData(); });
+        int w2 = font.width("Upgrader") + 14;
+        segment(context, theme, "Upgrader", modeX + w1, y, w2, upgraderMode, mouseX, mouseY, fade, () -> { upgraderMode = true; rebuildData(); });
+    }
+
+    private void segment(GuiGraphicsExtractor context, Theme theme, String label, int x, int y, int w, boolean active, int mouseX, int mouseY, float fade, Runnable action) {
+        boolean hover = Ui.inside(mouseX, mouseY, x, y, w, 18);
+        context.fill(x, y, x + w, y + 18, Ui.argb(active ? theme.buttonHover : hover ? theme.buttonBase : 0x000000, (active ? 0.95f : hover ? 0.85f : 0.45f) * fade));
+        Ui.border(context, x, y, x + w, y + 18, 1, Ui.argb(active ? theme.accent : theme.buttonBase, fade));
+        GuiText.centeredText(context, font, label, x + w / 2, y + 5, Ui.argb(active ? 0xFFFFFF : 0xC4C4CC, fade));
+        segments.add(new Segment(x, y, w, 18, action));
+    }
+
+    private void renderList(GuiGraphicsExtractor context, Theme theme, int mouseX, int mouseY, float fade) {
+        int top = listTop(), bottom = listBottom();
+        int left = MARGIN, right = width - MARGIN;
+        context.fill(left, top, right, bottom, Ui.argb(0x000000, 0.45f * fade));
+        Ui.border(context, left, top, right, bottom, 1, Ui.argb(theme.border, 0.6f * fade));
+        if (loading) {
+            Ui.spinner(context, width / 2, (top + bottom) / 2 - 6, 6, theme.accent);
+            GuiText.centeredText(context, font, LanguageManager.text("randomrun.results.loading"), width / 2, (top + bottom) / 2 + 8, Ui.argb(0xA1A1AA, fade));
             return;
         }
-        
-        int startIndex = scrollOffset;
-        int endIndex = Math.min(startIndex + RESULTS_PER_PAGE, filteredResults.size());
-        
-        for (int i = startIndex; i < endIndex; i++) {
-            renderResultItem(context, mouseX, mouseY, i, listWidth);
-        }
-        
-        renderScrollbar(context, listWidth);
-    }
-    
-    private void renderResultItem(GuiGraphicsExtractor context, int mouseX, int mouseY, int index, int listWidth) {
-        int localIndex = index - scrollOffset;
-        int y = LIST_Y + localIndex * RESULT_HEIGHT;
-        TargetSummary result = filteredResults.get(index);
-        
-        if (isHovered(mouseX, mouseY, y, listWidth)) {
-            context.fill(LIST_X, y, LIST_X + listWidth, y + RESULT_HEIGHT, COLOR_HOVER);
-        }
-        
-        com.randomrun.ui.util.GuiText.text(context, font, "#" + (index + 1), LIST_X + 5, y + 10, COLOR_TEXT_GRAY);
-        
-        renderItemIcon(context, result.targetId, y);
-        renderItemName(context, result.targetId, y);
-        renderBestTime(context, result, y);
-        renderAttempts(context, result, y, listWidth);
-    }
-    
-    private boolean isHovered(int mouseX, int mouseY, int y, int listWidth) {
-        return mouseX >= LIST_X && mouseX <= LIST_X + listWidth &&
-               mouseY >= y && mouseY < y + RESULT_HEIGHT;
-    }
-    
-    private void renderItemIcon(GuiGraphicsExtractor context, String targetId, int y) {
-        try {
-            Item item = BuiltInRegistries.ITEM.getValue(Identifier.parse(targetId));
-            ItemStack stack = com.randomrun.ui.util.PreviewItems.stack(item);
-            context.item(stack, LIST_X + 35, y + 6);
-        } catch (Exception ignored) {}
-    }
-    
-    private void renderItemName(GuiGraphicsExtractor context, String targetId, int y) {
-        String itemName = getItemName(targetId);
-        if (itemName.length() > MAX_ITEM_NAME_LENGTH) {
-            itemName = itemName.substring(0, 22) + "...";
-        }
-        com.randomrun.ui.util.GuiText.text(context, font, itemName, LIST_X + 60, y + 6, COLOR_TEXT_WHITE);
-    }
-    
-    private void renderBestTime(GuiGraphicsExtractor context, TargetSummary result, int y) {
-        String timeStr;
-        int timeColor;
-        
-        if (result.hasValidBestTime()) {
-            timeStr = RunDataManager.formatTime(result.bestTime);
-            timeColor = COLOR_SUCCESS;
-        } else {
-            timeStr = com.randomrun.infrastructure.util.LanguageManager.text("randomrun.screen.defeat.title").getString();
-            timeColor = COLOR_DANGER;
-        }
-        
-        com.randomrun.ui.util.GuiText.text(context, font, timeStr, LIST_X + 60, y + 18, timeColor);
-    }
-    
-    private void renderAttempts(GuiGraphicsExtractor context, TargetSummary result, int y, int listWidth) {
-        String attemptsStr = String.format("%d runs (%d wins, %.0f%%) [History]", 
-            result.totalAttempts, result.victories, result.getWinRate());
-        
-        int attemptsX = LIST_X + listWidth - font.width(attemptsStr) - 10;
-        com.randomrun.ui.util.GuiText.text(context, font, attemptsStr, attemptsX, y + 10, COLOR_TEXT_LIGHT_GRAY);
-    }
-    
-    private void renderScrollbar(GuiGraphicsExtractor context, int listWidth) {
-        if (filteredResults.size() <= RESULTS_PER_PAGE) return;
-        
-        int maxScroll = filteredResults.size() - RESULTS_PER_PAGE;
-        float scrollRatio = scrollOffset / (float) maxScroll;
-        
-        int scrollBarX = LIST_X + listWidth + 5;
-        int scrollBarHeight = RESULTS_PER_PAGE * RESULT_HEIGHT;
-        int thumbHeight = Math.max(20, scrollBarHeight / (filteredResults.size() / RESULTS_PER_PAGE + 1));
-        int thumbY = LIST_Y + (int) ((scrollBarHeight - thumbHeight) * scrollRatio);
-        
-        context.fill(scrollBarX, LIST_Y, scrollBarX + 6, LIST_Y + scrollBarHeight, COLOR_SCROLLBAR_BG);
-        context.fill(scrollBarX, thumbY, scrollBarX + 6, thumbY + thumbHeight, COLOR_ACCENT);
-    }
-    
-    private void renderStatsSummary(GuiGraphicsExtractor context) {
-        if (cachedStats == null) {
-            cachedStats = calculateStats();
-        }
-        renderStatsPanel(context, cachedStats);
-        renderBestRecord(context, cachedStats);
-    }
-    
-    private Stats calculateStats() {
-        Stats stats = new Stats();
-        
-        List<Run> allRecords = cachedHistory != null ? cachedHistory : RunHistory.getInstance().getAllRecords();
-        allRecords = allRecords.stream().filter(record -> record.isUpgrader() == showingUpgrader).toList();
-        
-        for (TargetSummary result : allResults) {
-            stats.totalRuns += result.totalAttempts;
-            stats.totalWins += result.victories;
-            
-            if (result.hasValidBestTime() && result.bestTime < stats.bestOverallTime) {
-                stats.bestOverallTime = result.bestTime;
-                stats.bestOverallItem = result.targetId;
-            }
-        }
-        
-        for (Run record : allRecords) {
-            if (record.getDuration() > 0) {
-                stats.totalPlayTime += record.getDuration();
-            }
-        }
-        
-        stats.winRate = stats.totalRuns > 0 ? (stats.totalWins * 100.0f / stats.totalRuns) : 0;
-        stats.avgTime = stats.totalWins > 0 ? (allRecords.stream()
-            .filter(r -> r.isVictory() && r.getDuration() > 0)
-            .mapToLong(Run::getDuration)
-            .sum() / stats.totalWins) : 0;
-        
-        return stats;
-    }
-    
-    private void renderStatsPanel(GuiGraphicsExtractor context, Stats stats) {
-        int panelY = height - 65;
-        int panelX = 20;
-        int panelW = width - 40;
-        
-        context.fill(panelX, panelY, panelX + panelW, panelY + 32, COLOR_BG_STATS);
-        context.fill(panelX, panelY, panelX + panelW, panelY + 1, COLOR_ACCENT);
-        
-        int statY = panelY + 4;
-        int sx = panelX + 10;
-        int gap = 12;
-        
-        sx = renderStatItem(context, sx, statY, gap, 
-            com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.stats.items_label", String.valueOf(allResults.size())),
-            COLOR_STAT_LABEL);
-        
-        sx = renderStatItem(context, sx, statY, gap,
-            com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.stats.runs", String.valueOf(stats.totalRuns)) + 
-            " §8(§a" + stats.totalWins + "W§8/§c" + (stats.totalRuns - stats.totalWins) + "L§8)",
-            COLOR_STAT_LABEL);
-        
-        int winRateColor = stats.winRate >= 50 ? COLOR_SUCCESS : stats.winRate >= 25 ? COLOR_WARNING : COLOR_DANGER;
-        sx = renderStatItem(context, sx, statY, gap,
-            com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.stats.winrate", String.format("%.0f%%", stats.winRate)),
-            winRateColor);
-        
-        if (stats.avgTime > 0) {
-            sx = renderStatItem(context, sx, statY, gap,
-                com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.stats.avg_time", RunDataManager.formatTime(stats.avgTime)),
-                COLOR_WARNING);
-        }
-        
-        sx = renderStatItem(context, sx, statY, gap,
-            com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.stats.playtime", RunDataManager.formatTime(stats.totalPlayTime)),
-            COLOR_INFO);
-        
-        renderTrustScore(context, sx, statY);
-    }
-    
-    private int renderStatItem(GuiGraphicsExtractor context, int x, int y, int gap, String text, int color) {
-        com.randomrun.ui.util.GuiText.text(context, font, text, x, y, color);
-        return x + font.width(text) + gap;
-    }
-    
-    private void renderTrustScore(GuiGraphicsExtractor context, int x, int y) {
-        if (!com.randomrun.infrastructure.RandomRunMod.getInstance().getConfig().isOnlineMode()) {
+        if (filtered.isEmpty()) {
+            GuiText.centeredText(context, font, LanguageManager.text(all.isEmpty() ? "randomrun.results.empty" : "randomrun.results.no_match"), width / 2, (top + bottom) / 2 - 4, Ui.argb(0x8A8A93, fade));
             return;
         }
-        
-        com.randomrun.core.profile.PlayerProfile profile = com.randomrun.core.profile.PlayerProfile.get();
-        int trustScore = profile != null ? profile.getTrustScore() : -1;
-        
-        if (trustScore >= 0) {
-            int trustColor = trustScore >= 150 ? COLOR_SUCCESS : trustScore >= 100 ? COLOR_WARNING : COLOR_DANGER;
-            String trustText = com.randomrun.infrastructure.util.LanguageManager.translate(
-                "randomrun.stats.trust_score", trustScore + "/200");
-            com.randomrun.ui.util.GuiText.text(context, font, trustText, x, y, trustColor);
+        double max = Math.max(0, filtered.size() * ROW_HEIGHT - (bottom - top - 4));
+        targetScroll = Math.clamp(targetScroll, 0, max);
+        scroll += (targetScroll - scroll) * 0.35;
+        if (Math.abs(targetScroll - scroll) < 0.5) scroll = targetScroll;
+        context.enableScissor(left + 1, top + 1, right - 1, bottom - 1);
+        int first = Math.max(0, (int) (scroll / ROW_HEIGHT));
+        int last = Math.min(filtered.size() - 1, (int) ((scroll + bottom - top) / ROW_HEIGHT) + 1);
+        for (int i = first; i <= last; i++) {
+            int y = top + 2 + i * ROW_HEIGHT - (int) scroll;
+            renderRow(context, theme, filtered.get(i), i, left + 2, y, right - 2 - (max > 0 ? 6 : 0), mouseX, mouseY, top, bottom, fade);
+        }
+        context.disableScissor();
+        if (max > 0) {
+            int trackH = bottom - top - 4;
+            int thumbH = Math.max(16, (int) (trackH * (trackH / (double) (filtered.size() * ROW_HEIGHT))));
+            int thumbY = top + 2 + (int) ((trackH - thumbH) * (scroll / max));
+            context.fill(right - 6, top + 2, right - 3, bottom - 2, Ui.argb(0xFFFFFF, 0.06f * fade));
+            context.fill(right - 6, thumbY, right - 3, thumbY + thumbH, Ui.argb(theme.accent, fade));
         }
     }
-    
-    private void renderBestRecord(GuiGraphicsExtractor context, Stats stats) {
-        if (stats.bestOverallTime >= Long.MAX_VALUE || stats.bestOverallItem == null) return;
-        
-        String itemName = getItemName(stats.bestOverallItem);
-        if (itemName.length() > MAX_BEST_ITEM_NAME_LENGTH) {
-            itemName = itemName.substring(0, 17) + "...";
+
+    private void renderRow(GuiGraphicsExtractor context, Theme theme, Summary summary, int index, int left, int y, int right, int mouseX, int mouseY, int clipTop, int clipBottom, float fade) {
+        boolean hover = Ui.inside(mouseX, mouseY, left, y, right - left, ROW_HEIGHT - 2) && mouseY >= clipTop && mouseY < clipBottom;
+        context.fill(left, y, right, y + ROW_HEIGHT - 2, Ui.argb(hover ? theme.buttonBase : 0xFFFFFF, hover ? 0.55f * fade : (index % 2 == 0 ? 0.03f : 0.0f) * fade));
+        if (hover) context.fill(left, y, left + 2, y + ROW_HEIGHT - 2, Ui.argb(theme.accent, fade));
+        GuiText.text(context, font, "#" + (index + 1), left + 6, y + 8, Ui.argb(0x71717A, fade), false);
+        if (!summary.stack().isEmpty()) context.item(summary.stack(), left + 30, y + 4);
+        int textX = left + 52;
+        int statsWidth = Math.min(170, (right - left) / 3);
+        GuiText.text(context, font, Ui.ellipsize(font, summary.name(), right - textX - statsWidth - 10), textX, y + 3, Ui.argb(0xFFFFFF, fade), false);
+        if (summary.hasBest()) {
+            com.randomrun.ui.util.Icons.CLOCK.draw(context, textX, y + 13, Ui.argb(0x4ADE80, fade));
+            GuiText.text(context, font, RunDataManager.formatTime(summary.bestTime()), textX + 10, y + 13, Ui.argb(0x4ADE80, fade), false);
         }
-        
-        String bestText = "⭐ " + com.randomrun.infrastructure.util.LanguageManager.translate(
-            "randomrun.stats.best_record", 
-            RunDataManager.formatTime(stats.bestOverallTime), 
-            itemName);
-        
-        com.randomrun.ui.util.GuiText.text(context, font, bestText, 30, height - 47, COLOR_SUCCESS);
+        else GuiText.text(context, font, LanguageManager.text("randomrun.results.no_wins"), textX, y + 13, Ui.argb(0xF87171, fade), false);
+
+        int barRight = right - 16;
+        int barLeft = barRight - statsWidth + 10;
+        String info = LanguageManager.translate("randomrun.results.row", summary.attempts(), summary.winRate());
+        GuiText.text(context, font, info, barRight - font.width(info), y + 3, Ui.argb(0xC4C4CC, fade), false);
+        context.fill(barLeft, y + 15, barRight, y + 18, Ui.argb(0xF87171, 0.45f * fade));
+        int fill = (int) ((barRight - barLeft) * (summary.attempts() > 0 ? summary.wins() / (float) summary.attempts() : 0));
+        if (fill > 0) context.fill(barLeft, y + 15, barLeft + fill, y + 18, Ui.argb(0x4ADE80, fade));
+        com.randomrun.ui.util.Icons.CHEVRON_RIGHT.drawCentered(context, right - 10, y, 4, ROW_HEIGHT - 2, Ui.argb(hover ? 0xFFFFFF : 0x71717A, fade));
     }
-    
+
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
-        double mouseX = event.x();
-        double mouseY = event.y();
-        int button = event.button();
-        if (super.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(mouseX, mouseY, event.buttonInfo()), doubleClick)) {
-            return true;
-        }
-        
-        int listWidth = width - 40;
-        int startIndex = scrollOffset;
-        int endIndex = Math.min(startIndex + RESULTS_PER_PAGE, filteredResults.size());
-        
-        for (int i = startIndex; i < endIndex; i++) {
-            int localIndex = i - startIndex;
-            int y = LIST_Y + localIndex * RESULT_HEIGHT;
-            
-            if (mouseX >= LIST_X && mouseX <= LIST_X + listWidth &&
-                mouseY >= y && mouseY < y + RESULT_HEIGHT) {
-                openHistoryScreen(filteredResults.get(i));
+        for (Segment segment : List.copyOf(segments)) {
+            if (Ui.inside(event.x(), event.y(), segment.x(), segment.y(), segment.w(), segment.h())) {
+                Ui.click();
+                segment.action().run();
                 return true;
             }
         }
-        
+        if (super.mouseClicked(event, doubleClick)) return true;
+        int top = listTop(), bottom = listBottom();
+        if (!loading && event.y() >= top && event.y() < bottom && event.x() >= MARGIN && event.x() < width - MARGIN) {
+            int index = (int) ((event.y() - top - 2 + scroll) / ROW_HEIGHT);
+            if (index >= 0 && index < filtered.size()) {
+                Summary summary = filtered.get(index);
+                Ui.click();
+                minecraft.gui.setScreen(new RunHistoryScreen(this, new RunDataManager.RunResult(summary.targetId(), summary.bestTime()), upgraderMode));
+                return true;
+            }
+        }
         return false;
     }
-    
-    private void openHistoryScreen(TargetSummary result) {
-        RunDataManager.RunResult runResult = 
-            new RunDataManager.RunResult(result.targetId, result.bestTime);
-        
-        Minecraft.getInstance().gui.setScreen(new RunHistoryScreen(this, runResult, showingUpgrader));
-        Minecraft.getInstance().getSoundManager().play(
-            net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
-                net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0F
-            )
-        );
-    }
-    
+
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        int maxScroll = Math.max(0, filteredResults.size() - RESULTS_PER_PAGE);
-        scrollAmount = Math.max(0, Math.min(maxScroll, scrollAmount - verticalAmount));
-        scrollOffset = (int) scrollAmount;
+        targetScroll -= verticalAmount * ROW_HEIGHT * 2;
         return true;
+    }
+
+    @Override
+    public void onClose() {
+        minecraft.gui.setScreen(parent instanceof MainModScreen ? parent : new MainModScreen(null));
     }
 }

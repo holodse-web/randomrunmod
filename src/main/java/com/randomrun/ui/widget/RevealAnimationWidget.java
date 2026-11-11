@@ -1,7 +1,8 @@
 package com.randomrun.ui.widget;
 
+
+import com.randomrun.ui.util.Previews.PreviewRenderGeometry;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.ui.util.PreviewRenderGeometry;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -18,8 +19,8 @@ public class RevealAnimationWidget implements Renderable, GuiEventListener, Narr
     private final PhysicsState physics;
     private final DragState drag;
     
-    private static final int HITBOX_SIZE = 100;
-    private static final float ITEM_SCALE = 48f;
+    private static final int HITBOX_SIZE = 56;
+    private final float itemScale;
     private static final float MOUSE_SENSITIVITY = 0.5f;
     private static final float LEVITATION_AMPLITUDE = 5f;
     private static final float LEVITATION_PERIOD = 500f;
@@ -33,6 +34,11 @@ public class RevealAnimationWidget implements Renderable, GuiEventListener, Narr
     private long lastFrameNanos = System.nanoTime();
 
     public RevealAnimationWidget(int x, int y, ItemStack stack) {
+        this(x, y, stack, 48f);
+    }
+
+    public RevealAnimationWidget(int x, int y, ItemStack stack, float itemScale) {
+        this.itemScale = itemScale;
         this.x = x;
         this.y = y;
         this.stack = stack.copy();
@@ -100,14 +106,14 @@ public class RevealAnimationWidget implements Renderable, GuiEventListener, Narr
         );
         
         double elapsed = (now - physics.openTimeNanos) / 1_000_000.0;
-        physics.targetLevitationOffset = (float) Math.sin(elapsed / LEVITATION_PERIOD) * LEVITATION_AMPLITUDE;
+        physics.targetLevitationOffset = (float) Math.sin(elapsed / LEVITATION_PERIOD) * LEVITATION_AMPLITUDE * itemScale / 48f;
         physics.levitationOffset += (physics.targetLevitationOffset - physics.levitationOffset) 
             * (float) (1 - Math.exp(-physics.levitationSpeed * LERP_SPEED * 20 * seconds));
     }
 
     private void render3DItem(GuiGraphicsExtractor context) {
-        com.randomrun.ui.util.ItemPreviewRenderer.extract(context, stack, x, y + physics.levitationOffset,
-            ITEM_SCALE, drag.rotationX, physics.rotationY + drag.rotationY, ItemDisplayContext.GUI);
+        com.randomrun.ui.util.Previews.ItemPreviewRenderer.extract(context, stack, x, y + physics.levitationOffset,
+            itemScale, drag.rotationX, physics.rotationY + drag.rotationY, ItemDisplayContext.GUI);
     }
 
     @Override

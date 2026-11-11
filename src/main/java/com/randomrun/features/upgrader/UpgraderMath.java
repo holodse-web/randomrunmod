@@ -4,6 +4,24 @@ public final class UpgraderMath {
     public static final double MAX_CHANCE = 0.75;
     public static final long SPIN_MILLIS = 6000;
     public static final long RESULT_HOLD_MILLIS = 350;
+    public static final double BONUS_APPEAR_CHANCE = 0.25;
+    public static final long STREAK_STEP_MILLIS = 1800;
+    public static final int MAX_STREAK = 5;
+
+    public static double bonusSize(double chance) {
+        if (!Double.isFinite(chance) || chance <= 0) return 0;
+        return chance <= .05 ? chance * .4 : Math.min(.10, chance * .5);
+    }
+
+    public static boolean inBonus(double roll, double chance, double size) {
+        if (size <= 0 || !Double.isFinite(roll)) return false;
+        double start = chance / 2.0 - size / 2.0;
+        return roll >= start && roll < start + size;
+    }
+
+    public static long totalMillis(int flips) {
+        return SPIN_MILLIS + Math.max(0, flips) * STREAK_STEP_MILLIS;
+    }
 
     private UpgraderMath() {}
 

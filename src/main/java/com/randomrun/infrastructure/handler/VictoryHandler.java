@@ -74,7 +74,7 @@ public class VictoryHandler {
         }
 
         if (!config.isHardcoreModeEnabled() && CLIENT.player != null) {
-            com.randomrun.infrastructure.util.ClientMessages.send(CLIENT.player, net.minecraft.network.chat.Component.literal("§e⚠ Режим не Хардкор — результат не будет отправлен в таблицу лидеров."), false);
+            com.randomrun.infrastructure.util.ClientMessages.send(CLIENT.player, com.randomrun.infrastructure.util.LanguageManager.text("randomrun.victory.not_hardcore"), false);
         }
 
         spawnVictoryParticles();
@@ -111,40 +111,12 @@ public class VictoryHandler {
                     .modVersion(session.getModVersion())
                     .attemptNumber(1)
                     .targetType(session.getTargetType())
-                    .mobVariant(session.getMobVariant())
                     .build();
             }
         } catch (Exception e) {
             CompactLogger.error("[Victory] Failed to create temp record: {}", e.getMessage());
         }
         return null;
-    }
-
-    private static void handleVictoryRecord(Run record, long elapsedTime) {
-        if (record == null) {
-            CompactLogger.error("[Victory] Completion failed - record is null");
-            return;
-        }
-
-        completedRecord = record;
-
-        CLIENT.execute(() -> showVictoryEffects(record, elapsedTime));
-    }
-
-    private static void showVictoryEffects(Run record, long elapsedTime) {
-        ModConfig config = getCachedConfig();
-
-        playVictorySound(config);
-
-        ModConfig.VictoryScreenMode mode = config.getVictoryScreenMode();
-
-        if (mode != ModConfig.VictoryScreenMode.SHOW_AFTER_10_SECONDS) {
-            showVictoryTitle(elapsedTime);
-            sendVictoryMessage(record, elapsedTime);
-        }
-
-        spawnVictoryParticles();
-        handleVictoryScreen(mode, record);
     }
 
     private static void playVictorySound(ModConfig config) {
@@ -161,23 +133,6 @@ public class VictoryHandler {
     private static void showVictoryTitle(long elapsedTime) {
         CLIENT.gui.hud.setTitle(Component.literal("\u00A7a\u00A7lVICTORY!"));
         CLIENT.gui.hud.setSubtitle(Component.literal("\u00A7e" + formatTime(elapsedTime)));
-    }
-
-    private static void sendVictoryMessage(Run record, long elapsedTime) {
-        if (CLIENT.player != null) {
-            String itemName = getItemName(record);
-            com.randomrun.infrastructure.util.ClientMessages.send(CLIENT.player, com.randomrun.infrastructure.util.LanguageManager.text(
-                    "randomrun.victory.message", itemName, formatTime(elapsedTime)
-                ), false);
-        }
-    }
-
-    private static void handleVictoryScreen(ModConfig.VictoryScreenMode mode, Run record) {
-        switch (mode) {
-            case SHOW -> showVictoryScreen(record);
-            case HIDE -> {}
-            case SHOW_AFTER_10_SECONDS -> scheduleDelayedScreen();
-        }
     }
 
     private static void scheduleDelayedScreen() {
@@ -226,6 +181,10 @@ public class VictoryHandler {
         }
     }
 
+    public static boolean isItemVictory() {
+        return victoryInProgress.get();
+    }
+
     public static void reset() {
         victoryInProgress.set(false);
         victoryScheduled = false;
@@ -234,21 +193,6 @@ public class VictoryHandler {
         completedRecord = null;
         cachedConfig = null;
         lastConfigCache = 0;
-    }
-
-    private static String getItemName(Run record) {
-        try {
-            net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(record.getTargetId());
-            if (id != null) {
-                net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(id);
-                if (item != net.minecraft.world.item.Items.AIR) {
-                    return net.minecraft.network.chat.Component.translatable(item.getDescriptionId()).getString();
-                }
-            }
-        } catch (Exception e) {
-            CompactLogger.warn("[Victory] Failed to get item name: {}", e.getMessage());
-        }
-        return "Unknown";
     }
 
     private static String formatTime(long milliseconds) {

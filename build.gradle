@@ -1,6 +1,5 @@
 plugins {
     id 'net.fabricmc.fabric-loom' version "${loom_version}"
-    id 'maven-publish'
 }
 
 version = project.mod_version
@@ -13,7 +12,7 @@ base {
 loom {
     runs {
         client {
-            programArgs "--username=Player338"
+            programArgs "--username=${project.findProperty('rrmName') ?: 'Player338'}"
         }
     }
 }
@@ -26,8 +25,12 @@ dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-    implementation 'com.google.code.gson:gson:2.10.1'
-    include 'com.google.code.gson:gson:2.10.1'
+    implementation 'dev.onvoid.webrtc:webrtc-java:1.0.0'
+    include 'dev.onvoid.webrtc:webrtc-java:1.0.0'
+    ['windows-x86_64', 'linux-x86_64', 'macos-x86_64', 'macos-aarch64'].each { platform ->
+        runtimeOnly "dev.onvoid.webrtc:webrtc-java:1.0.0:${platform}"
+        include "dev.onvoid.webrtc:webrtc-java:1.0.0:${platform}"
+    }
 }
 
 processResources {
@@ -54,23 +57,6 @@ jar {
     from("LICENSE") {
         rename { "${it}_${project.archives_base_name}" }
     }
-}
-
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-        }
-    }
-    repositories {
-    }
-}
-
-tasks.register('verifyUpgrader', JavaExec) {
-    dependsOn testClasses
-    classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'com.randomrun.features.upgrader.UpgraderVerification'
-    workingDir = layout.buildDirectory.get().asFile
 }
 
 apply from: 'gradle/obfuscation.gradle'

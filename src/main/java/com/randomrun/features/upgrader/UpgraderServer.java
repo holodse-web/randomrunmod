@@ -49,11 +49,12 @@ public final class UpgraderServer {
     }
 
     public static void request(MinecraftServer server, ServerPlayer player, long id, String roomId,
-                               Map<Integer, Integer> amounts, Map<Integer, ItemStack> expected, Item target,
+                               Map<Integer, Integer> amounts, Map<Integer, ItemStack> expected, Item target, int targetCount,
                                Consumer<UpgraderClient.RollResult> result, Consumer<Boolean> completed) {
         if (id <= 0 || !authorized(server, player, roomId) || PENDING.containsKey(player.getUUID())
                 || player.containerMenu != player.inventoryMenu || !player.inventoryMenu.getCarried().isEmpty()
-                || target == null || !UpgraderValues.isAllowed(target)) {
+                || target == null || !UpgraderValues.isAllowed(target)
+                || targetCount < 1 || targetCount > maxTargetCount(target)) {
             result.accept(rejected("unavailable"));
             return;
         }
@@ -61,15 +62,35 @@ public final class UpgraderServer {
         try {
             List<ItemStack> inventory = inventory(player, false);
             UpgraderTransaction.Consumption plan = UpgraderTransaction.consume(inventory, amounts, expected);
-            double chance = UpgraderMath.chance(plan.stake(), UpgraderValues.unitValue(target));
+            double chance = UpgraderMath.chance(plan.stake(), Math.multiplyExact(UpgraderValues.unitValue(target), (long) targetCount));
             if (chance <= 0) throw new IllegalArgumentException("invalid_target_value");
             RunSession session = RunSessionManager.getInstance().getCurrentSession();
             ItemStack compensation = UpgraderCompensation.choose(plan.stake(), session.getTargetItem(), target, RANDOM);
             double roll = RANDOM.nextDouble();
-            boolean success = UpgraderMath.wins(roll, chance);
-            ItemStack reward = success ? new ItemStack(target) : compensation;
-            Pending pending = new Pending(server, player, id, session, new UpgraderPendingReward(reward),
-                System.nanoTime(), completed);
+            double bonus = RANDOM.nextDouble() < UpgraderMath.BONUS_APPEAR_CHANCE ? UpgraderMath.bonusSize(chance) : 0;
+            boolean bonusHit = UpgraderMath.inBonus(roll, chance, bonus);
+            boolean success = bonusHit || UpgraderMath.wins(roll, chance);
+            int streak = 0, flips = 0;
+            if (bonusHit) {
+                int stackLimit = Math.max(1, target.getDefaultMaxStackSize()) * 16;
+                while (streak < UpgraderMath.MAX_STREAK && ((long) targetCount << (streak + 1)) <= stackLimit) {
+                    flips++;
+                    if (RANDOM.nextBoolean()) streak++;
+                    else break;
+                }
+            }
+            ItemStack reward = success ? new ItemStack(target, targetCount) : compensation;
+            List<ItemStack> delivery = new ArrayList<>();
+            if (success) {
+                int total = targetCount << streak, max = Math.max(1, target.getDefaultMaxStackSize());
+                while (total > 0) {
+                    int part = Math.min(max, total);
+                    delivery.add(new ItemStack(target, part));
+                    total -= part;
+                }
+            } else if (!compensation.isEmpty()) delivery.add(compensation);
+            Pending pending = new Pending(server, player, id, session,
+                new UpgraderPendingReward(delivery, UpgraderMath.totalMillis(flips)), System.nanoTime(), completed);
             for (int slot = 0; slot < UpgraderTransaction.INVENTORY_SLOTS; slot++) {
                 player.getInventory().setItem(slot, plan.inventory().get(slot));
             }
@@ -77,7 +98,7 @@ public final class UpgraderServer {
             player.getInventory().setChanged();
             player.inventoryMenu.broadcastChanges();
             accepted = new UpgraderClient.RollResult(true, success, chance, roll,
-                success ? "success" : "lost", reward.copy());
+                success ? "success" : "lost", reward.copy(), bonus, bonusHit, streak, flips);
         } catch (IllegalArgumentException error) {
             result.accept(rejected(error.getMessage()));
             return;
@@ -87,6 +108,10 @@ public final class UpgraderServer {
             return;
         }
         result.accept(accepted);
+    }
+
+    public static int maxTargetCount(Item target) {
+        return target == null ? 1 : Math.clamp(target.getDefaultMaxStackSize(), 1, 64);
     }
 
     public static void control(ServerPlayer player, long id, int action) {
@@ -137,7 +162,7 @@ public final class UpgraderServer {
             player.inventoryMenu.broadcastChanges();
             if (player.containerMenu != player.inventoryMenu) player.containerMenu.broadcastChanges();
         }
-        if (!delivery.get().overflow().isEmpty()) player.drop(delivery.get().overflow(), false, Prediction.SERVER_ONLY);
+        for (ItemStack overflow : delivery.get().overflow()) player.drop(overflow, false, Prediction.SERVER_ONLY);
         try { pending.completion().accept(true); }
         catch (Exception error) {
             RandomRunMod.LOGGER.warn("[Upgrader] Reward delivered, completion notification unavailable", error);

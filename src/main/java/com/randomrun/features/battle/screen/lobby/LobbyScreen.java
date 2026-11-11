@@ -1,14 +1,27 @@
 package com.randomrun.features.battle.screen.lobby;
 
+
+
+
+import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
+import com.randomrun.ui.widget.styled.Buttons.ButtonRainbow;
+import com.randomrun.features.battle.screen.lobby.LobbyRender.ConnectionStatusRenderer;
+import com.randomrun.features.battle.screen.lobby.LobbyRender.RoomListRenderer;
+import com.randomrun.features.battle.screen.lobby.LobbyRender.UIColors;
+import com.randomrun.features.battle.screen.lobby.LobbyLogic.LobbyPollingManager;
+import com.randomrun.features.battle.screen.lobby.LobbyLogic.LobbyUpdates;
+import com.randomrun.features.battle.screen.lobby.LobbyLogic.PingMonitor;
+import com.randomrun.features.battle.screen.lobby.LobbyLogic.RoomClickHandler;
+import com.randomrun.features.battle.screen.lobby.LobbyLogic.RoomSearchFilter;
+import com.randomrun.features.battle.screen.lobby.LobbyLogic.RoomSorter;
+import com.randomrun.features.battle.screen.lobby.LobbyLogic.SearchDebouncer;
 import com.randomrun.features.battle.screen.room.RoomJoinScreen;
 import com.randomrun.features.battle.manager.BattleRoom;
-import com.randomrun.features.battle.screen.lobby.util.helper.*;
-import com.randomrun.features.battle.screen.lobby.util.render.*;
 import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
-import com.randomrun.ui.widget.styled.ButtonDefault;
-import com.randomrun.ui.widget.styled.ButtonRainbow;
 import java.util.Collections;
 import java.util.List;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -16,8 +29,6 @@ import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 public class LobbyScreen extends AbstractRandomRunScreen {
     private static final int BUTTON_HEIGHT = 20;
@@ -32,21 +43,20 @@ public class LobbyScreen extends AbstractRandomRunScreen {
     private static final int TITLE_Y = 22;
     private static final int ROOM_ENTRY_HEIGHT = 48;
     private static final int ROOM_ENTRY_SPACING = 4;
-    private static final int SCROLLBAR_WIDTH = 6;
-    
+
     private com.randomrun.features.battle.util.ItemGlitchEffect glitchEffect;
     private final Screen parent;
     private RoomListWidget roomList;
     private List<BattleRoom> rooms = Collections.emptyList();
     private List<BattleRoom> filteredRooms = Collections.emptyList();
     private String searchQuery = "";
-    
+
     private int pingTextX = 0;
     private int pingTextY = 0;
     private int pingTextWidth = 0;
-    
+
     private final PingMonitor pingMonitor = new PingMonitor();
-    private LobbySseListener sseListener;
+    private LobbyUpdates sseListener;
     private SearchDebouncer searchDebouncer;
     private RoomClickHandler clickHandler;
     private boolean sseConnectionStarted = false;
@@ -61,36 +71,37 @@ public class LobbyScreen extends AbstractRandomRunScreen {
     @Override
     protected void init() {
         super.init();
+        com.randomrun.network.RealtimeClient.getInstance().setPresence("lobby", null);
         stopConnections();
         activeScreen = true;
         final long currentLifecycle = lifecycle;
-        
+
         boolean allowUnobtainable = com.randomrun.infrastructure.RandomRunMod.getInstance()
             .getConfig().isAllowUnobtainableItems();
         glitchEffect = new com.randomrun.features.battle.util.ItemGlitchEffect(allowUnobtainable);
-        
+
         searchDebouncer = new SearchDebouncer(() -> minecraft.execute(() -> {
             if (activeScreen && lifecycle == currentLifecycle) filterRooms();
         }));
         if (clickHandler == null || !clickHandler.isJoining()) clickHandler = new RoomClickHandler(minecraft, parent, this);
-        
+
         initRoomList();
         initButtons();
         filterRooms();
         initPollingConnection();
     }
-    
+
     private void initRoomList() {
         int listWidth = Math.min(600, width - LIST_MARGIN);
         int listHeight = height - LIST_TOP - LIST_BOTTOM_OFFSET;
         int bottom = height - LIST_BOTTOM_OFFSET;
-        
+
         this.roomList = new RoomListWidget(minecraft, listWidth, listHeight, LIST_TOP, bottom, ROOM_ENTRY_HEIGHT);
         int centerX = (width - listWidth) / 2;
         this.roomList.setX(centerX);
         this.addWidget(this.roomList);
     }
-    
+
     private void initButtons() {
         addRenderableWidget(new ButtonDefault(
             BUTTON_MARGIN, BUTTON_Y, BUTTON_WIDTH_SMALL, BUTTON_HEIGHT,
@@ -98,7 +109,7 @@ public class LobbyScreen extends AbstractRandomRunScreen {
             button -> onClose(),
             0, 0.1f
         ));
-        
+
         com.randomrun.ui.widget.styled.TextFieldStyled searchField = 
             new com.randomrun.ui.widget.styled.TextFieldStyled(
                 font, 90, BUTTON_Y, SEARCH_WIDTH, BUTTON_HEIGHT, 
@@ -112,7 +123,7 @@ public class LobbyScreen extends AbstractRandomRunScreen {
         });
         searchField.setValue(searchQuery);
         addRenderableWidget(searchField);
-        
+
         addRenderableWidget(new ButtonRainbow(
             width - 270, BUTTON_Y, BUTTON_WIDTH_MEDIUM, BUTTON_HEIGHT,
             com.randomrun.infrastructure.util.LanguageManager.text("randomrun.battle.create_room"),
@@ -122,7 +133,7 @@ public class LobbyScreen extends AbstractRandomRunScreen {
             },
             1, 0.12f
         ));
-        
+
         addRenderableWidget(new ButtonDefault(
             width - 140, BUTTON_Y, BUTTON_WIDTH_MEDIUM, BUTTON_HEIGHT,
             com.randomrun.infrastructure.util.LanguageManager.text("randomrun.battle.enter_code"),
@@ -132,17 +143,17 @@ public class LobbyScreen extends AbstractRandomRunScreen {
             1, 0.12f
         ));
     }
-    
+
     private void initPollingConnection() {
         if (sseConnectionStarted) {
             return;
         }
-        
+
         sseConnectionStarted = true;
         final long currentLifecycle = lifecycle;
-        
+
         if (!com.randomrun.core.init.CoreInitializer.isInitialized()) {
-            String playerName = minecraft.getUser().getName();
+            String playerName = com.randomrun.network.BackendSession.playerName();
             com.randomrun.core.init.CoreInitializer.initialize(playerName)
                 .thenRun(() -> {
                     minecraft.execute(() -> {
@@ -160,11 +171,11 @@ public class LobbyScreen extends AbstractRandomRunScreen {
             startSseConnection();
         }
     }
-    
+
     private void startSseConnection() {
         if (!activeScreen || sseListener != null) return;
         final long currentLifecycle = lifecycle;
-        sseListener = new LobbySseListener(
+        sseListener = new LobbyUpdates(
             newRooms -> minecraft.execute(() -> {
                 if (activeScreen && lifecycle == currentLifecycle) onRoomsUpdate(newRooms);
             }),
@@ -182,12 +193,12 @@ public class LobbyScreen extends AbstractRandomRunScreen {
         );
         sseListener.start();
     }
-    
+
     private void onReconnectFailed() {
         com.randomrun.infrastructure.RandomRunMod.LOGGER.error("[Lobby] SSE переподключение не удалось");
     }
-    
-    private LobbyPollingManager.ConnectionStatus convertStatus(LobbySseListener.ConnectionStatus sseStatus) {
+
+    private LobbyPollingManager.ConnectionStatus convertStatus(LobbyUpdates.ConnectionStatus sseStatus) {
         switch (sseStatus) {
             case CONNECTED: return LobbyPollingManager.ConnectionStatus.CONNECTED;
             case CONNECTING: return LobbyPollingManager.ConnectionStatus.CONNECTING;
@@ -196,15 +207,15 @@ public class LobbyScreen extends AbstractRandomRunScreen {
             default: return LobbyPollingManager.ConnectionStatus.DISCONNECTED;
         }
     }
-    
+
     private void onRoomsUpdate(List<BattleRoom> newRooms) {
         this.rooms = List.copyOf(newRooms);
         filterRooms();
     }
-    
-    private void onConnectionStatusChange(LobbySseListener.ConnectionStatus status) {
+
+    private void onConnectionStatusChange(LobbyUpdates.ConnectionStatus status) {
     }
-    
+
     private void filterRooms() {
         filteredRooms = RoomSearchFilter.filter(rooms, searchQuery);
         filteredRooms = RoomSorter.sort(filteredRooms, RoomSorter.SortType.PLAYERS_DESC);
@@ -240,7 +251,7 @@ public class LobbyScreen extends AbstractRandomRunScreen {
         super.tick();
         pingMonitor.update();
     }
-    
+
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         if (roomList.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) {
@@ -248,7 +259,7 @@ public class LobbyScreen extends AbstractRandomRunScreen {
         }
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
-    
+
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
         double mouseX = event.x();
@@ -270,60 +281,60 @@ public class LobbyScreen extends AbstractRandomRunScreen {
     @Override
     public void extractBackground(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         super.extractBackground(context, mouseX, mouseY, delta);
-        
+
         if (roomList != null) {
             roomList.renderBackgrounds(context, mouseX, mouseY);
         }
     }
-    
+
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         extractBackground(context, mouseX, mouseY, delta);
-        
+
         com.randomrun.ui.util.GuiText.centeredText(context, font, 
             com.randomrun.infrastructure.util.LanguageManager.text("randomrun.battle.lobby"), 
             width / 2, TITLE_Y, UIColors.TEXT_WHITE);
-        
+
         super.extractRenderState(context, mouseX, mouseY, delta);
-        
+
         if (roomList != null) {
             roomList.renderContent(context, mouseX, mouseY, delta);
         }
-        
+
         renderBottomInfo(context);
         renderEmptyState(context);
     }
-    
+
     private void renderBottomInfo(GuiGraphicsExtractor context) {
         int bottomY = height - 20;
-        
-        String countText = String.format("Найдено: %d", filteredRooms.size());
+
+        String countText = com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.lobby.found", filteredRooms.size());
         int leftMargin = (width - Math.min(600, width - LIST_MARGIN)) / 2;
         com.randomrun.ui.util.GuiText.text(context, font, Component.literal(countText), 
             leftMargin, bottomY, UIColors.TEXT_GRAY);
-        
+
         LocalDateTime now = LocalDateTime.now();
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
-        
+
         String dateTime = now.format(dateFormatter) + " " + now.format(timeFormatter);
         String pingText = pingMonitor.isUpdating() ? "..." : pingMonitor.getPingText();
-        
+
         int dateTimeWidth = font.width(dateTime);
         int pingWidth = font.width(pingText);
         int totalWidth = dateTimeWidth + 15 + pingWidth;
         int startX = (width - totalWidth) / 2;
-        
+
         com.randomrun.ui.util.GuiText.text(context, font, Component.literal(dateTime), startX, bottomY, UIColors.TEXT_GRAY);
-        
+
         pingTextX = startX + dateTimeWidth + 15;
         pingTextY = bottomY;
         pingTextWidth = pingWidth;
-        
+
         com.randomrun.ui.util.GuiText.text(context, font, Component.literal(pingText), 
             pingTextX, pingTextY, pingMonitor.getPingColor());
-        
-        if (sseListener != null) {
+
+        if (sseListener != null && sseListener.getStatus() != LobbyUpdates.ConnectionStatus.CONNECTED) {
             int listWidth = Math.min(600, width - LIST_MARGIN);
             int rightMargin = (width + listWidth) / 2;
             int connectionX = rightMargin - 110;
@@ -331,9 +342,9 @@ public class LobbyScreen extends AbstractRandomRunScreen {
                 convertStatus(sseListener.getStatus()), connectionX, bottomY);
         }
     }
-    
+
     private void renderEmptyState(GuiGraphicsExtractor context) {
-        if (sseListener != null && sseListener.getStatus() == LobbySseListener.ConnectionStatus.CONNECTING 
+        if (sseListener != null && sseListener.getStatus() == LobbyUpdates.ConnectionStatus.CONNECTING
             && filteredRooms.isEmpty()) {
             com.randomrun.ui.util.GuiText.centeredText(context, font, 
                 com.randomrun.infrastructure.util.LanguageManager.text("randomrun.battle.loading"), 
@@ -348,29 +359,43 @@ public class LobbyScreen extends AbstractRandomRunScreen {
                 width / 2, height / 2, UIColors.TEXT_GRAY);
         }
     }
-    
+
+    private static final java.util.Map<String, Long> ROOM_SEEN = new java.util.HashMap<>();
+
+    private static float entryAppear(String code, int index) {
+        long now = System.currentTimeMillis();
+        long seen = ROOM_SEEN.computeIfAbsent(code, ignored -> now + index * 55L);
+        return com.randomrun.ui.util.Ui.easeOut((now - seen) / 320f);
+    }
+
+    @Override
+    public void added() {
+        super.added();
+        ROOM_SEEN.clear();
+    }
+
     class RoomListWidget extends ObjectSelectionList<RoomListWidget.RoomEntry> {
         public RoomListWidget(Minecraft client, int width, int height, int top, int bottom, int itemHeight) {
             super(client, width, height, top, itemHeight);
         }
-        
+
         public void setRooms(List<BattleRoom> rooms) {
             this.clearEntries();
             for (BattleRoom room : rooms) {
                 this.addEntry(new RoomEntry(room));
             }
         }
-        
+
         @Override
         public int getRowWidth() {
             return width - 20 - SCROLLBAR_WIDTH;
         }
-        
+
         @Override
         public int scrollBarX() {
             return this.getX() + this.width - SCROLLBAR_WIDTH;
         }
-        
+
         @Override
         protected int scrollerHeight() {
             int contentHeight = this.getItemCount() * this.defaultEntryHeight;
@@ -381,100 +406,108 @@ public class LobbyScreen extends AbstractRandomRunScreen {
             int thumbHeight = (visibleHeight * visibleHeight) / contentHeight;
             return Math.max(thumbHeight, 32);
         }
-        
+
         protected void extractBackground(GuiGraphicsExtractor context) {
         }
-        
+
         public void renderBackgrounds(GuiGraphicsExtractor context, int mouseX, int mouseY) {
             int entryHeight = this.defaultEntryHeight - ROOM_ENTRY_SPACING;
             int entryWidth = this.getRowWidth();
             int left = this.getRowLeft();
-            
+
             for (int i = 0; i < this.getItemCount(); i++) {
                 int entryTop = this.getRowTop(i);
                 int entryBottom = entryTop + entryHeight;
-                
+
                 if (entryBottom >= this.getY() && entryTop <= this.getBottom()) {
                     RoomEntry entry = this.children().get(i);
                     boolean hovered = this.isMouseOver(mouseX, mouseY) && 
                                      mouseY >= entryTop && mouseY < entryBottom;
+                    float appear = entryAppear(entry.room.getRoomCode(), i);
+                    if (appear <= 0f) continue;
+                    context.pose().pushMatrix();
+                    context.pose().translate((1f - appear) * 28f, 0);
                     entry.renderDecoration(context, entryTop, left, entryWidth, entryHeight, hovered);
+                    context.pose().popMatrix();
                 }
             }
-            
+
             renderScrollbar(context);
         }
-        
+
         public void renderContent(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
             int entryHeight = this.defaultEntryHeight - ROOM_ENTRY_SPACING;
-            int entryWidth = this.getRowWidth();
-            int left = this.getRowLeft();
-            
+
             for (int i = 0; i < this.getItemCount(); i++) {
                 int entryTop = this.getRowTop(i);
                 int entryBottom = entryTop + entryHeight;
-                
+
                 if (entryBottom >= this.getY() && entryTop <= this.getBottom()) {
                     RoomEntry entry = this.children().get(i);
                     boolean hovered = this.isMouseOver(mouseX, mouseY) && 
                                      mouseY >= entryTop && mouseY < entryBottom;
+                    float appear = entryAppear(entry.room.getRoomCode(), i);
+                    if (appear <= 0f) continue;
+                    context.pose().pushMatrix();
+                    context.pose().translate((1f - appear) * 28f, 0);
                     entry.extractContent(context, mouseX, mouseY, hovered, delta);
+                    context.pose().popMatrix();
                 }
             }
         }
-        
+
         private void renderScrollbar(GuiGraphicsExtractor context) {
             int contentHeight = this.getItemCount() * this.defaultEntryHeight;
             int visibleHeight = this.getBottom() - this.getY();
             int maxScroll = Math.max(0, contentHeight - visibleHeight);
-            
+
             if (maxScroll <= 0) {
                 return;
             }
-            
+
             int scrollbarX = this.scrollBarX();
             int scrollbarTop = this.getY();
             int scrollbarBottom = this.getBottom();
             int scrollbarHeight = scrollbarBottom - scrollbarTop;
-            
+
             context.fill(scrollbarX, scrollbarTop, scrollbarX + SCROLLBAR_WIDTH, scrollbarBottom, 0x80000000);
-            
+
             int thumbHeight = this.scrollerHeight();
             if (thumbHeight > 0) {
                 double scrollAmount = this.scrollAmount();
-                
+
                 int thumbY = scrollbarTop + (int) ((scrollbarHeight - thumbHeight) * (scrollAmount / maxScroll));
-                
-                context.fill(scrollbarX, thumbY, scrollbarX + SCROLLBAR_WIDTH, thumbY + thumbHeight, UIColors.BORDER_NORMAL);
+
+                context.fill(scrollbarX, thumbY, scrollbarX + SCROLLBAR_WIDTH, thumbY + thumbHeight, UIColors.BORDER_NORMAL());
             }
         }
-        
+
         @Override
         public void extractWidgetRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         }
-        
+
         class RoomEntry extends ObjectSelectionList.Entry<RoomEntry> {
             private final BattleRoom room;
             private final ItemStack roomIconStack;
             private final String modeTextCache;
             private final boolean isRandomItem;
-            
+
             public RoomEntry(BattleRoom room) {
                 this.room = room;
                 this.isRandomItem = room.getTargetItem() == null || room.getTargetItem().isEmpty();
                 this.roomIconStack = RoomListRenderer.createRoomIcon(room.getTargetItem(), glitchEffect);
                 this.modeTextCache = RoomListRenderer.getRoomModeText(room);
             }
-            
+
             public void renderDecoration(GuiGraphicsExtractor context, int top, int left, int entryWidth, 
                                         int entryHeight, boolean hovered) {
                 int bgColor = room.getStatus() != BattleRoom.RoomStatus.WAITING ? UIColors.BG_DISABLED :
-                             (hovered ? UIColors.BG_HOVERED : UIColors.BG_NORMAL);
+                             (hovered ? UIColors.BG_HOVERED() : UIColors.BG_NORMAL());
                 int borderColor = room.getStatus() != BattleRoom.RoomStatus.WAITING ? UIColors.BORDER_DISABLED :
-                                 (hovered ? UIColors.BORDER_HOVERED : UIColors.BORDER_NORMAL);
-                
+                                 (hovered ? UIColors.BORDER_HOVERED() : UIColors.BORDER_NORMAL());
+
                 context.fill(left, top, left + entryWidth, top + entryHeight, bgColor);
-                
+
                 int borderWidth = 2;
                 context.fill(left, top, left + entryWidth, top + borderWidth, borderColor);
                 context.fill(left, top + entryHeight - borderWidth, left + entryWidth, top + entryHeight, borderColor);
@@ -493,11 +526,10 @@ public class LobbyScreen extends AbstractRandomRunScreen {
                 RoomListRenderer.renderRoomEntry(context, font, room, icon, 
                     modeTextCache, left, top, entryWidth, entryHeight, hovered);
             }
-            
+
             @Override
             public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
-        double mouseX = event.x();
-        double mouseY = event.y();
+
         int button = event.button();
                 if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
                     return clickHandler.handleClick(room);
