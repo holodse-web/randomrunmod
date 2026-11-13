@@ -1,8 +1,13 @@
 package com.randomrun.features.upgrader;
 
-import com.randomrun.core.session.RunSession;
-import com.randomrun.core.session.RunSessionManager;
+import com.randomrun.core.run.RunSession;
+import com.randomrun.core.run.RunSessionManager;
 import com.randomrun.features.upgrader.client.UpgraderClient;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -12,11 +17,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 public final class UpgraderNetwork {
     private static String enabledRoom;

@@ -1,26 +1,29 @@
 package com.randomrun.features.upgrader;
 
-import com.randomrun.core.session.RunSession;
-import com.randomrun.core.session.RunSessionManager;
-import com.randomrun.core.session.RunStatus;
+import com.randomrun.core.run.RunSession;
+import com.randomrun.core.run.RunSession.RunStatus;
+import com.randomrun.core.run.RunSessionManager;
 import com.randomrun.features.battle.manager.BattleManager;
 import com.randomrun.features.battle.manager.BattleRoom;
+import com.randomrun.features.upgrader.UpgraderMath.UpgraderCompensation;
 import com.randomrun.features.upgrader.client.UpgraderClient;
 import com.randomrun.infrastructure.RandomRunMod;
-import net.minecraft.client.Minecraft;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.Prediction;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Prediction;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 public final class UpgraderServer {
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -179,5 +182,75 @@ public final class UpgraderServer {
 
     private static UpgraderClient.RollResult rejected(String reason) {
         return new UpgraderClient.RollResult(false, false, 0, 0, reason, ItemStack.EMPTY);
+    }
+
+    public static final class UpgraderPendingReward {
+        private final long durationNanos;
+        private final List<ItemStack> rewards;
+        private boolean started;
+        private long startedNanos;
+        private boolean skipped;
+        private boolean settled;
+
+        public UpgraderPendingReward(ItemStack reward) {
+            this(Objects.requireNonNull(reward, "reward").isEmpty() ? List.of() : List.of(reward), UpgraderMath.SPIN_MILLIS);
+        }
+
+        public UpgraderPendingReward(List<ItemStack> rewards, long durationMillis) {
+            List<ItemStack> copies = new ArrayList<>();
+            for (ItemStack stack : Objects.requireNonNull(rewards, "rewards")) if (!stack.isEmpty()) copies.add(stack.copy());
+            this.rewards = List.copyOf(copies);
+            this.durationNanos = Math.max(0, durationMillis) * 1_000_000L;
+        }
+
+        public synchronized void start(long startedNanos) {
+            if (!started && !settled) {
+                this.startedNanos = startedNanos;
+                started = true;
+            }
+        }
+
+        public synchronized void skip() {
+            skipped = true;
+        }
+
+        public synchronized boolean ready(long nowNanos) {
+            return !settled && (skipped || started && nowNanos - startedNanos >= durationNanos);
+        }
+
+        public synchronized Optional<Delivery> settle(List<ItemStack> currentInventory, long nowNanos) {
+            if (!ready(nowNanos)) return Optional.empty();
+            if (currentInventory == null || currentInventory.size() != UpgraderTransaction.INVENTORY_SLOTS) {
+                throw new IllegalArgumentException("invalid_inventory");
+            }
+            List<ItemStack> inventory = new ArrayList<>(UpgraderTransaction.INVENTORY_SLOTS);
+            for (ItemStack stack : currentInventory) {
+                if (stack == null) throw new IllegalArgumentException("invalid_inventory");
+                inventory.add(stack.copy());
+            }
+            List<ItemStack> overflow = new ArrayList<>();
+            for (ItemStack reward : rewards) {
+                ItemStack remaining = reward.copy();
+                for (ItemStack stack : inventory) {
+                    if (remaining.isEmpty()) break;
+                    if (stack.isEmpty() || !ItemStack.isSameItemSameComponents(stack, remaining)) continue;
+                    int moved = Math.min(remaining.getCount(), Math.max(0, stack.getMaxStackSize() - stack.getCount()));
+                    stack.grow(moved);
+                    remaining.shrink(moved);
+                }
+                for (int slot = 0; slot < inventory.size() && !remaining.isEmpty(); slot++) {
+                    if (!inventory.get(slot).isEmpty()) continue;
+                    int moved = Math.min(remaining.getCount(), remaining.getMaxStackSize());
+                    inventory.set(slot, remaining.copyWithCount(moved));
+                    remaining.shrink(moved);
+                }
+                if (!remaining.isEmpty()) overflow.add(remaining);
+            }
+            Delivery delivery = new Delivery(List.copyOf(inventory), List.copyOf(overflow));
+            settled = true;
+            return Optional.of(delivery);
+        }
+
+        public record Delivery(List<ItemStack> inventory, List<ItemStack> overflow) {}
     }
 }

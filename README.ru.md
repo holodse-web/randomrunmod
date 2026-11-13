@@ -2,7 +2,7 @@
 
 <p align="center"><a href="README.md">English version</a> · <a href="https://t.me/rrmnetwork">Telegram</a> · <a href="CHANGELOG.md">Список изменений</a></p>
 
-Клиентский мод Fabric для Minecraft **26.3**, Java **25+**, версия **27.1**. Добывайте случайный предмет на время — в одиночку или в комнате с друзьями.
+Клиентский мод Fabric для Minecraft **26.3**, Java **25+**, версия **27.2**. Добывайте случайный предмет на время — в одиночку или в комнате с друзьями.
 
 ## Игра
 
@@ -22,8 +22,8 @@
 ## Установка
 
 1. Установите Minecraft **26.3**, Fabric Loader **0.19.5+**, Java **25+** и Fabric API для 26.3.
-2. Положите `RandomRun-26.3Fabric-27.1.jar` в `mods`, удалив старые версии RandomRun.
-3. У всех участников должна быть одинаковая версия мода. WebRTC включён в сборку для Windows x64, Linux x64 и macOS (Intel и Apple Silicon); e4mc и VPN не требуются.
+2. Положите `RandomRun-26.3Fabric-27.2.jar` в `mods`, удалив старые версии RandomRun.
+3. Версии 27.1 и 27.2 могут играть вместе; с более старыми у всех должна быть одинаковая версия. WebRTC включён в сборку для Windows x64, Linux x64 и macOS (Intel и Apple Silicon); e4mc и VPN не требуются.
 
 ## Разработка
 
@@ -31,7 +31,6 @@
 
 ```powershell
 .\gradlew.bat build
-.\gradlew.bat obfuscatedJar
 cd server
 npm ci
 npm run dev
@@ -39,7 +38,9 @@ npm run dev
 
 Для тестового Minecraft задайте параметр JVM `-Drandomrun.api=http://127.0.0.1:8787`. Адрес готовой сборки находится в `src/main/resources/randomrun-online.json`. Удалённые адреса должны использовать HTTPS.
 
-Обычный jar: `build/libs`, обфусцированный: `build/obfuscated/release`. Карта для разбора ошибок в `build/obfuscated` приватна: не распространяйте её. Задачи сборки не публикуют релиз.
+Jar мода лежит в `build/libs` (без обфускации). `build-release.ps1` копирует его в `release` и добавляет его отпечаток в `server/src/mod-hashes.json`. Задачи сборки не публикуют релиз.
+
+Сторонние компоненты в сборке и их лицензии (WebRTC с FFmpeg под LGPL): см. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Каталог Upgrader пересоздаётся командой `python tools/upgrader/generate_values.py C:/path/to/minecraft-26.3-client.jar`. Ресурс: `src/main/resources/assets/randomrun/upgrader_values.json`; отчёты: `build/reports/upgrader`.
 

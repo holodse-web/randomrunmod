@@ -1,9 +1,10 @@
 package com.randomrun.infrastructure.security;
 
-import com.randomrun.core.history.Run;
-import com.randomrun.core.profile.PlayerProfile;
+import com.randomrun.core.data.PlayerProfile;
+import com.randomrun.core.run.Run;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.util.CompactLogger;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.Minecraft;
@@ -70,6 +71,7 @@ public class RunIntegrityChecker {
         }
     }
 
+    /** Low trust and past flags are consequences, not new violations: logged only, never punished twice. */
     private static void checkPlayerStats(PlayerProfile profile, IntegrityReport report) {
         int totalRuns = profile.getTotalRuns();
         if (totalRuns < MIN_RUNS_FOR_STATS) return;
@@ -77,13 +79,13 @@ public class RunIntegrityChecker {
         if (profile.getTrustScore() < PlayerProfile.LEADERBOARD_THRESHOLD) {
             report.addViolation(ViolationType.LOW_TRUST_SCORE,
                 String.format("Trust Score too low: %d/%d", profile.getTrustScore(), PlayerProfile.LEADERBOARD_THRESHOLD),
-                Severity.HIGH);
+                Severity.LOW);
         }
 
         if (profile.getSuspiciousFlags() > 5) {
             report.addViolation(ViolationType.HIGH_SUSPICIOUS_FLAGS,
                 String.format("Too many suspicious flags: %d", profile.getSuspiciousFlags()),
-                Severity.MEDIUM);
+                Severity.LOW);
         }
 
         if (profile.getLastCheatDetection() > 0) {
@@ -91,7 +93,7 @@ public class RunIntegrityChecker {
             if (daysSinceCheat < 7) {
                 report.addViolation(ViolationType.RECENT_CHEAT_DETECTION,
                     String.format("Cheat detected %d days ago", daysSinceCheat),
-                    Severity.HIGH);
+                    Severity.LOW);
             }
         }
     }
@@ -162,8 +164,8 @@ public class RunIntegrityChecker {
 
     private static void checkWorldIntegrity(IntegrityReport report) {
         try {
-            com.randomrun.core.session.RunSession session =
-                com.randomrun.core.session.RunSessionManager.getInstance().getCurrentSession();
+            com.randomrun.core.run.RunSession session =
+                com.randomrun.core.run.RunSessionManager.getInstance().getCurrentSession();
 
             if (session == null) return;
 

@@ -1,18 +1,17 @@
 package com.randomrun.ui.util;
 
+import com.randomrun.mixin.HudMixins.GuiGraphicsAccessor;
+
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.renderpearl.api.textures.FilterMode;
-import com.randomrun.mixin.ui.GuiGraphicsAccessor;
-import com.randomrun.ui.theme.Theme;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Optional;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
-
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.Optional;
 
 public final class Logo {
     private static final String[] WORD = {

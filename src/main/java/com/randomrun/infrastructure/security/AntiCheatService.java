@@ -1,7 +1,8 @@
 package com.randomrun.infrastructure.security;
 
-import com.randomrun.core.session.RunSessionManager;
+import com.randomrun.core.run.RunSessionManager;
 import com.randomrun.infrastructure.util.CompactLogger;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.phys.Vec3;
@@ -135,14 +136,14 @@ public class AntiCheatService {
         totalFlags++;
         CompactLogger.warn("{} Player {}: {}", LOG_TAG, playerName, description);
         try {
-            com.randomrun.core.profile.PlayerProfile profile = com.randomrun.core.profile.PlayerProfile.get();
+            com.randomrun.core.data.PlayerProfile profile = com.randomrun.core.data.PlayerProfile.get();
             if (profile != null) {
                 profile.applyTrustPenalty(
-                    com.randomrun.core.profile.PlayerProfile.PENALTY_CHEAT,
+                    com.randomrun.core.data.PlayerProfile.PENALTY_CHEAT,
                     description
                 );
                 profile.addSuspiciousFlag();
-                com.randomrun.core.profile.PlayerProfile.save();
+                com.randomrun.core.data.PlayerProfile.save();
             }
         } catch (Exception e) {
             CompactLogger.error("{} Penalty error: {}", LOG_TAG, e.getMessage());

@@ -4,8 +4,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -107,7 +109,7 @@ public final class SocialService {
 
     private static void notify(String text) {
         net.minecraft.client.Minecraft.getInstance().execute(() -> {
-            com.randomrun.ui.widget.overlay.CustomNotification.show(text);
+            com.randomrun.ui.overlay.CustomNotification.show(text);
             com.randomrun.ui.util.Ui.playSound(net.minecraft.sounds.SoundEvents.NOTE_BLOCK_PLING.value(), 1.4f, 0.5f);
         });
     }
@@ -188,5 +190,25 @@ public final class SocialService {
 
     private static int integer(JsonObject object, String key) {
         return object.has(key) && object.get(key).isJsonPrimitive() ? object.get(key).getAsInt() : 0;
+    }
+
+    public static final class PendingInvites {
+        private static final Set<String> NAMES = new LinkedHashSet<>();
+
+        private PendingInvites() {}
+
+        public static synchronized void add(String name) {
+            NAMES.add(name);
+        }
+
+        public static synchronized Set<String> drain() {
+            Set<String> copy = new LinkedHashSet<>(NAMES);
+            NAMES.clear();
+            return copy;
+        }
+
+        public static synchronized void clear() {
+            NAMES.clear();
+        }
     }
 }

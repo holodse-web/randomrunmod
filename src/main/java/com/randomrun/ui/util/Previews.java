@@ -4,20 +4,24 @@ import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.mojang.serialization.Lifecycle;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 import net.fabricmc.fabric.api.client.rendering.v1.PictureInPictureRendererRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
 import net.minecraft.client.renderer.state.gui.GuiRenderState;
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.resources.DefaultPlayerSkin;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.MappedRegistry;
@@ -30,6 +34,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.EmptyTagLookupWrapper;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.registries.VanillaRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -154,11 +159,19 @@ public final class Previews {
             Matrix3x2f pose = new Matrix3x2f(graphics.pose());
             float magnification = PreviewRenderGeometry.magnification(pose.m00(), pose.m01(), pose.m10(), pose.m11());
             float renderSize = PreviewRenderGeometry.textureScale(size, magnification, Math.max(1, client.getWindow().getGuiScale()));
-            int radius = (int) Math.ceil(renderSize);
+            int radius = (int) Math.ceil(renderSize) + 1;
             pose.translate(x, y).scale(size / renderSize);
+            // The texture is blitted with nearest filtering, so a sub-pixel position would make a moving item
+            // jump pixel by pixel. Snap the blit to whole screen pixels and draw the rest of the offset inside
+            // the texture instead, where the model itself moves smoothly.
+            int guiScale = Math.max(1, client.getWindow().getGuiScale());
+            float screenX = pose.m20() * guiScale, screenY = pose.m21() * guiScale;
+            float shiftX = (screenX - Math.round(screenX)) / guiScale, shiftY = (screenY - Math.round(screenY)) / guiScale;
+            pose.translateLocal(-shiftX, -shiftY);
+            float toModel = 1f / (size * magnification);
             ScreenRectangle scissor = graphics.scissorStack.peek();
             graphics.guiRenderState.addPicturesInPictureState(new State(graphics, item, displayContext,
-                rotationX, rotationY, -radius, -radius, radius, radius, renderSize, pose, scissor,
+                rotationX, rotationY, shiftX * toModel, shiftY * toModel, -radius, -radius, radius, radius, renderSize, pose, scissor,
                 PictureInPictureRenderState.getBounds(-radius, -radius, radius, radius, pose, scissor)));
         }
 
@@ -199,7 +212,7 @@ public final class Previews {
 
         private static final class CachedPreview extends PictureInPictureRenderer<State> {
             private Object modelOnTexture;
-            private float rotationX, rotationY;
+            private float rotationX, rotationY, shiftX, shiftY;
 
             @Override public Class<State> getRenderStateClass() { return State.class; }
             @Override protected String getTextureLabel() { return "RandomRun cached item preview"; }
@@ -208,7 +221,8 @@ public final class Previews {
             @Override
             protected boolean textureIsReadyToBlit(State state) {
                 return !state.item().isAnimated() && state.item().getModelIdentity().equals(modelOnTexture)
-                    && rotationX == state.rotationX() && rotationY == state.rotationY();
+                    && rotationX == state.rotationX() && rotationY == state.rotationY()
+                    && shiftX == state.shiftX() && shiftY == state.shiftY();
             }
 
             @Override
@@ -216,6 +230,7 @@ public final class Previews {
                 Minecraft client = Minecraft.getInstance();
                 client.gameRenderer.lighting().setupFor(state.item().usesBlockLight()
                     ? Lighting.Entry.ITEMS_3D : Lighting.Entry.ITEMS_FLAT);
+                pose.translate(state.shiftX(), state.shiftY(), 0);
                 pose.scale(1, -1, -1);
                 pose.rotateDegrees(Axis.XP, state.rotationX());
                 pose.rotateDegrees(Axis.YP, state.rotationY());
@@ -223,11 +238,57 @@ public final class Previews {
                 modelOnTexture = state.item().getModelIdentity();
                 rotationX = state.rotationX();
                 rotationY = state.rotationY();
+                shiftX = state.shiftX();
+                shiftY = state.shiftY();
             }
         }
 
         public record State(Object frameToken, TrackingItemStackRenderState item, ItemDisplayContext displayContext,
-                            float rotationX, float rotationY, int x0, int y0, int x1, int y1, float scale,
+                            float rotationX, float rotationY, float shiftX, float shiftY, int x0, int y0, int x1, int y1, float scale,
                             Matrix3x2fc pose, ScreenRectangle scissorArea, ScreenRectangle bounds) implements PictureInPictureRenderState {}
+    }
+
+    public static final class Heads {
+        private Heads() {}
+
+        public static void draw(GuiGraphicsExtractor context, String name, int x, int y, int size, int frameArgb) {
+            if (name == null || name.isEmpty()) return;
+            Identifier skin = PlayerSkinHelper.getPlayerSkin(name, PlayerSkinHelper.getOfflineUUID(name));
+            if (frameArgb != 0) Ui.border(context, x - 1, y - 1, x + size + 1, y + size + 1, 1, frameArgb);
+            context.blit(RenderPipelines.GUI_TEXTURED, skin, x, y, 8f, 8f, size, size, 8, 8, 64, 64);
+            context.blit(RenderPipelines.GUI_TEXTURED, skin, x, y, 40f, 8f, size, size, 8, 8, 64, 64);
+        }
+    }
+
+    public static class PlayerSkinHelper {
+        private static final int MAX_CACHED_PLAYERS = 512;
+        private static final Map<UUID, Identifier> skinCache = boundedCache();
+        private static final Map<String, UUID> offlineIds = boundedCache();
+
+        private static <K, V> Map<K, V> boundedCache() {
+            return new LinkedHashMap<>(32, .75f, true) {
+                @Override protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+                    return size() > MAX_CACHED_PLAYERS;
+                }
+            };
+        }
+
+        public static Identifier getPlayerSkin(String playerName, UUID playerUuid) {
+            synchronized (skinCache) {
+                return skinCache.computeIfAbsent(playerUuid, id -> DefaultPlayerSkin.get(id).body().texturePath());
+            }
+        }
+
+        public static void clearCache() {
+            synchronized (skinCache) { skinCache.clear(); }
+            synchronized (offlineIds) { offlineIds.clear(); }
+        }
+
+        public static UUID getOfflineUUID(String playerName) {
+            synchronized (offlineIds) {
+                return offlineIds.computeIfAbsent(playerName,
+                    name -> UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(StandardCharsets.UTF_8)));
+            }
+        }
     }
 }

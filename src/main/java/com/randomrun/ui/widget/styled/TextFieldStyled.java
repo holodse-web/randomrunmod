@@ -88,7 +88,7 @@ public class TextFieldStyled extends EditBox {
 
         styledHelper.updateAnimations(delta, hovered);
 
-        com.randomrun.ui.theme.Theme theme = com.randomrun.ui.theme.Theme.current();
+        com.randomrun.ui.util.Theme theme = com.randomrun.ui.util.Theme.current();
         int base = baseColor != null ? baseColor : theme.buttonBase;
         int fieldBg = com.randomrun.ui.util.Ui.lerp(0xFF000000 | base, 0xFF000000, 0.55f) & 0xFFFFFF;
         int idle = borderColor != null ? borderColor : base;

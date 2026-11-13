@@ -2,12 +2,13 @@ package com.randomrun.ui.screen.main;
 
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.util.LanguageManager;
-import com.randomrun.infrastructure.version.VersionChecker;
-import com.randomrun.ui.theme.Theme;
+import com.randomrun.network.VersionChecker;
 import com.randomrun.ui.util.GuiText;
+import com.randomrun.ui.util.Theme;
 import com.randomrun.ui.util.Ui;
-import com.randomrun.ui.widget.overlay.OverlayWidgets.LanguageDropdownWidget;
+import com.randomrun.ui.widget.OverlayWidgets.LanguageDropdownWidget;
 import com.randomrun.ui.widget.styled.Buttons.ButtonMenu;
+
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.TitleScreen;

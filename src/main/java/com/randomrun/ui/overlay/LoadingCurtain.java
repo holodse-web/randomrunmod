@@ -1,14 +1,15 @@
 package com.randomrun.ui.overlay;
 
 import com.randomrun.features.battle.manager.BattleManager;
-import com.randomrun.features.challenges.classic.world.WorldCreator;
+import com.randomrun.features.speedrun.WorldCreator;
 import com.randomrun.infrastructure.util.LanguageManager;
-import com.randomrun.network.ConnectionStatus;
-import com.randomrun.ui.screen.loading.LoadingTips;
-import com.randomrun.ui.theme.Theme;
+import com.randomrun.network.WebRtcTransport.ConnectionStatus;
 import com.randomrun.ui.util.GuiText;
 import com.randomrun.ui.util.Logo;
+import com.randomrun.ui.util.Theme;
 import com.randomrun.ui.util.Ui;
+
+import java.util.concurrent.ThreadLocalRandom;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -215,8 +216,11 @@ public final class LoadingCurtain {
 
         Minecraft client = Minecraft.getInstance();
         Font font = client.font;
-        int width = graphics.guiWidth();
-        int height = graphics.guiHeight();
+        float canvas = com.randomrun.ui.util.UiScale.factor();
+        int width = com.randomrun.ui.util.UiScale.width();
+        int height = com.randomrun.ui.util.UiScale.height();
+        graphics.pose().pushMatrix();
+        graphics.pose().scale(canvas, canvas);
         int edge = Math.round(height * cover);
         int offset = edge - height;
         Theme theme = Theme.current();
@@ -225,8 +229,15 @@ public final class LoadingCurtain {
         graphics.pose().pushMatrix();
         graphics.pose().translate(0, offset);
 
-        int base = Ui.lerp(0xFF000000 | theme.bgBottom, 0xFF000000, 0.55f);
-        graphics.fill(0, 0, width, height, base);
+        // Same backdrop as the mod's menus: theme gradient with drifting dust.
+        int middle = height / 2;
+        graphics.fillGradient(0, 0, width, middle, 0xFF000000 | theme.bgTop, 0xFF000000 | theme.bgMid);
+        graphics.fillGradient(0, middle, width, height, 0xFF000000 | theme.bgMid, 0xFF000000 | theme.bgBottom);
+        graphics.fillGradient(0, 0, width, Math.min(60, height), 0xFF000000, 0x00000000);
+        com.randomrun.ui.widget.GlobalParticleSystem particles = com.randomrun.ui.widget.GlobalParticleSystem.getInstance();
+        particles.updateScreenSize(width, height);
+        if (!(client.gui.screen() instanceof com.randomrun.ui.screen.main.AbstractRandomRunScreen)) particles.update(dt);
+        particles.extractRenderState(graphics);
         if (cover < 0.999f) graphics.fill(0, height - 2, width, height, 0xFF000000 | theme.accent);
 
         float contentAlpha = Math.clamp((cover - 0.35f) / 0.5f, 0f, 1f);
@@ -234,6 +245,7 @@ public final class LoadingCurtain {
 
         graphics.pose().popMatrix();
         if (edge < height) graphics.fillGradient(0, edge, width, Math.min(height, edge + 14), 0x99000000, 0x00000000);
+        graphics.pose().popMatrix();
     }
 
     private static void extractContent(GuiGraphicsExtractor graphics, Font font, int width, int height, float alpha, Theme theme) {
@@ -262,6 +274,31 @@ public final class LoadingCurtain {
         if (screen instanceof LevelLoadingScreen || mode == Mode.GUEST) {
             Component hint = LanguageManager.text(mode == Mode.GUEST ? "randomrun.curtain.hint.leave" : "randomrun.curtain.hint.cancel");
             GuiText.text(graphics, font, hint, 8, height - 14, Ui.argb(0x888888, alpha), false);
+        }
+    }
+
+    public static final class LoadingTips {
+        private static final int TIP_COUNT = 24;
+        private static final long TIP_REFRESH_INTERVAL = 8000;
+        private static String currentTip = "";
+        private static long lastChangeTime;
+        private static int lastIndex = -1;
+
+        private LoadingTips() {}
+
+        public static void refreshTip() {
+            int index;
+            do index = 1 + ThreadLocalRandom.current().nextInt(TIP_COUNT); while (index == lastIndex && TIP_COUNT > 1);
+            lastIndex = index;
+            String key = "randomrun.loading.tip." + index;
+            String text = LanguageManager.translate(key);
+            currentTip = text.equals(key) ? "" : LanguageManager.translate("randomrun.loading.tip.prefix") + " §f" + text;
+            lastChangeTime = System.currentTimeMillis();
+        }
+
+        public static String getCurrentTip() {
+            if (currentTip.isEmpty() || System.currentTimeMillis() - lastChangeTime > TIP_REFRESH_INTERVAL) refreshTip();
+            return currentTip;
         }
     }
 }

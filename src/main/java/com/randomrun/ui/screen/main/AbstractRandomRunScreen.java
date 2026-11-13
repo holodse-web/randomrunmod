@@ -1,15 +1,15 @@
 package com.randomrun.ui.screen.main;
 
-
-import com.randomrun.ui.widget.overlay.OverlayWidgets.ModInfoWidget;
-import com.randomrun.ui.background.BackgroundRenderer;
+import com.randomrun.ui.util.BackgroundRenderer;
 import com.randomrun.ui.widget.GlobalParticleSystem;
+import com.randomrun.ui.widget.OverlayWidgets.ModInfoWidget;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-public abstract class AbstractRandomRunScreen extends Screen {
+public abstract class AbstractRandomRunScreen extends Screen implements com.randomrun.ui.util.UiScale.Scaled {
     protected ModInfoWidget modInfoWidget;
     private static final float TRANSITION_MS = 340f;
     private long shownAt;
@@ -43,7 +43,7 @@ public abstract class AbstractRandomRunScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        setupGuiScale();
+        // Size comes from UiScale: the same layout on every resolution and GUI scale.
         initWidgets();
     }
 
@@ -132,7 +132,6 @@ public abstract class AbstractRandomRunScreen extends Screen {
     @Override
     public void removed() {
         super.removed();
-        restoreGuiScale();
     }
 
     private void restoreGuiScale() {

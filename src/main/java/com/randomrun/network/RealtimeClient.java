@@ -1,11 +1,12 @@
 package com.randomrun.network;
 
+import com.randomrun.network.HttpClient.BackendConfig;
+
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.net.http.WebSocket;
 import java.nio.ByteBuffer;
 import java.time.Duration;
-import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -63,6 +64,7 @@ public final class RealtimeClient {
     public Subscription subscribeSignals(Consumer<JsonObject> listener) { signalListeners.add(listener); connect(); return () -> signalListeners.remove(listener); }
     public synchronized void connect() {
         if (socket != null || connecting || !BackendSession.isAuthenticated()) return;
+        if (!com.randomrun.infrastructure.RandomRunMod.getInstance().getConfig().isOnlineMode()) return;
         connecting = true;
         if (retryTask != null) retryTask.cancel(false);
         long attempt = generation.incrementAndGet();

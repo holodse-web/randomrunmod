@@ -1,8 +1,8 @@
 package com.randomrun.features.battle.manager;
 
-
 import com.randomrun.features.battle.manager.BattleSupport.BattleRoomUpdates;
 import com.randomrun.network.WebRtcTransport;
+
 import java.net.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -63,7 +63,7 @@ public final class BattleNetworkManager {
                 String host = endpoint.getAddress().getHostAddress();
                 String address = (host.contains(":") ? "[" + host + "]" : host) + ":" + endpoint.getPort();
                 var client = Minecraft.getInstance();
-                com.randomrun.network.ConnectionStatus.set(com.randomrun.network.ConnectionStatus.Stage.JOINING);
+                com.randomrun.network.WebRtcTransport.ConnectionStatus.set(com.randomrun.network.WebRtcTransport.ConnectionStatus.Stage.JOINING);
                 ConnectScreen.startConnecting(client.gui.screen(), client, ServerAddress.parseString(address), new ServerData("RandomRun", address, ServerData.Type.OTHER), false, null);
                 state.set(ConnectionState.CONNECTED);
             });

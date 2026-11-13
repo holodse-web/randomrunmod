@@ -1,13 +1,14 @@
 package com.randomrun.features.battle.manager;
 
-import com.google.gson.Gson;
-import com.randomrun.features.battle.screen.lobby.LobbyScreen;
-import com.randomrun.features.battle.screen.room.RoomWaitingScreen;
+import com.randomrun.features.battle.screen.LobbyScreen;
+import com.randomrun.features.battle.screen.RoomWaitingScreen;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.network.BackendSession;
 import com.randomrun.network.HttpClient;
 import com.randomrun.network.RealtimeClient;
 import com.randomrun.ui.widget.GlobalParticleSystem;
+
+import com.google.gson.Gson;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -68,7 +69,7 @@ public final class BattleSupport {
         public void cleanupOnShutdown(String code, BattleRoom room, boolean host) { notifyDeparture(code, room, host, ""); }
     }
 
-    public static enum RoomJoinResult {
+    public enum RoomJoinResult {
         JOINED(null),
         INVALID_PASSWORD("password"),
         ROOM_FULL("full"),

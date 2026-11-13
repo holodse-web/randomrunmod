@@ -1,12 +1,12 @@
 package com.randomrun.ui.screen.settings;
 
-
-import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
+import com.randomrun.infrastructure.ModConfig;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.config.ModConfig;
 import com.randomrun.infrastructure.util.LanguageManager;
-import com.randomrun.ui.theme.Theme;
+import com.randomrun.ui.util.Theme;
+import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
 import com.randomrun.ui.widget.styled.OptionRow;
+
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;

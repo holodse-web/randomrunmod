@@ -1,8 +1,9 @@
 package com.randomrun.ui.widget.styled;
 
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.ui.theme.ButtonPalette;
 import com.randomrun.ui.util.GuiQuadBatch;
+import com.randomrun.ui.util.Theme.ButtonPalette;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -138,8 +139,8 @@ public abstract class AbstractStyledButton extends Button {
     protected void renderBorderWithCursorEffect(GuiGraphicsExtractor context, int left, int top, int right, int bottom, 
                                                 int baseColor, int cursorColor, float alpha) {
         Minecraft mc = Minecraft.getInstance();
-        double mouseX = mc.mouseHandler.xpos() * mc.getWindow().getGuiScaledWidth() / mc.getWindow().getScreenWidth();
-        double mouseY = mc.mouseHandler.ypos() * mc.getWindow().getGuiScaledHeight() / mc.getWindow().getScreenHeight();
+        double mouseX = net.minecraft.client.MouseHandler.getScaledXPos(mc.getWindow(), mc.mouseHandler.xpos());
+        double mouseY = net.minecraft.client.MouseHandler.getScaledYPos(mc.getWindow(), mc.mouseHandler.ypos());
         GuiQuadBatch.Builder border = new GuiQuadBatch.Builder(2 * (right - left + bottom - top));
         
         renderBorderSegment(border, left, top, right, top + BORDER_THICKNESS,

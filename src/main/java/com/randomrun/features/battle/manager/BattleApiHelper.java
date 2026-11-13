@@ -1,12 +1,11 @@
 package com.randomrun.features.battle.manager;
 
-
 import com.randomrun.features.battle.manager.BattleSupport.BattleConstants;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.network.HttpClient;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.util.Map;
 import java.util.concurrent.*;
 

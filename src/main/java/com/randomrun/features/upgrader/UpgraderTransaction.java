@@ -1,14 +1,15 @@
 package com.randomrun.features.upgrader;
 
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Item;
+import com.randomrun.features.upgrader.UpgraderMath.UpgraderCompensation;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Collections;
-import java.util.IdentityHashMap;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 public final class UpgraderTransaction {
     public static final int INVENTORY_SLOTS = 36;

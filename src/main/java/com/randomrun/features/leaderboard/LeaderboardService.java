@@ -1,14 +1,14 @@
 package com.randomrun.features.leaderboard;
 
+import com.randomrun.features.leaderboard.LeaderboardEntry.LatestRunEntry;
+import com.randomrun.infrastructure.RandomRunMod;
+import com.randomrun.infrastructure.util.IdCompressor;
+import com.randomrun.network.HttpClient;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.randomrun.network.HttpClient;
-import com.randomrun.core.history.Run;
-import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.util.IdCompressor;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;

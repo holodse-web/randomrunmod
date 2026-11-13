@@ -1,14 +1,14 @@
 package com.randomrun.ui.widget;
 
-
-import com.randomrun.ui.util.Previews.ItemPreviewRenderer;
-import com.randomrun.ui.util.Previews.PreviewItems;
-import com.randomrun.features.challenges.classic.data.ItemDifficulty;
+import com.randomrun.features.speedrun.ItemDifficulty;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.ui.theme.Theme;
 import com.randomrun.ui.util.GuiQuadBatch;
 import com.randomrun.ui.util.GuiText;
+import com.randomrun.ui.util.Previews.ItemPreviewRenderer;
+import com.randomrun.ui.util.Previews.PreviewItems;
+import com.randomrun.ui.util.Theme;
 import com.randomrun.ui.util.Ui;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

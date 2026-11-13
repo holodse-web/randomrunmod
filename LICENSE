@@ -3,3 +3,7 @@ All rights reserved.
 
 The software is provided "as is", without warranty of any kind.
 Redistribution, modification, or use of this software without explicit permission from the author is prohibited.
+
+Third-party components bundled with the software (see THIRD_PARTY_NOTICES.md) are licensed under their own
+licenses. This license does not apply to them and does not restrict any right those licenses grant, including the
+right to modify, replace and reverse-engineer the LGPL-licensed parts (FFmpeg inside the bundled WebRTC native libraries).

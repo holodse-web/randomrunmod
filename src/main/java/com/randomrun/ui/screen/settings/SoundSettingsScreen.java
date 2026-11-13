@@ -1,11 +1,12 @@
 package com.randomrun.ui.screen.settings;
 
+import com.randomrun.infrastructure.ModConfig;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.config.ModConfig;
 import com.randomrun.infrastructure.util.LanguageManager;
 import com.randomrun.ui.util.Ui;
 import com.randomrun.ui.widget.styled.OptionRow;
 import com.randomrun.ui.widget.styled.SliderDefault;
+
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.sounds.SoundEvents;
 

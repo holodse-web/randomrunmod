@@ -1,5 +1,15 @@
 # Changelog
 
+## 27.2 — Minecraft 26.3
+
+- First launch asks whether to play online or offline. Nothing is sent to the RandomRun servers until you agree; you can switch at any time in the mod menu.
+- The login screen checks your nickname with the server only after you chose to play online.
+- World auto-delete only removes worlds the mod created for a run; normal saves are never touched, whatever their folder is called.
+- No more code obfuscation.
+- Third-party notices (WebRTC, LGPL FFmpeg) are included in the jar: see THIRD_PARTY_NOTICES.md.
+- Smoother floating item preview in menus; quieter victory sound.
+- Fully compatible with 27.1 players: rooms, battles and the online service work across both versions.
+
 ## 27.1 — Minecraft 26.3
 
 - Shared-world rooms use built-in WebRTC: e4mc and Radmin VPN are no longer required. Separate worlds with the same seed are also available.

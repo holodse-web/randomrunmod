@@ -1,7 +1,8 @@
 package com.randomrun.ui.widget.styled;
 
-import com.randomrun.ui.theme.ButtonPalette;
 import com.randomrun.ui.util.GuiQuadBatch;
+import com.randomrun.ui.util.Theme.ButtonPalette;
+
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
@@ -154,7 +155,7 @@ public final class Buttons {
         }
 
         public ButtonRainbow setColors(int baseColor, int hoverColor) {
-            setPalette(com.randomrun.ui.theme.ButtonPalette.of(baseColor, hoverColor));
+            setPalette(com.randomrun.ui.util.Theme.ButtonPalette.of(baseColor, hoverColor));
             return this;
         }
 

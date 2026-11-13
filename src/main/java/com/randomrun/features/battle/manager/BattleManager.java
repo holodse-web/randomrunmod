@@ -1,16 +1,15 @@
 package com.randomrun.features.battle.manager;
 
-
+import com.randomrun.core.run.RunDataManager;
 import com.randomrun.features.battle.manager.BattleSupport.BattleConstants;
 import com.randomrun.features.battle.manager.BattleSupport.BattleRoomUpdates;
 import com.randomrun.features.battle.manager.BattleSupport.DisconnectHandler;
 import com.randomrun.features.battle.manager.BattleSupport.RoomJoinResult;
-import com.google.gson.JsonElement;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.util.CompactLogger;
 import com.randomrun.infrastructure.util.IdCompressor;
-import com.randomrun.infrastructure.data.RunDataManager;
 import com.randomrun.network.HttpClient;
+
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -99,10 +98,15 @@ public class BattleManager {
 
     public CompletableFuture<String> createRoom(String playerName, Item targetItem, boolean isSharedWorld,
                                                  boolean isPrivate, String password, int maxPlayers, String creationMode, boolean randomDrop, boolean upgrader) {
+        return createRoom(playerName, targetItem, isSharedWorld, isPrivate, password, maxPlayers, creationMode, randomDrop, upgrader, false);
+    }
+
+    public CompletableFuture<String> createRoom(String playerName, Item targetItem, boolean isSharedWorld,
+                                                 boolean isPrivate, String password, int maxPlayers, String creationMode, boolean randomDrop, boolean upgrader, boolean voice) {
         resetForNewGame();
         final long generation = lifecycleGeneration;
         return roomLifecycle.createRoom(playerName, targetItem, isSharedWorld, isPrivate, password,
-            maxPlayers, creationMode, randomDrop, upgrader, (room, code, host) -> {
+            maxPlayers, creationMode, randomDrop, upgrader, voice, (room, code, host) -> {
                 synchronized (roomLock) {
                     if (generation != lifecycleGeneration) return;
                     setupRoom(room, code, host);
@@ -419,7 +423,7 @@ public class BattleManager {
         }
 
         if (!isHost && oldStatus == BattleRoom.RoomStatus.WAITING && newStatus == BattleRoom.RoomStatus.LOADING) {
-            com.randomrun.network.ConnectionStatus.set(com.randomrun.network.ConnectionStatus.Stage.WAITING_HOST);
+            com.randomrun.network.WebRtcTransport.ConnectionStatus.set(com.randomrun.network.WebRtcTransport.ConnectionStatus.Stage.WAITING_HOST);
             com.randomrun.ui.overlay.LoadingCurtain.close(com.randomrun.ui.overlay.LoadingCurtain.Mode.GUEST);
             if (updatedRoom.isSharedWorld()) com.randomrun.network.WebRtcTransport.getInstance().prefetch();
             else stateController.createOwnWorld(updatedRoom);
@@ -514,7 +518,7 @@ public class BattleManager {
                         freezePlayer();
                     }
                 }
-                var sessions = com.randomrun.core.session.RunSessionManager.getInstance();
+                var sessions = com.randomrun.core.run.RunSessionManager.getInstance();
                 var session = sessions.getCurrentSession();
                 if (roomItem != null && (session == null || session.getTargetItem() != roomItem
                         || !session.isBattle() || !Objects.equals(session.getBattleRoomId(), roomId)
@@ -572,9 +576,9 @@ public class BattleManager {
         cancelAllTasks();
         resetAllFlags();
 
-        com.randomrun.features.challenges.classic.world.WorldCreator.clearPendingData();
+        com.randomrun.features.speedrun.WorldCreator.clearPendingData();
 
-        com.randomrun.core.session.RunSessionManager.getInstance().cancelRun();
+        com.randomrun.core.run.RunSessionManager.getInstance().cancelRun();
 
         if (scheduler != null && !scheduler.isShutdown()) {
             scheduler.shutdownNow();
@@ -731,7 +735,7 @@ public class BattleManager {
         }
         boolean allowUnobtainable = com.randomrun.infrastructure.RandomRunMod.getInstance()
             .getConfig().isAllowUnobtainableItems();
-        java.util.List<Item> allItems = com.randomrun.features.challenges.classic.data.ItemDifficulty.getAllItems(allowUnobtainable);
+        java.util.List<Item> allItems = com.randomrun.features.speedrun.ItemDifficulty.getAllItems(allowUnobtainable);
         if (allItems.isEmpty()) return CompletableFuture.completedFuture(null);
         Item randomItem = allItems.get(new java.util.Random().nextInt(allItems.size()));
         String itemId = IdCompressor.compress(BuiltInRegistries.ITEM.getKey(randomItem).toString());
@@ -814,7 +818,7 @@ public class BattleManager {
     private void sendPlayerMessage(String message) {
         Minecraft.getInstance().execute(() -> {
             if (Minecraft.getInstance().player != null) {
-                com.randomrun.infrastructure.util.ClientMessages.send(Minecraft.getInstance().player, Component.literal(message), false);
+                com.randomrun.infrastructure.util.CompactLogger.ClientMessages.send(Minecraft.getInstance().player, Component.literal(message), false);
             }
         });
     }

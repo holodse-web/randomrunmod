@@ -1,37 +1,36 @@
 package com.randomrun.ui.screen.main;
 
-
-
-import com.randomrun.ui.widget.overlay.OverlayWidgets.LanguageDropdownWidget;
-import com.randomrun.ui.widget.overlay.OverlayWidgets.ThemeSwitchWidget;
-import com.randomrun.ui.widget.styled.Buttons.ButtonGreen;
-import com.randomrun.ui.widget.styled.Buttons.ButtonMenu;
-import com.randomrun.ui.widget.styled.Buttons.ButtonYellow;
-import com.randomrun.core.init.CoreInitializer;
-import com.randomrun.core.profile.PlayerProfile;
-import com.randomrun.features.battle.screen.lobby.LobbyScreen;
-import com.randomrun.features.battle.screen.room.RoomHostScreenCreateImproved;
-import com.randomrun.features.challenges.classic.screen.SpeedrunScreen;
-import com.randomrun.features.challenges.classic.world.WorldCreator;
-import com.randomrun.features.leaderboard.LatestRunEntry;
+import com.randomrun.core.data.DataSyncService.CoreInitializer;
+import com.randomrun.core.data.PlayerProfile;
+import com.randomrun.features.battle.screen.LobbyScreen;
+import com.randomrun.features.battle.screen.RoomHostScreenCreateImproved;
+import com.randomrun.features.leaderboard.LeaderboardEntry.LatestRunEntry;
 import com.randomrun.features.leaderboard.LeaderboardService;
+import com.randomrun.features.speedrun.SpeedrunScreen;
+import com.randomrun.features.speedrun.WorldCreator;
+import com.randomrun.infrastructure.ModConfig;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.config.ModConfig;
 import com.randomrun.infrastructure.security.ModScannerService;
 import com.randomrun.infrastructure.util.CompactLogger;
 import com.randomrun.infrastructure.util.LanguageManager;
 import com.randomrun.network.BackendSession;
 import com.randomrun.network.RealtimeClient;
-import com.randomrun.ui.screen.auth.ProfileAuthScreen;
-import com.randomrun.ui.screen.info.ModBlockScreen;
-import com.randomrun.ui.screen.info.TrustScoreInfoScreen;
+import com.randomrun.ui.screen.account.ModBlockScreen;
+import com.randomrun.ui.screen.account.ProfileAuthScreen;
+import com.randomrun.ui.screen.account.TrustScoreInfoScreen;
 import com.randomrun.ui.screen.settings.SettingsScreen;
 import com.randomrun.ui.util.GuiText;
-import com.randomrun.ui.util.Heads;
 import com.randomrun.ui.util.Logo;
+import com.randomrun.ui.util.Previews.Heads;
 import com.randomrun.ui.util.Ui;
-import com.randomrun.ui.widget.overlay.ToggleSwitchWidget;
-import com.randomrun.ui.widget.social.FriendsPanel;
+import com.randomrun.ui.widget.FriendsPanel;
+import com.randomrun.ui.widget.OverlayWidgets.LanguageDropdownWidget;
+import com.randomrun.ui.widget.OverlayWidgets.ThemeSwitchWidget;
+import com.randomrun.ui.widget.ToggleSwitchWidget;
+import com.randomrun.ui.widget.styled.Buttons.ButtonGreen;
+import com.randomrun.ui.widget.styled.Buttons.ButtonMenu;
+import com.randomrun.ui.widget.styled.Buttons.ButtonYellow;
+
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -75,9 +74,14 @@ public class MainModScreen extends AbstractRandomRunScreen {
 
     @Override
     protected void init() {
+        // First launch: ask whether the mod may go online before anything is sent anywhere.
+        if (!RandomRunMod.getInstance().getConfig().isPrivacyChoiceMade()) {
+            minecraft.gui.setScreen(new PrivacyConsentScreen(parent));
+            return;
+        }
         if (online()) {
-            com.randomrun.infrastructure.version.VersionGate.start(false);
-            if (com.randomrun.infrastructure.version.VersionGate.state() == com.randomrun.infrastructure.version.VersionGate.State.UPDATE_REQUIRED) {
+            com.randomrun.network.VersionGate.start(false);
+            if (com.randomrun.network.VersionGate.state() == com.randomrun.network.VersionGate.State.UPDATE_REQUIRED) {
                 minecraft.gui.setScreen(new UpdateRequiredScreen());
                 return;
             }
@@ -85,7 +89,7 @@ public class MainModScreen extends AbstractRandomRunScreen {
         String playerName = BackendSession.playerName();
         String banned = BackendSession.takeBanned();
         if (banned != null) {
-            minecraft.gui.setScreen(new com.randomrun.ui.screen.info.BanScreen(parent, banned, com.randomrun.ui.screen.info.BanScreen.Kind.BANNED, this));
+            minecraft.gui.setScreen(new com.randomrun.ui.screen.account.BanScreen(parent, banned, com.randomrun.ui.screen.account.BanScreen.Kind.BANNED, this));
             return;
         }
         ModScannerService scanner = ModScannerService.getInstance();
@@ -199,11 +203,11 @@ public class MainModScreen extends AbstractRandomRunScreen {
         int buttonY = contentBottom() - 22;
         int lpLeft = 15, lpRight = contentLeft() - 20;
         friendsPanel = new FriendsPanel(this, FriendsPanel.Context.MENU,
-            () -> { if (com.randomrun.infrastructure.version.VersionGate.requireOnline()) minecraft.gui.setScreen(new RoomHostScreenCreateImproved(new LobbyScreen(this), null)); });
+            () -> { if (com.randomrun.network.VersionGate.requireOnline()) minecraft.gui.setScreen(new RoomHostScreenCreateImproved(new LobbyScreen(this), null)); });
         friendsPanel.layout(lpLeft, contentTop(), lpRight, contentBottom(), this::addRenderableWidget);
         addRenderableWidget(new ButtonGreen(lpLeft + 4, buttonY, lpRight - lpLeft - 8, 18,
             LanguageManager.text("randomrun.main.lobby"),
-            button -> { if (com.randomrun.infrastructure.version.VersionGate.requireOnline()) minecraft.gui.setScreen(new LobbyScreen(this)); }));
+            button -> { if (com.randomrun.network.VersionGate.requireOnline()) minecraft.gui.setScreen(new LobbyScreen(this)); }));
         int lbLeft = contentRight() + 20, lbRight = width - 15;
         addRenderableWidget(new ButtonYellow(lbLeft + 4, buttonY, lbRight - lbLeft - 8, 18,
             LanguageManager.text("randomrun.main.leaderboard_title"),
@@ -221,7 +225,7 @@ public class MainModScreen extends AbstractRandomRunScreen {
         ModConfig config = RandomRunMod.getInstance().getConfig();
         if (!config.isOnlineMode()) {
             enableOnlineMode();
-            com.randomrun.infrastructure.version.VersionGate.start(true);
+            com.randomrun.network.VersionGate.start(true);
             return;
         }
         config.setOnlineMode(false);

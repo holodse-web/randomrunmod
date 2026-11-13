@@ -1,12 +1,11 @@
 package com.randomrun.features.battle.manager;
 
-
+import com.randomrun.core.run.RunDataManager;
 import com.randomrun.features.battle.manager.BattleSupport.BattleConstants;
-import com.google.gson.JsonObject;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.data.RunDataManager;
 import com.randomrun.infrastructure.util.IdCompressor;
-import com.randomrun.ui.screen.endgame.DefeatScreen;
+import com.randomrun.ui.screen.endgame.EndgameScreen.DefeatScreen;
+
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -152,7 +151,7 @@ public class BattleEventHandler {
         Minecraft.getInstance().execute(() -> {
             Item targetItem = BuiltInRegistries.ITEM.getValue(Identifier.parse(room.getTargetItem()));
             Minecraft.getInstance().gui.setScreen(
-                new com.randomrun.ui.screen.endgame.DrawScreen(targetItem, 0, finalReason));
+                new com.randomrun.ui.screen.endgame.EndgameScreen.DrawScreen(targetItem, 0, finalReason));
         });
     }
 
@@ -181,7 +180,7 @@ public class BattleEventHandler {
     private void showNormalVictory() {
         playSound(net.minecraft.sounds.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
 
-        com.randomrun.core.service.RunCompletionService.getInstance()
+        com.randomrun.core.run.RunCompletionService.getInstance()
             .completeWithSurvivorVictory()
             .thenAccept(record -> {
                 if (record == null) {
@@ -198,7 +197,7 @@ public class BattleEventHandler {
             return;
         }
 
-        com.randomrun.core.service.RunCompletionService.getInstance()
+        com.randomrun.core.run.RunCompletionService.getInstance()
             .completeWithDeath()
             .thenAccept(record -> {
                 if (record == null) {

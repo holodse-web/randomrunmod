@@ -1,8 +1,9 @@
 package com.randomrun.ui.widget.styled;
 
-import com.randomrun.ui.theme.Theme;
 import com.randomrun.ui.util.GuiText;
+import com.randomrun.ui.util.Theme;
 import com.randomrun.ui.util.Ui;
+
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;

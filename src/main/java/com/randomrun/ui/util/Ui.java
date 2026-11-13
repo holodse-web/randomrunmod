@@ -1,7 +1,7 @@
 package com.randomrun.ui.util;
 
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.ui.theme.Theme;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -83,7 +83,7 @@ public final class Ui {
     public static float reveal(int left, int top) {
         if (!RandomRunMod.getInstance().getConfig().isAnimationsEnabled()) return 1f;
         if (!(Minecraft.getInstance().gui.screen() instanceof com.randomrun.ui.screen.main.AbstractRandomRunScreen screen)) return 1f;
-        int width = Math.max(1, Minecraft.getInstance().getWindow().getGuiScaledWidth());
+        int width = Math.max(1, com.randomrun.ui.util.UiScale.width());
         long delay = 60L + (long) (Mth.clamp(left / (float) width, 0f, 1f) * 140f) + Mth.clamp(top, 0, 200) / 4L;
         return easeOut((System.currentTimeMillis() - screen.shownAt() - delay) / 520f);
     }
@@ -118,7 +118,7 @@ public final class Ui {
 
     public static void selectedItemCard(GuiGraphicsExtractor context, Font font, int left, int top, int right, int bottom,
                                         net.minecraft.world.item.Item item, boolean random, long selectedAt) {
-        com.randomrun.ui.theme.Theme theme = com.randomrun.ui.theme.Theme.current();
+        com.randomrun.ui.util.Theme theme = com.randomrun.ui.util.Theme.current();
         boolean empty = item == null && !random;
         int accent = random ? 0xFB923C : empty ? 0x71717A : theme.accent;
         card(context, left, top, right, bottom, accent, 1f);

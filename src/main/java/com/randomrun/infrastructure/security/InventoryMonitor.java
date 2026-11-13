@@ -1,8 +1,9 @@
 package com.randomrun.infrastructure.security;
 
-import com.randomrun.core.profile.PlayerProfile;
+import com.randomrun.core.data.PlayerProfile;
+import com.randomrun.core.run.RunDataManager;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.data.RunDataManager;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.Minecraft;
@@ -77,14 +78,14 @@ public class InventoryMonitor {
         
         PlayerProfile profile = PlayerProfile.get();
         if (profile != null) {
-            profile.applyTrustPenalty(-8, 
+            profile.applyTrustPenalty(PlayerProfile.PENALTY_CHEAT,
                 "Читерские предметы: " + violations.size());
             PlayerProfile.save();
         }
 
         Minecraft client = Minecraft.getInstance();
         if (client.player != null) {
-            com.randomrun.infrastructure.util.ClientMessages.send(client.player, com.randomrun.infrastructure.util.LanguageManager.text("randomrun.anticheat.items"), false);
+            com.randomrun.infrastructure.util.CompactLogger.ClientMessages.send(client.player, com.randomrun.infrastructure.util.LanguageManager.text("randomrun.anticheat.items"), false);
         }
 
         RandomRunMod.getInstance().getRunDataManager().failRun();

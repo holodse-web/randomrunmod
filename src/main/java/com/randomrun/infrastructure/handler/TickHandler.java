@@ -1,9 +1,10 @@
 package com.randomrun.infrastructure.handler;
 
+import com.randomrun.core.run.RunSessionManager;
+import com.randomrun.infrastructure.ModConfig;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.util.CompactLogger;
-import com.randomrun.infrastructure.config.ModConfig;
-import com.randomrun.core.session.RunSessionManager;
+
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;

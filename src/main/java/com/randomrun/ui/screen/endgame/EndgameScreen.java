@@ -1,33 +1,36 @@
 package com.randomrun.ui.screen.endgame;
 
-
-
-import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
-import com.randomrun.ui.util.Previews.ItemPreviewRenderer;
-import com.randomrun.ui.util.Previews.PreviewItems;
-import com.randomrun.core.history.Run;
-import com.randomrun.core.history.RunHistory;
-import com.randomrun.core.history.RunResult;
-import com.randomrun.core.profile.PlayerProfile;
-import com.randomrun.features.challenges.classic.world.WorldCreationRequest;
-import com.randomrun.features.challenges.classic.world.WorldCreator;
-import com.randomrun.features.challenges.classic.world.WorldMode;
+import com.randomrun.core.data.PlayerProfile;
+import com.randomrun.core.run.Run;
+import com.randomrun.core.run.Run.RunResult;
+import com.randomrun.core.run.RunDataManager;
+import com.randomrun.core.run.RunHistory;
+import com.randomrun.core.run.RunSession;
+import com.randomrun.core.run.RunSessionManager;
+import com.randomrun.features.battle.manager.BattleManager;
+import com.randomrun.features.speedrun.WorldCreationRequest;
+import com.randomrun.features.speedrun.WorldCreationRequest.WorldMode;
+import com.randomrun.features.speedrun.WorldCreator;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.data.RunDataManager;
 import com.randomrun.infrastructure.util.LanguageManager;
 import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
 import com.randomrun.ui.screen.main.MainModScreen;
-import com.randomrun.ui.theme.ButtonPalette;
 import com.randomrun.ui.util.GuiText;
+import com.randomrun.ui.util.Previews.ItemPreviewRenderer;
+import com.randomrun.ui.util.Previews.PreviewItems;
+import com.randomrun.ui.util.Theme.ButtonPalette;
 import com.randomrun.ui.util.Ui;
 import com.randomrun.ui.widget.GlobalParticleSystem;
 import com.randomrun.ui.widget.styled.AbstractStyledButton;
+import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
+
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -72,6 +75,8 @@ public abstract class EndgameScreen extends AbstractRandomRunScreen {
     protected volatile Component badge;
     protected volatile int badgeColor = 0xFFFFFF;
     protected volatile List<Component> notes = List.of();
+    /** Colour of the thin bar left of the notes; 0 = no bar. */
+    protected volatile int notesAccent;
 
     protected EndgameScreen(Kind kind, Item item, long time, boolean allowRetry, boolean upgrader, boolean randomDrop) {
         super(LanguageManager.text(kind.titleKey));
@@ -226,7 +231,8 @@ public abstract class EndgameScreen extends AbstractRandomRunScreen {
         if (alpha <= 0) return;
         int right = left + CARD_WIDTH;
         List<FormattedCharSequence> noteLines = new ArrayList<>();
-        for (Component note : notes) noteLines.addAll(font.split(note, CARD_WIDTH - 16));
+        int noteIndent = notesAccent != 0 ? 7 : 0;
+        for (Component note : notes) noteLines.addAll(font.split(note, CARD_WIDTH - 16 - noteIndent));
         int bottom = top + 44 + stats.size() * 12 + (badge != null ? 14 : 0) + (noteLines.isEmpty() ? 0 : noteLines.size() * 10 + 6) + 8;
         context.fill(left, top, right, bottom, Ui.argb(0x000000, 0.62f * alpha));
         context.fill(left, top, right, top + 2, Ui.argb(kind.color, alpha));
@@ -253,8 +259,11 @@ public abstract class EndgameScreen extends AbstractRandomRunScreen {
         }
         if (!noteLines.isEmpty()) {
             y += 6;
+            if (notesAccent != 0) {
+                context.fill(left + 8, y - 1, left + 10, y + noteLines.size() * 10 - 2, Ui.argb(notesAccent, 0.9f * alpha));
+            }
             for (FormattedCharSequence line : noteLines) {
-                GuiText.text(context, font, line, left + 8, y, Ui.argb(0xD4D4D8, alpha), false);
+                GuiText.text(context, font, line, left + 8 + noteIndent, y, Ui.argb(0xD4D4D8, alpha), false);
                 y += 10;
             }
         }
@@ -274,5 +283,71 @@ public abstract class EndgameScreen extends AbstractRandomRunScreen {
     public void removed() {
         GlobalParticleSystem.getInstance().setColorMode(GlobalParticleSystem.ColorMode.DEFAULT);
         super.removed();
+    }
+
+    public static class DrawScreen extends EndgameScreen {
+        private final String reason;
+
+        public DrawScreen(Item item, long time, String reason) {
+            super(Kind.DRAW, item, time, false, false, false);
+            this.reason = reason;
+        }
+
+        @Override
+        protected Component subtitle() {
+            return reason == null || reason.isEmpty() ? LanguageManager.text("randomrun.endgame.draw_subtitle") : Component.literal(reason);
+        }
+
+        @Override
+        protected void onOpened() {
+            if (minecraft.player != null) minecraft.player.playSound(SoundEvents.NOTE_BLOCK_PLING.value(), 1.0f, 0.5f);
+        }
+
+        @Override
+        protected void collectStats() {
+            var runs = history();
+            long best = bestVictory(runs);
+            if (best > 0) stats.add(new Stat(LanguageManager.text("randomrun.endgame.best"), Component.literal(com.randomrun.core.run.RunDataManager.formatTime(best)), 0xFFCC00));
+            addHistoryStats(runs, 0, 0);
+            addTrustStat();
+        }
+    }
+
+    public static class DefeatScreen extends EndgameScreen {
+        private final String reason;
+
+        public DefeatScreen(Item item, long time, String reason) {
+            this(item, time, reason, BattleManager.getInstance().isInBattle(), RunSessionManager.getInstance().getCurrentSession());
+        }
+
+        public DefeatScreen(Item item, long time) {
+            this(item, time, null);
+        }
+
+        private DefeatScreen(Item item, long time, String reason, boolean battle, RunSession session) {
+            super(Kind.DEFEAT, item, time, !battle,
+                !battle && (session != null ? session.isUpgrader() : WorldCreator.isLastCreatedUpgrader()),
+                session != null ? session.isRandomDrop() : WorldCreator.isLastCreatedRandomDrop());
+            this.reason = reason;
+        }
+
+        @Override
+        protected Component subtitle() {
+            return reason == null || reason.isEmpty() ? null : Component.literal(reason);
+        }
+
+        @Override
+        protected void onOpened() {
+            if (minecraft.player != null) minecraft.player.playSound(SoundEvents.WITHER_SPAWN, 0.6f, 1.0f);
+        }
+
+        @Override
+        protected void collectStats() {
+            var runs = history();
+            long best = bestVictory(runs);
+            if (best > 0) stats.add(new Stat(LanguageManager.text("randomrun.endgame.best"), Component.literal(com.randomrun.core.run.RunDataManager.formatTime(best)), 0xFFCC00));
+            addHistoryStats(runs, 0, 0);
+            addTrustStat();
+        }
     }
 }

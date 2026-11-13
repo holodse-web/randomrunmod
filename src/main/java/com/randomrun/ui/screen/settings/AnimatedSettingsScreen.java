@@ -1,6 +1,7 @@
 package com.randomrun.ui.screen.settings;
 
 import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -87,7 +88,7 @@ public abstract class AnimatedSettingsScreen extends AbstractRandomRunScreen {
         com.randomrun.ui.util.Ui.panel(context, x, y, right, bottom, fadeProgress);
         com.randomrun.ui.util.Ui.glowBorder(context, x, y, right, bottom, 2, 0xFFFFFF);
         com.randomrun.ui.util.GuiText.centeredText(context, font, title, width / 2, y + 10, com.randomrun.ui.util.Ui.argb(0xFFFFFF, fadeProgress));
-        com.randomrun.ui.util.Ui.divider(context, x + 12, right - 12, y + 24, com.randomrun.ui.theme.Theme.current().border, fadeProgress);
+        com.randomrun.ui.util.Ui.divider(context, x + 12, right - 12, y + 24, com.randomrun.ui.util.Theme.current().border, fadeProgress);
         renderWidgetContent(context, x, y, fadeProgress);
     }
 

@@ -2,7 +2,7 @@
 
 <p align="center"><a href="README.ru.md">Русская версия</a> · <a href="https://t.me/rrmnetwork">Telegram</a> · <a href="CHANGELOG.md">Changelog</a></p>
 
-A Fabric client mod for Minecraft **26.3**, Java **25+**, mod version **27.1**. Obtain a random item as quickly as possible, alone or in a room with friends.
+A Fabric client mod for Minecraft **26.3**, Java **25+**, mod version **27.2**. Obtain a random item as quickly as possible, alone or in a room with friends.
 
 ## Playing
 
@@ -22,8 +22,8 @@ A Fabric client mod for Minecraft **26.3**, Java **25+**, mod version **27.1**. 
 ## Installation
 
 1. Install Minecraft **26.3**, Fabric Loader **0.19.5+**, Java **25+**, and Fabric API for 26.3.
-2. Put `RandomRun-26.3Fabric-27.1.jar` in `mods` and remove older RandomRun jars.
-3. Use the same mod version on every player's client. WebRTC is bundled for Windows x64, Linux x64 and macOS (Intel and Apple Silicon); e4mc and a VPN are not required.
+2. Put `RandomRun-26.3Fabric-27.2.jar` in `mods` and remove older RandomRun jars.
+3. Versions 27.1 and 27.2 can play together; for anything older, use the same version on every client. WebRTC is bundled for Windows x64, Linux x64 and macOS (Intel and Apple Silicon); e4mc and a VPN are not required.
 
 ## Development
 
@@ -31,7 +31,6 @@ Requires Java 25, Node.js 22+ and npm.
 
 ```powershell
 .\gradlew.bat build
-.\gradlew.bat obfuscatedJar
 cd server
 npm ci
 npm run dev
@@ -39,7 +38,9 @@ npm run dev
 
 For a local Minecraft client set JVM property `-Drandomrun.api=http://127.0.0.1:8787`. The packaged API address is in `src/main/resources/randomrun-online.json`; remote overrides require HTTPS.
 
-Jars: `build/libs` (plain), `build/obfuscated/release` (obfuscated). The crash mapping in `build/obfuscated` is private: do not distribute it. Build tasks do not publish releases.
+The mod jar is in `build/libs` (no obfuscation). `build-release.ps1` copies it to `release` and adds its fingerprint to `server/src/mod-hashes.json`. Build tasks do not publish releases.
+
+Bundled third-party components and their licenses (WebRTC with LGPL FFmpeg): see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 The Upgrader catalog is regenerated with `python tools/upgrader/generate_values.py C:/path/to/minecraft-26.3-client.jar`. Its resource is `src/main/resources/assets/randomrun/upgrader_values.json`; audits go to `build/reports/upgrader`.
 

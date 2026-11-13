@@ -1,6 +1,5 @@
 package com.randomrun.ui.util;
 
-import com.randomrun.ui.theme.Theme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;

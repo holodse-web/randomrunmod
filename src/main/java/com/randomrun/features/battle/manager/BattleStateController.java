@@ -1,11 +1,11 @@
 package com.randomrun.features.battle.manager;
 
-
+import com.randomrun.core.run.RunDataManager;
 import com.randomrun.features.battle.manager.BattleSupport.BattleConstants;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.data.RunDataManager;
 import com.randomrun.infrastructure.util.CompactLogger;
 import com.randomrun.infrastructure.util.IdCompressor;
+
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
@@ -29,7 +29,7 @@ public class BattleStateController {
     private final AtomicBoolean waitingForWorldLoad = new AtomicBoolean(false);
     private final AtomicBoolean isFrozen = new AtomicBoolean(false);
     private final AtomicBoolean worldCreationInitiated = new AtomicBoolean(false);
-    private final AtomicReference<com.randomrun.core.session.RunSession> scheduledSession = new AtomicReference<>();
+    private final AtomicReference<com.randomrun.core.run.RunSession> scheduledSession = new AtomicReference<>();
     private volatile boolean countdownCancelled = false;
     private ScheduledFuture<?> countdownTask;
     private ScheduledFuture<?> unfreezeTask;
@@ -46,14 +46,14 @@ public class BattleStateController {
     public boolean isWaitingForWorldLoad() { return waitingForWorldLoad.get(); }
     public boolean isFrozen() { return isFrozen.get(); }
 
-    public static com.randomrun.features.challenges.classic.world.WorldCreationRequest createWorldRequest(BattleRoom room) {
+    public static com.randomrun.features.speedrun.WorldCreationRequest createWorldRequest(BattleRoom room) {
         Objects.requireNonNull(room, "room");
         String targetId = IdCompressor.decompress(room.getTargetItem());
         Item target = targetId == null || targetId.isEmpty() ? null
             : BuiltInRegistries.ITEM.getValue(Identifier.parse(targetId));
-        return new com.randomrun.features.challenges.classic.world.WorldCreationRequest.Builder()
+        return new com.randomrun.features.speedrun.WorldCreationRequest.Builder()
             .targetItem(target).seed(room.getSeed())
-            .mode(com.randomrun.features.challenges.classic.world.WorldMode.STANDARD)
+            .mode(com.randomrun.features.speedrun.WorldCreationRequest.WorldMode.STANDARD)
             .randomDrop(room.isRandomDrop()).upgrader(room.isUpgrader()).build();
     }
     
@@ -95,7 +95,7 @@ public class BattleStateController {
         client.execute(() -> {
             if (!worldCreationInitiated.compareAndSet(false, true)) return;
             waitingForWorldLoad.set(true);
-            com.randomrun.features.challenges.classic.world.WorldCreator.getInstance().createWorld(createWorldRequest(room));
+            com.randomrun.features.speedrun.WorldCreator.getInstance().createWorld(createWorldRequest(room));
         });
     }
 
@@ -228,8 +228,8 @@ public class BattleStateController {
     }
 
     private void scheduleStart(BattleRoom room, Runnable onUnfreeze, int attempt) {
-        var session = com.randomrun.core.session.RunSessionManager.getInstance().getCurrentSession();
-        if (session == null || session.getStatus() != com.randomrun.core.session.RunStatus.FROZEN) {
+        var session = com.randomrun.core.run.RunSessionManager.getInstance().getCurrentSession();
+        if (session == null || session.getStatus() != com.randomrun.core.run.RunSession.RunStatus.FROZEN) {
             if (attempt < 300 && scheduler != null && !scheduler.isShutdown()) {
                 scheduler.schedule(() -> Minecraft.getInstance().execute(() -> {
                     if (!countdownCancelled) scheduleStart(room, onUnfreeze, attempt + 1);
@@ -250,7 +250,7 @@ public class BattleStateController {
             if (countdownCancelled) return;
             
             Minecraft.getInstance().execute(() -> {
-                if (countdownCancelled || com.randomrun.core.session.RunSessionManager.getInstance().getCurrentSession() != session) return;
+                if (countdownCancelled || com.randomrun.core.run.RunSessionManager.getInstance().getCurrentSession() != session) return;
                 onUnfreeze.run();
                 healAllPlayers();
                 
@@ -261,7 +261,7 @@ public class BattleStateController {
                 if (runManager != null) {
                     runManager.unfreezeRun();
                 }
-                com.randomrun.core.session.RunSessionManager.getInstance().unfreezeRun();
+                com.randomrun.core.run.RunSessionManager.getInstance().unfreezeRun();
             });
         }, delayToStart, TimeUnit.MILLISECONDS);
     }
@@ -402,7 +402,7 @@ public class BattleStateController {
         if (client != null) {
             client.execute(() -> {
                 if (client.player != null) {
-                    com.randomrun.infrastructure.util.ClientMessages.send(client.player, Component.literal(message), actionBar);
+                    com.randomrun.infrastructure.util.CompactLogger.ClientMessages.send(client.player, Component.literal(message), actionBar);
                 }
             });
         }

@@ -2,6 +2,14 @@ import { DurableObject } from 'cloudflare:workers';
 import MOD_HASHES from './mod-hashes.json';
 import { ApiError, fail, randomToken, digest, constantEqual, username, password, passwordHash, body, json, validTarget } from './security.mjs';
 
+/** Trust Score: new accounts start below the leaderboard bar and earn it by playing honestly. */
+const TRUST = Object.freeze({
+  start: 20, max: 200, threshold: 30, dailyCap: 15, minRunMs: 60000,
+  cleanRun: 1, victory: 3, battleVictory: 5,
+  penalties: Object.freeze({ CHEAT_MOD: 25, CREATIVE: 10, LAN: 5, UNTRUSTED_RUN: 5 })
+});
+const clampTrust = value => Math.max(0, Math.min(TRUST.max, Math.round(value)));
+
 const SESSION_MS = 12 * 60 * 60 * 1000;
 const ROOM_MS = 6 * 60 * 60 * 1000;
 const dictionary = () => Object.create(null);
@@ -84,7 +92,9 @@ export class RandomRunHub extends DurableObject {
   async fetch(request) {
     try {
       const url = new URL(request.url), path = url.pathname.slice(3), method = request.method;
-      if (method === 'GET' && path === '/version') return json({ latest: this.env.MOD_VERSION, min_required: this.env.MIN_MOD_VERSION, download_url: '', changelog: 'RandomRun online services' });
+      // Clients up to 27.1 treat "latest" as the minimum they must have, so it carries MIN_MOD_VERSION:
+      // older supported versions keep working after a new release is deployed. "newest" is the actual newest version.
+      if (method === 'GET' && path === '/version') return json({ latest: this.env.MIN_MOD_VERSION, newest: this.env.MOD_VERSION, min_required: this.env.MIN_MOD_VERSION, download_url: '', changelog: 'RandomRun online services' });
       if (method === 'GET' && path === '/health') return json({ ok: true, protocol: 1, serverTime: Date.now() });
       if (method === 'GET' && path === '/auth/challenge') {
         this.limit('challenge:' + await digest(request.headers.get('x-client-ip') ?? 'local'), 30, 60000);
@@ -163,12 +173,13 @@ export class RandomRunHub extends DurableObject {
       if (method === 'GET' && (path === '/latest_runs' || /^\/latest_runs\/[A-Za-z0-9_]{3,16}$/.test(path))) return json(this.latestRuns(path.split('/')[2]));
       if (method === 'GET' && path === '/stats/global') return json({ total_runs: this.one('SELECT COUNT(*) AS n FROM runs').n + this.one('SELECT COUNT(*) AS n FROM legacy_runs').n, total_rooms_created: (this.one("SELECT value FROM metadata WHERE key='rooms'")?.value ?? 0) + (this.one("SELECT value FROM metadata WHERE key='legacy_rooms'")?.value ?? 0), online: this.online().length });
       if (method === 'POST' && path === '/security/report') {
-        const value = payload, allowed = new Set(['CREATIVE', 'CHEAT_MOD', 'UNTRUSTED_RUN']);
-        if (!allowed.has(value.reason)) fail(400, 'INVALID_REPORT');
+        const penalty = TRUST.penalties[payload?.reason];
+        if (penalty == null) fail(400, 'INVALID_REPORT');
+        this.limit('report:' + user.uid, 30, 3600000);
         const profile = JSON.parse(user.profile);
-        profile.sec.ts = Math.max(0, profile.sec.ts - 5);
+        profile.sec.ts = clampTrust(profile.sec.ts - penalty);
         this.sql.exec('UPDATE accounts SET profile=? WHERE uid=?', JSON.stringify(profile), user.uid);
-        return json({ ok: true });
+        return json({ ok: true, ts: profile.sec.ts });
       }
       fail(404, 'NOT_FOUND');
     } catch (error) {
@@ -190,7 +201,7 @@ export class RandomRunHub extends DurableObject {
       this.limit('register:' + ip, 5, 3600000);
       if (account) fail(409, 'USERNAME_TAKEN');
       const result = await passwordHash(value.password), uid = randomToken(16), now = Date.now();
-      const profile = { info: { u: uid, ca: now, ls: now, mv: this.env.MOD_VERSION }, sec: { ts: 100, b: false }, stats: { tr: 0, fts: false } };
+      const profile = { info: { u: uid, ca: now, ls: now, mv: this.env.MOD_VERSION }, sec: { ts: TRUST.start, b: false }, stats: { tr: 0, fts: false } };
       if (this.one('SELECT uid FROM accounts WHERE name=? COLLATE NOCASE', name)) fail(409, 'USERNAME_TAKEN');
       this.sql.exec('INSERT INTO accounts VALUES (?,?,?,?,?,?)', uid, name, result.salt, result.hash, JSON.stringify(profile), now);
       this.claimLegacy(uid, name);
@@ -327,7 +338,7 @@ export class RandomRunHub extends DurableObject {
     if (this.one('SELECT code FROM membership WHERE uid=?', user.uid)) fail(409, 'ALREADY_IN_ROOM');
     let code;
     do { code = String(10000 + crypto.getRandomValues(new Uint32Array(1))[0] % 90000); } while (this.one('SELECT code FROM rooms WHERE code=?', code));
-    const room = { h: { [user.name]: { r: false, l: false, t: 0 } }, g: dictionary(), s: value.seed ?? '0', t: value.target ?? null, st: 'WAITING', pr: !!secret, cm: value.mode === 'sw' ? 'sw' : 'webrtc', mp: max, gm: value.randomDrop ? 'random_drop' : 'default', ug: value.upgrader === true, ca: Date.now(), upd: Date.now(), dd: dictionary(), ep: dictionary(), start: 0, srv_start: 0, swt: 0 };
+    const room = { h: { [user.name]: { r: false, l: false, t: 0 } }, g: dictionary(), s: value.seed ?? '0', t: value.target ?? null, st: 'WAITING', pr: !!secret, cm: value.mode === 'sw' ? 'sw' : 'webrtc', mp: max, gm: value.randomDrop ? 'random_drop' : 'default', ug: value.upgrader === true, vo: value.voice === true, ca: Date.now(), upd: Date.now(), dd: dictionary(), ep: dictionary(), start: 0, srv_start: 0, swt: 0 };
     this.ctx.storage.transactionSync(() => {
       this.sql.exec('INSERT INTO rooms VALUES (?,?,?,?,?,?)', code, user.uid, JSON.stringify(room), secret?.salt ?? null, secret?.hash ?? null, Date.now() + ROOM_MS);
       this.sql.exec('INSERT INTO membership VALUES (?,?)', user.uid, code);
@@ -521,11 +532,28 @@ export class RandomRunHub extends DurableObject {
     }
     if (typeof value.rid === 'string') clean.v = this.verifyTicket(user, target, value, clean);
     const attempt = this.one('SELECT COALESCE(MAX(attempt),0)+1 AS n FROM runs WHERE uid=? AND target=?', user.uid, target).n;
+    const before = this.one('SELECT COUNT(*) AS n FROM runs WHERE uid=?', user.uid).n;
     this.sql.exec('INSERT OR IGNORE INTO runs VALUES (?,?,?,?,?)', user.uid, target, clean.t, JSON.stringify(clean), attempt);
     const profile = JSON.parse(user.profile);
     profile.stats.tr = this.one('SELECT COUNT(*) AS n FROM runs WHERE uid=?', user.uid).n;
+    if (profile.stats.tr > before) this.rewardRun(profile, clean, value);
     this.sql.exec('UPDATE accounts SET profile=? WHERE uid=?', JSON.stringify(profile), user.uid);
-    return json({ ok: true });
+    return json({ ok: true, ts: profile.sec.ts });
+  }
+  /** Trust grows with honest play: a little per finished run, more per verified win, capped per day. */
+  rewardRun(profile, clean, value) {
+    if (value.u === true || value.vo === true) return;
+    let gain = 0;
+    if (clean.r === 'V' && clean.br) gain = TRUST.battleVictory;
+    else if (clean.r === 'V' && clean.v === true && !clean.cs && !clean.rd) gain = TRUST.victory;
+    else if (clean.r !== 'G' && clean.d >= TRUST.minRunMs) gain = TRUST.cleanRun;
+    if (gain <= 0) return;
+    const day = Math.floor(Date.now() / 86400000);
+    if (profile.sec.gd !== day) { profile.sec.gd = day; profile.sec.gs = 0; }
+    gain = Math.min(gain, TRUST.dailyCap - (profile.sec.gs ?? 0));
+    if (gain <= 0) return;
+    profile.sec.gs = (profile.sec.gs ?? 0) + gain;
+    profile.sec.ts = clampTrust(profile.sec.ts + gain);
   }
   beginRun(value, user) {
     this.limit('begin:' + user.uid, 30, 60000);
@@ -565,7 +593,7 @@ export class RandomRunHub extends DurableObject {
     const key = target ? validTarget(target) : null;
     const trust = new Map();
     const trusted = name => {
-      if (!trust.has(name)) trust.set(name, JSON.parse(this.one('SELECT profile FROM accounts WHERE name=?', name).profile).sec.ts >= 30);
+      if (!trust.has(name)) trust.set(name, JSON.parse(this.one('SELECT profile FROM accounts WHERE name=?', name).profile).sec.ts >= TRUST.threshold);
       return trust.get(name);
     };
     const since = this.one("SELECT value FROM metadata WHERE key='verify_since'")?.value ?? 0;

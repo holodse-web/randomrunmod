@@ -1,5 +1,8 @@
 package com.randomrun.network;
 
+import com.randomrun.network.RunVerifier.ModIntegrity;
+import com.randomrun.network.SocialService.PendingInvites;
+
 import com.google.gson.JsonObject;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -66,7 +69,7 @@ public final class BackendSession {
         JsonObject user = value.getAsJsonObject("user");
         current = new Session(value.get("token").getAsString(), user.get("id").getAsString(), user.get("name").getAsString(), value.get("expires").getAsLong(), generation);
         HttpClient.getInstance().clearCache();
-        com.randomrun.core.service.DataSyncService.resetCache();
+        com.randomrun.core.data.DataSyncService.resetCache();
         RealtimeClient.getInstance().connect();
     }
     public static synchronized void invalidate(Session expected) { if (current == expected) clear(); }
@@ -78,8 +81,8 @@ public final class BackendSession {
         PendingInvites.clear();
         WebRtcTransport.getInstance().reset();
         HttpClient.getInstance().clearCache();
-        com.randomrun.core.init.CoreInitializer.reset();
-        com.randomrun.core.profile.PlayerProfile.clear();
+        com.randomrun.core.data.DataSyncService.CoreInitializer.reset();
+        com.randomrun.core.data.PlayerProfile.clear();
         if (previous != null) {
             var manager = com.randomrun.features.battle.manager.BattleManager.getInstance();
             var oldRoom = manager.getCurrentRoom();
@@ -90,7 +93,7 @@ public final class BackendSession {
                 if (client.level != null) client.disconnectFromWorld(com.randomrun.infrastructure.util.LanguageManager.text("randomrun.session.ended"));
             });
         }
-        com.randomrun.core.service.DataSyncService.resetCache();
+        com.randomrun.core.data.DataSyncService.resetCache();
     }
     public static CompletableFuture<Void> logout() {
         var result = isAuthenticated() ? HttpClient.getInstance().request("POST", "/auth/logout", Map.of(), true).handle((value, error) -> (Void) null) : CompletableFuture.<Void>completedFuture(null);

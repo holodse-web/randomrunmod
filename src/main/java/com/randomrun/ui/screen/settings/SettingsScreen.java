@@ -1,19 +1,18 @@
 package com.randomrun.ui.screen.settings;
 
-
-
-import com.randomrun.ui.widget.overlay.OverlayWidgets.LanguageDropdownWidget;
-import com.randomrun.ui.widget.overlay.OverlayWidgets.ThemeSwitchWidget;
-import com.randomrun.ui.widget.styled.Buttons.ButtonMenu;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.util.LanguageManager;
 import com.randomrun.network.BackendSession;
-import com.randomrun.ui.screen.auth.ChangePasswordScreen;
-import com.randomrun.ui.screen.info.TrustScoreInfoScreen;
+import com.randomrun.ui.screen.account.ChangePasswordScreen;
+import com.randomrun.ui.screen.account.TrustScoreInfoScreen;
 import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
-import com.randomrun.ui.theme.Theme;
 import com.randomrun.ui.util.GuiText;
+import com.randomrun.ui.util.Theme;
 import com.randomrun.ui.util.Ui;
+import com.randomrun.ui.widget.OverlayWidgets.LanguageDropdownWidget;
+import com.randomrun.ui.widget.OverlayWidgets.ThemeSwitchWidget;
+import com.randomrun.ui.widget.styled.Buttons.ButtonMenu;
+
 import java.util.function.Supplier;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Tooltip;
@@ -51,7 +50,7 @@ public class SettingsScreen extends AbstractRandomRunScreen {
                 () -> new ChangePasswordScreen(this, BackendSession.playerName()), 5);
         }
         addRenderableWidget(new ButtonMenu(centerX - 100, height - 30, 200, 20, LanguageManager.text("randomrun.button.back"),
-            button -> onClose(), 6, 0.3f));
+            button -> onClose(), 7, 0.3f));
         addRenderableWidget(new LanguageDropdownWidget(10, height - 30, this, 0.35f));
         addRenderableWidget(new ThemeSwitchWidget(34, height - 30, 0.4f));
     }
@@ -60,6 +59,11 @@ public class SettingsScreen extends AbstractRandomRunScreen {
         ButtonMenu button = addRenderableWidget(new ButtonMenu(x, y, TILE_WIDTH, TILE_HEIGHT, LanguageManager.text(key),
             pressed -> minecraft.gui.setScreen(target.get()), index, 0.04f * index));
         button.setTooltip(Tooltip.create(LanguageManager.text(tooltipKey)));
+        // Opened from the pause menu: account pages stay in the main menu.
+        if (minecraft.level != null && (index == 4 || index == 5)) {
+            button.active = false;
+            button.setTooltip(Tooltip.create(LanguageManager.text("randomrun.settings.in_game_locked")));
+        }
     }
 
     @Override
@@ -72,7 +76,7 @@ public class SettingsScreen extends AbstractRandomRunScreen {
         GuiText.centeredText(context, font, title, width / 2, panelTop() + 10, Ui.argb(0xFFFFFF, fade));
         Ui.divider(context, left + 12, right - 12, panelTop() + 24, Theme.current().border, fade);
         if (online()) {
-            int y = panelTop() + 34 + (TILE_HEIGHT + 6) * 2 + 4;
+            int y = panelTop() + 34 + (TILE_HEIGHT + 6) * 3 + 4;
             GuiText.centeredText(context, font, LanguageManager.text("randomrun.settings.account", BackendSession.playerName()), width / 2, y, Ui.argb(0xA1A1AA, fade));
         }
     }

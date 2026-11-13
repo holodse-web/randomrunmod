@@ -62,7 +62,7 @@ public class SliderDefault extends AbstractSliderButton {
         }
         styledHelper.wasHovered = hovered;
         
-        com.randomrun.ui.theme.Theme theme = com.randomrun.ui.theme.Theme.current();
+        com.randomrun.ui.util.Theme theme = com.randomrun.ui.util.Theme.current();
         int colorBase = theme.buttonBase, colorActive = theme.buttonHover, colorBorder = theme.buttonHover, colorOverlay = theme.overlay;
         int bgAlpha = (int) (alpha * AbstractStyledWidget.ALPHA_BACKGROUND);
         int finalBgColor = (bgAlpha << 24) | (colorBase & 0x00FFFFFF);

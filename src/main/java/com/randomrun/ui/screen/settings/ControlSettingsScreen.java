@@ -1,12 +1,12 @@
 package com.randomrun.ui.screen.settings;
 
-
-import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
-import com.mojang.blaze3d.platform.InputConstants;
+import com.randomrun.infrastructure.ModConfig;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.config.ModConfig;
 import com.randomrun.infrastructure.util.LanguageManager;
 import com.randomrun.infrastructure.util.LegacyKeyCodes;
+import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
+
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Tooltip;

@@ -1,11 +1,11 @@
 package com.randomrun.ui.screen.settings;
 
-
-import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
+import com.randomrun.infrastructure.ModConfig;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.config.ModConfig;
 import com.randomrun.infrastructure.util.LanguageManager;
 import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
+import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
+
 import java.awt.Color;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;

@@ -1,8 +1,8 @@
 package com.randomrun.ui.widget;
 
-
-import com.randomrun.ui.util.Previews.PreviewRenderGeometry;
 import com.randomrun.infrastructure.RandomRunMod;
+import com.randomrun.ui.util.Previews.PreviewRenderGeometry;
+
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.events.GuiEventListener;

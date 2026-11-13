@@ -1,8 +1,7 @@
 package com.randomrun.features.upgrader.client;
 
-
-
-import com.randomrun.ui.util.Previews.ItemPreviewRenderer;
+import com.randomrun.features.upgrader.UpgraderMath;
+import com.randomrun.features.upgrader.UpgraderTransaction;
 import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderPalette;
 import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderPixelMesh;
 import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderRingRaster;
@@ -11,15 +10,25 @@ import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderSearch;
 import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderSelection;
 import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderWheel;
 import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderWheelGeometry;
-import com.mojang.blaze3d.platform.InputConstants;
-import com.randomrun.features.upgrader.UpgraderMath;
-import com.randomrun.features.upgrader.UpgraderTransaction;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.util.LanguageManager;
 import com.randomrun.ui.util.GuiQuadBatch;
+import com.randomrun.ui.util.Previews.ItemPreviewRenderer;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -33,19 +42,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-
-public final class UpgraderScreen extends Screen {
+public final class UpgraderScreen extends Screen implements com.randomrun.ui.util.UiScale.Scaled {
     private static int GOLD, TEXT, MUTED, PANEL, EDGE;
     private static final int GREEN = UpgraderPalette.GREEN;
     private static final int RED = UpgraderPalette.RED;
@@ -450,6 +447,85 @@ public final class UpgraderScreen extends Screen {
         selectionChanged();
     }
 
+    // ------------------------------------------------------------ voice control
+
+    /** Adds up to {@code count} matching items (0 = as many as allowed) to the stake. Returns how many were added. */
+    public int voiceStake(java.util.List<Item> candidates, int count) {
+        if (rolling || UpgraderClient.isAnimating() || candidates.isEmpty()) return 0;
+        int want = count > 0 ? count : Integer.MAX_VALUE;
+        int added = 0;
+        for (Item wanted : candidates) {
+            java.util.List<Integer> slots = new java.util.ArrayList<>(offers.keySet());
+            java.util.Collections.sort(slots);
+            for (int slot : slots) {
+                if (want <= 0) break;
+                UpgraderClient.Offer offer = offers.get(slot);
+                if (offer.stack().getItem() != wanted) continue;
+                if (!UpgraderSelection.canAddType(selectedTypes.contains(wanted), selectedTypes.size())) {
+                    message = rejection("selection_types_limit");
+                    messageColor = GOLD;
+                    return added;
+                }
+                int current = selected.getOrDefault(slot, 0);
+                int free = UpgraderTransaction.MAX_SELECTED_ITEMS - selectedCount;
+                int add = Math.min(want, Math.min(offer.stack().getCount() - current, free));
+                if (add <= 0) continue;
+                selected.put(slot, current + add);
+                want -= add;
+                added += add;
+                selectionChanged();
+            }
+            if (added > 0) break;
+        }
+        if (added > 0) sound(SoundEvents.ITEM_PICKUP, 1.3f, .5f);
+        return added;
+    }
+
+    public void voiceClear() {
+        if (rolling || UpgraderClient.isAnimating()) return;
+        selected.clear();
+        selectionChanged();
+    }
+
+    /** Picks the target closest to stake × ratio, like the x2 / 30% buttons. */
+    public boolean voicePreset(double ratio) {
+        if (stake <= 0) return false;
+        choosePreset(ratio);
+        return target != null;
+    }
+
+    public boolean voiceTarget(java.util.List<Item> candidates, int count) {
+        if (rolling || UpgraderClient.isAnimating()) return false;
+        for (Item item : candidates) {
+            if (!allTargets.contains(item) || UpgraderClient.unitValue(item) <= 0) continue;
+            target = item;
+            targetCount = 1;
+            targetCount = Math.clamp(count, 1, maxTargetCount());
+            if (search != null) search.setValue("");
+            searchText = "";
+            filterTargets();
+            targetRow = Math.clamp(Math.max(0, filteredTargets.indexOf(target)) / Math.max(1, targetColumns), 0, maxTargetRow());
+            revealed = false;
+            message = "";
+            updateControls();
+            return true;
+        }
+        return false;
+    }
+
+    /** Starts the roll; returns why it could not start, or null. */
+    public String voiceRoll() {
+        if (stake <= 0) return "stake";
+        if (target == null) return "target";
+        if (upgradeButton == null || !upgradeButton.active) return message.isEmpty() ? "busy" : message;
+        beginRoll();
+        return null;
+    }
+
+    public boolean voiceRolling() {
+        return rolling;
+    }
+
     private void beginRoll() {
         if (rolling || !upgradeButton.active || target == null) return;
         needleStartTurn = restingNeedleTurn = UpgraderClient.restingNeedleTurn();
@@ -725,7 +801,7 @@ public final class UpgraderScreen extends Screen {
         graphics.pose().translate(wx + ww / 2f, wy + wh / 2f + (1f - eased) * 10f);
         graphics.pose().scale(scale, scale);
         graphics.pose().translate(-(wx + ww / 2f), -(wy + wh / 2f));
-        com.randomrun.ui.theme.Theme theme = com.randomrun.ui.theme.Theme.current();
+        com.randomrun.ui.util.Theme theme = com.randomrun.ui.util.Theme.current();
         com.randomrun.ui.util.Ui.panel(graphics, wx, wy, wx + ww, wy + wh, theme.panel, theme.border, 1f);
         com.randomrun.ui.util.Ui.glowBorder(graphics, wx, wy, wx + ww, wy + wh, 2, 0xFFFFFF);
         String heading = tr("Апгрейдер", "Upgrader");
@@ -1252,6 +1328,7 @@ public final class UpgraderScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (com.randomrun.features.voice.control.VoiceController.get().blocksMouse()) return true;
         if (event.button() == InputConstants.MOUSE_BUTTON_LEFT
                 && event.x() >= rightX + 6 && event.x() < rightX + rightWidth - 36
                 && event.y() >= lowerY + 4 && event.y() < lowerY + 19) {

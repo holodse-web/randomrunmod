@@ -1,12 +1,12 @@
 package com.randomrun.ui.screen.main;
 
-
-import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
-import com.randomrun.infrastructure.data.RunDataManager;
+import com.randomrun.core.run.Run;
+import com.randomrun.core.run.Run.RunResult;
+import com.randomrun.core.run.RunDataManager;
+import com.randomrun.core.run.RunHistory;
 import com.randomrun.infrastructure.util.LanguageManager;
-import com.randomrun.core.history.RunHistory;
-import com.randomrun.core.history.Run;
-import com.randomrun.core.history.RunResult;
+import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -36,9 +36,9 @@ public class RunHistoryScreen extends AbstractRandomRunScreen {
     private static final int COLOR_BG_LIST = 0x60000000;
     private static final int COLOR_BG_CARD = 0x60101018;
     private static final int COLOR_BG_CARD_HOVER = 0x70181828;
-    private static int COLOR_BORDER() { return 0xFF000000 | com.randomrun.ui.theme.Theme.current().buttonBase; }
-    private static int COLOR_BORDER_HOVER() { return 0xFF000000 | com.randomrun.ui.theme.Theme.current().buttonHover; }
-    private static int COLOR_ACCENT() { return 0xFF000000 | com.randomrun.ui.theme.Theme.current().buttonHover; }
+    private static int COLOR_BORDER() { return 0xFF000000 | com.randomrun.ui.util.Theme.current().buttonBase; }
+    private static int COLOR_BORDER_HOVER() { return 0xFF000000 | com.randomrun.ui.util.Theme.current().buttonHover; }
+    private static int COLOR_ACCENT() { return 0xFF000000 | com.randomrun.ui.util.Theme.current().buttonHover; }
     private static final int COLOR_SCROLLBAR_BG = 0x30000000;
     private static final int COLOR_TEXT_WHITE = 0xFFFFFF;
     private static final int COLOR_TEXT_GRAY = 0x888888;
@@ -497,7 +497,7 @@ public class RunHistoryScreen extends AbstractRandomRunScreen {
                 Minecraft.getInstance().getSoundManager().play(
                     net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
                         net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 1.2f, 0.3f));
-                com.randomrun.ui.widget.overlay.CustomNotification.show(
+                com.randomrun.ui.overlay.CustomNotification.show(
                     LanguageManager.translate("randomrun.screen.history.seed_copied"), seedStr, "minecraft:paper");
                 return true;
             }

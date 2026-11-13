@@ -1,30 +1,20 @@
 package com.randomrun.ui.screen.main;
 
-
-
-import com.randomrun.ui.widget.styled.Buttons.ButtonYellow;
-import com.randomrun.ui.util.Previews.ItemPreviewRenderer;
-import com.randomrun.ui.util.Previews.PreviewItems;
-import com.randomrun.features.challenges.classic.data.ItemDifficulty;
 import com.randomrun.features.leaderboard.LeaderboardEntry;
 import com.randomrun.features.leaderboard.LeaderboardService;
+import com.randomrun.features.speedrun.ItemDifficulty;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.util.LanguageManager;
 import com.randomrun.network.BackendSession;
 import com.randomrun.ui.util.GuiQuadBatch;
 import com.randomrun.ui.util.GuiText;
-import com.randomrun.ui.util.Heads;
+import com.randomrun.ui.util.Previews.Heads;
+import com.randomrun.ui.util.Previews.ItemPreviewRenderer;
+import com.randomrun.ui.util.Previews.PreviewItems;
 import com.randomrun.ui.util.Ui;
 import com.randomrun.ui.widget.GlobalParticleSystem;
+import com.randomrun.ui.widget.styled.Buttons.ButtonYellow;
 import com.randomrun.ui.widget.styled.TextFieldStyled;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -35,6 +25,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 public class LeaderboardScreen extends AbstractRandomRunScreen {
     private static final int PAD = 12;

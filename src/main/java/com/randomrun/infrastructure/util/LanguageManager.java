@@ -1,8 +1,9 @@
 package com.randomrun.infrastructure.util;
 
+import com.randomrun.infrastructure.RandomRunMod;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.randomrun.infrastructure.RandomRunMod;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;

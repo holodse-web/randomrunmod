@@ -1,6 +1,7 @@
 package com.randomrun.ui.widget;
 
 import com.randomrun.infrastructure.RandomRunMod;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -166,7 +167,7 @@ public class GlobalParticleSystem {
     public void extractRenderState(GuiGraphicsExtractor context) {
         if (particles.isEmpty()) return;
         
-        int baseColor = colorMode == ColorMode.DEFAULT ? com.randomrun.ui.theme.Theme.current().buttonHover : colorMode.getColor();
+        int baseColor = colorMode == ColorMode.DEFAULT ? com.randomrun.ui.util.Theme.current().buttonHover : colorMode.getColor();
         com.randomrun.ui.util.GuiQuadBatch.Builder batch = new com.randomrun.ui.util.GuiQuadBatch.Builder(particles.size());
         for (Particle particle : particles) {
             particle.extractRenderState(batch, baseColor);
@@ -180,7 +181,7 @@ public class GlobalParticleSystem {
             lastSimplifiedCheck = now;
             try {
                 simplifiedUI = RandomRunMod.getInstance().getConfig().getUIStyle() == 
-                    com.randomrun.infrastructure.config.ModConfig.UIStyle.SIMPLIFIED;
+                    com.randomrun.infrastructure.ModConfig.UIStyle.SIMPLIFIED;
             } catch (Exception e) {
                 simplifiedUI = false;
             }

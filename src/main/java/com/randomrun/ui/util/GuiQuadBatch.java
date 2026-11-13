@@ -2,6 +2,7 @@ package com.randomrun.ui.util;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.renderpearl.api.pipeline.RenderPipeline;
+import java.util.Arrays;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.TextureSetup;
@@ -9,8 +10,6 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.state.gui.GuiElementRenderState;
 import org.joml.Matrix3x2f;
 import org.joml.Matrix3x2fc;
-
-import java.util.Arrays;
 
 public final class GuiQuadBatch {
     private static final int STRIDE = 5;

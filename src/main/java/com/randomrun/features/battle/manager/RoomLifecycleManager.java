@@ -1,10 +1,10 @@
 package com.randomrun.features.battle.manager;
 
-
 import com.randomrun.features.battle.manager.BattleSupport.RoomJoinResult;
-import com.google.gson.Gson;
-import com.randomrun.network.HttpClient;
 import com.randomrun.infrastructure.util.IdCompressor;
+import com.randomrun.network.HttpClient;
+
+import com.google.gson.Gson;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -19,18 +19,22 @@ public final class RoomLifecycleManager {
         return createRoom(playerName, targetItem, shared, privateRoom, password, capacity, mode, randomDrop, false, callback);
     }
     public CompletableFuture<String> createRoom(String playerName, Item targetItem, boolean shared, boolean privateRoom, String password, int capacity, String mode, boolean randomDrop, boolean upgrader, RoomSetupCallback callback) {
+        return createRoom(playerName, targetItem, shared, privateRoom, password, capacity, mode, randomDrop, upgrader, false, callback);
+    }
+    public CompletableFuture<String> createRoom(String playerName, Item targetItem, boolean shared, boolean privateRoom, String password, int capacity, String mode, boolean randomDrop, boolean upgrader, boolean voice, RoomSetupCallback callback) {
         long operation = generation.get();
         Map<String, Object> payload = new HashMap<>();
         payload.put("maxPlayers", capacity);
         payload.put("target", targetItem == null ? null : IdCompressor.compress(BuiltInRegistries.ITEM.getKey(targetItem).toString()));
         payload.put("seed", String.valueOf(new Random().nextLong()));
         payload.put("password", password == null ? "" : password);
-        payload.put("randomDrop", randomDrop); payload.put("upgrader", upgrader);
+        payload.put("randomDrop", randomDrop); payload.put("upgrader", upgrader); payload.put("voice", voice);
         payload.put("mode", shared ? "webrtc" : "sw");
         return HttpClient.getInstance().post("/rooms", payload).thenApply(value -> {
             BattleRoom room = new Gson().fromJson(value, BattleRoom.class);
             String code = value.getAsJsonObject().get("roomCode").getAsString();
             room.setRoomCode(code);
+            if (voice) room.setVoice(true); // older servers drop the flag; keep it for the host's own view
             if (operation != generation.get()) { HttpClient.getInstance().post("/rooms/" + code + "/leave", Map.of()); return null; }
             callback.setup(room, code, true); return code;
         }).exceptionally(error -> null);

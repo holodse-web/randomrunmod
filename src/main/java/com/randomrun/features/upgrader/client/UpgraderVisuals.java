@@ -1,12 +1,13 @@
 package com.randomrun.features.upgrader.client;
 
+import com.randomrun.features.upgrader.UpgraderMath;
+import com.randomrun.features.upgrader.UpgraderTransaction;
+import com.randomrun.ui.util.Theme;
+import com.randomrun.ui.util.Ui;
+
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.renderpearl.api.pipeline.RenderPipeline;
-import com.randomrun.features.upgrader.UpgraderMath;
-import com.randomrun.features.upgrader.UpgraderTransaction;
-import com.randomrun.ui.theme.Theme;
-import com.randomrun.ui.util.Ui;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -26,7 +27,7 @@ public final class UpgraderVisuals {
     private UpgraderVisuals() {
     }
 
-    public static record UpgraderWheelGeometry(int guiRadius, int guiScale) {
+    public record UpgraderWheelGeometry(int guiRadius, int guiScale) {
         public UpgraderWheelGeometry {
             if (guiRadius < 1 || guiScale < 1) throw new IllegalArgumentException("Invalid wheel geometry");
         }
@@ -124,7 +125,7 @@ public final class UpgraderVisuals {
         }
     }
 
-    public static record UpgraderScreenLayout(int windowX, int windowY, int windowWidth, int windowHeight,
+    public record UpgraderScreenLayout(int windowX, int windowY, int windowWidth, int windowHeight,
                                        int contentX, int contentWidth, int contentTop, int slotSize,
                                        int leftWidth, int rightWidth, int lowerY, int lowerHeight,
                                        int heroHeight) {

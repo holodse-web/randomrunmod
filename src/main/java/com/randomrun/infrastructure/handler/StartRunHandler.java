@@ -1,9 +1,9 @@
 package com.randomrun.infrastructure.handler;
 
+import com.randomrun.core.run.RunSessionManager;
 import com.randomrun.features.battle.manager.BattleManager;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.audio.RunSoundHelper;
-import com.randomrun.core.session.RunSessionManager;
+
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,7 +25,7 @@ public class StartRunHandler {
             if (result == StartRunResult.NOT_FROZEN) {
                 return false;
             }
-            com.randomrun.infrastructure.util.ClientMessages.send(player, Component.literal("§c" + result.getMessage()), false);
+            com.randomrun.infrastructure.util.CompactLogger.ClientMessages.send(player, Component.literal("§c" + result.getMessage()), false);
             RunSoundHelper.playErrorSound(player);
         }
         
@@ -77,7 +77,7 @@ public class StartRunHandler {
             player.removeEffect(net.minecraft.world.effect.MobEffects.ABSORPTION);
             player.removeEffect(net.minecraft.world.effect.MobEffects.RESISTANCE);
             
-            com.randomrun.infrastructure.data.RunDataManager runManager = RandomRunMod.getInstance().getRunDataManager();
+            com.randomrun.core.run.RunDataManager runManager = RandomRunMod.getInstance().getRunDataManager();
             
             runManager.unfreezeRun();
             SESSION_MANAGER.unfreezeRun();
@@ -88,7 +88,7 @@ public class StartRunHandler {
             }
             
             RunSoundHelper.playStartSound(player, false);
-            com.randomrun.infrastructure.util.ClientMessages.send(player, Component.literal("§a§lGO!"), true);
+            com.randomrun.infrastructure.util.CompactLogger.ClientMessages.send(player, Component.literal("§a§lGO!"), true);
             return StartRunResult.SUCCESS;
         } catch (Exception e) {
             RandomRunMod.LOGGER.error("[StartRun] Ошибка solo старта", e);
@@ -183,5 +183,28 @@ public class StartRunHandler {
     public static void clearStatistics() {
         lastStartAttempt.clear();
         startAttempts.clear();
+    }
+
+    public enum StartRunResult {
+        SUCCESS("Забег начат"),
+        NOT_FROZEN("Забег не заморожен"),
+        NO_PLAYER("Игрок не найден"),
+        COOLDOWN("Подождите перед повторной попыткой"),
+        INVALID_STATE("Неверное состояние мира"),
+        NO_PERMISSION("Нет прав для старта");
+
+        private final String message;
+
+        StartRunResult(String message) {
+            this.message = message;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public boolean isSuccess() {
+            return this == SUCCESS;
+        }
     }
 }

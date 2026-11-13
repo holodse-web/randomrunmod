@@ -1,16 +1,17 @@
 package com.randomrun.ui.screen.endgame;
 
-import com.randomrun.core.history.Run;
-import com.randomrun.core.history.RunResult;
-import com.randomrun.core.profile.PlayerProfile;
+import com.randomrun.core.data.PlayerProfile;
+import com.randomrun.core.run.Run;
+import com.randomrun.core.run.Run.RunResult;
+import com.randomrun.core.run.RunDataManager;
 import com.randomrun.features.battle.manager.BattleManager;
-import com.randomrun.features.challenges.classic.world.WorldCreator;
 import com.randomrun.features.leaderboard.LeaderboardService;
+import com.randomrun.features.speedrun.WorldCreator;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.data.RunDataManager;
 import com.randomrun.infrastructure.security.ModScannerService;
 import com.randomrun.infrastructure.util.LanguageManager;
 import com.randomrun.network.BackendSession;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -74,7 +75,7 @@ public class VictoryScreen extends EndgameScreen {
 
     @Override
     protected void onOpened() {
-        if (minecraft.player != null) minecraft.player.playSound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
+        if (minecraft.player != null) minecraft.player.playSound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 0.4f, 1.0f);
     }
 
     @Override
@@ -123,12 +124,14 @@ public class VictoryScreen extends EndgameScreen {
     private void setNotes(boolean submitted, String reason) {
         List<Component> lines = new ArrayList<>();
         lines.add(LanguageManager.text(submitted ? "randomrun.endgame.submitted" : "randomrun.endgame.not_submitted")
-            .withStyle(style -> style.withColor(submitted ? 0x4ADE80 : 0xF87171)));
+            .withStyle(style -> style.withColor(submitted ? 0x86EFAC : 0xFCA5A5)));
+        notesAccent = submitted ? 0x4ADE80 : 0xF87171;
         if (reason != null) lines.add(Component.literal(reason).withStyle(style -> style.withColor(0xA1A1AA)));
         notes = List.copyOf(lines);
     }
 
     private String staticReason(PlayerProfile profile, boolean trusted) {
+        if (com.randomrun.features.voice.control.VoiceController.recentVoiceRun()) return LanguageManager.translate("randomrun.endgame.reason.voice");
         if (upgrader) return LanguageManager.translate("randomrun.endgame.reason.upgrader");
         if (!trusted) return LanguageManager.translate("randomrun.endgame.reason.untrusted");
         if (!profile.canSubmitToLeaderboard()) {

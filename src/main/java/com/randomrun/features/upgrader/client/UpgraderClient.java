@@ -1,19 +1,28 @@
 package com.randomrun.features.upgrader.client;
 
-
-import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderWheel;
-import com.mojang.blaze3d.platform.InputConstants;
-import com.randomrun.core.session.RunSession;
-import com.randomrun.core.session.RunSessionManager;
-import com.randomrun.core.session.RunStatus;
+import com.randomrun.core.run.RunSession;
+import com.randomrun.core.run.RunSession.RunStatus;
+import com.randomrun.core.run.RunSessionManager;
 import com.randomrun.features.upgrader.UpgraderMath;
 import com.randomrun.features.upgrader.UpgraderNetwork;
 import com.randomrun.features.upgrader.UpgraderPackets;
 import com.randomrun.features.upgrader.UpgraderServer;
 import com.randomrun.features.upgrader.UpgraderTransaction;
 import com.randomrun.features.upgrader.UpgraderValues;
+import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderWheel;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.util.LegacyKeyCodes;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -26,16 +35,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ThreadLocalRandom;
 
 public final class UpgraderClient {
     private static boolean openKeyDown;
@@ -106,6 +105,7 @@ public final class UpgraderClient {
     }
 
     private static void checkOpenKey(Minecraft client) {
+        if (com.randomrun.features.voice.control.VoiceController.get().isActive()) return;
         int key = LegacyKeyCodes.toInputKey(RandomRunMod.getInstance().getConfig().getUpgraderKey());
         boolean down = key > 0 && client.isWindowActive() && InputConstants.isKeyDown(key);
         if (key != observedOpenKey) {
