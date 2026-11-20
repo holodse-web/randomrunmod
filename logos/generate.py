@@ -72,7 +72,7 @@ def main():
         logo.save(destination / f"{name}.png")
         if not classic and name == "graphite":
             colors[-1] = 0x111111
-            render(False, colors, background=(245, 245, 245), padding=32).save(ROOT / "docs/logo.png")
+            render(False, colors, background=(245, 245, 245), padding=32).save(ROOT / "docs/rrm-logo-black.png")
     print(f"Exported {len(THEMES)} logos into logos/classic and logos/modern")
 
 
