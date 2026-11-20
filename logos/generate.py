@@ -27,12 +27,12 @@ def blend(first, second, amount):
     return tuple(int(a + (b - a) * amount) for a, b in zip(first, second))
 
 
-def render(classic, colors, width=640, height=320, *, background=None, padding=0):
-    image = Image.new("RGBA", (width, height), background)
+def render(classic, colors, width=640, height=320):
+    image = Image.new("RGBA", (width, height))
     draw = ImageDraw.Draw(image)
     columns = len(GLYPHS[0]) + 1
     rows = len(GLYPHS) + 3
-    unit = min((width - padding * 2) // columns, (height - padding * 2) // rows)
+    unit = min(width // columns, height // rows)
     left = (width - columns * unit) // 2
     top = (height - (len(GLYPHS) + 3) * unit) // 2
     accent = rgb(colors[-1])
@@ -70,9 +70,6 @@ def main():
         destination.mkdir(parents=True, exist_ok=True)
         logo = render(classic, colors)
         logo.save(destination / f"{name}.png")
-        if not classic and name == "graphite":
-            colors[-1] = 0x111111
-            render(False, colors, background=(245, 245, 245), padding=32).save(ROOT / "docs/rrm-logo-black.png")
     print(f"Exported {len(THEMES)} logos into logos/classic and logos/modern")
 
 

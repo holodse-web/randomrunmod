@@ -20,7 +20,8 @@ mapping.txt
 /deploy-server.bat
 /run-client.bat
 /logos/classic/
-/logos/modern/
+/logos/modern/*
+!/logos/modern/graphite.png
 __pycache__/
 
 # Local dependencies, credentials, and editor settings
