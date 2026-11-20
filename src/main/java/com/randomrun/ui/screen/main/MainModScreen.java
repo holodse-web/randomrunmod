@@ -1,37 +1,37 @@
 package com.randomrun.ui.screen.main;
 
-
-
-import com.randomrun.ui.widget.overlay.OverlayWidgets.LanguageDropdownWidget;
-import com.randomrun.ui.widget.overlay.OverlayWidgets.ThemeSwitchWidget;
-import com.randomrun.ui.widget.styled.Buttons.ButtonGreen;
-import com.randomrun.ui.widget.styled.Buttons.ButtonMenu;
-import com.randomrun.ui.widget.styled.Buttons.ButtonYellow;
-import com.randomrun.core.init.CoreInitializer;
-import com.randomrun.core.profile.PlayerProfile;
-import com.randomrun.features.battle.screen.lobby.LobbyScreen;
-import com.randomrun.features.battle.screen.room.RoomHostScreenCreateImproved;
-import com.randomrun.features.challenges.classic.screen.SpeedrunScreen;
-import com.randomrun.features.challenges.classic.world.WorldCreator;
-import com.randomrun.features.leaderboard.LatestRunEntry;
+import com.randomrun.ui.util.InterfaceStyle;
+import com.randomrun.core.data.DataSyncService.CoreInitializer;
+import com.randomrun.core.data.PlayerProfile;
+import com.randomrun.features.battle.screen.LobbyScreen;
+import com.randomrun.features.battle.screen.RoomHostScreenCreateImproved;
+import com.randomrun.features.leaderboard.LeaderboardEntry.LatestRunEntry;
 import com.randomrun.features.leaderboard.LeaderboardService;
+import com.randomrun.features.speedrun.SpeedrunScreen;
+import com.randomrun.features.speedrun.WorldCreator;
+import com.randomrun.infrastructure.ModConfig;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.config.ModConfig;
 import com.randomrun.infrastructure.security.ModScannerService;
 import com.randomrun.infrastructure.util.CompactLogger;
 import com.randomrun.infrastructure.util.LanguageManager;
 import com.randomrun.network.BackendSession;
 import com.randomrun.network.RealtimeClient;
-import com.randomrun.ui.screen.auth.ProfileAuthScreen;
-import com.randomrun.ui.screen.info.ModBlockScreen;
-import com.randomrun.ui.screen.info.TrustScoreInfoScreen;
+import com.randomrun.ui.screen.account.ModBlockScreen;
+import com.randomrun.ui.screen.account.ProfileAuthScreen;
+import com.randomrun.ui.screen.account.TrustScoreInfoScreen;
 import com.randomrun.ui.screen.settings.SettingsScreen;
 import com.randomrun.ui.util.GuiText;
-import com.randomrun.ui.util.Heads;
 import com.randomrun.ui.util.Logo;
+import com.randomrun.ui.util.Previews.Heads;
 import com.randomrun.ui.util.Ui;
-import com.randomrun.ui.widget.overlay.ToggleSwitchWidget;
-import com.randomrun.ui.widget.social.FriendsPanel;
+import com.randomrun.ui.widget.FriendsPanel;
+import com.randomrun.ui.widget.OverlayWidgets.LanguageDropdownWidget;
+import com.randomrun.ui.widget.OverlayWidgets.ThemeSwitchWidget;
+import com.randomrun.ui.widget.ToggleSwitchWidget;
+import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
+import com.randomrun.ui.widget.styled.Buttons.ButtonMenu;
+import com.randomrun.ui.widget.styled.Buttons.ButtonYellow;
+
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -41,15 +41,14 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
 public class MainModScreen extends AbstractRandomRunScreen {
-    private static final int LOGO_WIDTH = 120;
-    private static final int LOGO_HEIGHT = 60;
+    private static final int LOGO_WIDTH = 138;
+    private static final int LOGO_HEIGHT = 69;
     private static final long LEADERBOARD_REFRESH_MS = 60000L;
     private static final int MAX_UPDATES_PER_WINDOW = 5;
     private static final long UPDATE_WINDOW_MS = 180000L;
-    private static final int GOLD_BG = 0x3D3410;
-    private static final int GOLD_BORDER = 0xDAA520;
-    private static final int GREEN_BG = 0x0D2B0D;
-    private static final int GREEN_BORDER = 0x32CD32;
+    private static int goldBg() { return InterfaceStyle.isClassic() ? 0x3D3D3D : 0x3D3410; }
+    private static int goldBorder() { return InterfaceStyle.isClassic() ? 0xBFA66A : 0xDAA520; }
+
 
     private static String warnedFindings = "";
     private static long globalLastRunsFetchTime = 0L;
@@ -59,9 +58,14 @@ public class MainModScreen extends AbstractRandomRunScreen {
     private final Screen parent;
     private float logoScale = 1.0F;
     private long openTime;
-    private List<LatestRunEntry> latestRuns = new ArrayList<>();
-    private boolean isFetchingRuns = false;
+    private static List<LatestRunEntry> latestRuns = new ArrayList<>();
+    private static boolean isFetchingRuns = false, runsLoaded = false;
     private FriendsPanel friendsPanel;
+    private static final int SIDE = 10;
+    private static boolean networkExpanded;
+    private float networkAnim = networkExpanded ? 1f : 0f;
+    private long networkFrame;
+    private ButtonDefault lobbyButton;
     private int refreshX, refreshY, refreshW;
 
     public MainModScreen(Screen parent) {
@@ -75,9 +79,19 @@ public class MainModScreen extends AbstractRandomRunScreen {
 
     @Override
     protected void init() {
+
+        if (!RandomRunMod.getInstance().getConfig().isInterfaceStyleChosen()) {
+            minecraft.gui.setScreen(new com.randomrun.ui.screen.InterfaceStyleScreen(parent, true));
+            return;
+        }
+
+        if (!RandomRunMod.getInstance().getConfig().isPrivacyChoiceMade()) {
+            minecraft.gui.setScreen(new PrivacyConsentScreen(parent));
+            return;
+        }
         if (online()) {
-            com.randomrun.infrastructure.version.VersionGate.start(false);
-            if (com.randomrun.infrastructure.version.VersionGate.state() == com.randomrun.infrastructure.version.VersionGate.State.UPDATE_REQUIRED) {
+            com.randomrun.network.VersionGate.start(false);
+            if (com.randomrun.network.VersionGate.state() == com.randomrun.network.VersionGate.State.UPDATE_REQUIRED) {
                 minecraft.gui.setScreen(new UpdateRequiredScreen());
                 return;
             }
@@ -85,7 +99,7 @@ public class MainModScreen extends AbstractRandomRunScreen {
         String playerName = BackendSession.playerName();
         String banned = BackendSession.takeBanned();
         if (banned != null) {
-            minecraft.gui.setScreen(new com.randomrun.ui.screen.info.BanScreen(parent, banned, com.randomrun.ui.screen.info.BanScreen.Kind.BANNED, this));
+            minecraft.gui.setScreen(new com.randomrun.ui.screen.account.BanScreen(parent, banned, com.randomrun.ui.screen.account.BanScreen.Kind.BANNED, this));
             return;
         }
         ModScannerService scanner = ModScannerService.getInstance();
@@ -103,10 +117,7 @@ public class MainModScreen extends AbstractRandomRunScreen {
         }
         if (!CoreInitializer.isInitialized()) CoreInitializer.initialize(playerName);
         LanguageManager.ensureLanguage();
-        if (minecraft.level == null && !WorldCreator.hasPendingRun()) {
-            WorldCreator.clearPendingData();
-            if (RandomRunMod.getInstance().getRunDataManager() != null) RandomRunMod.getInstance().getRunDataManager().cancelRun();
-        }
+        if (minecraft.level == null && (!WorldCreator.hasPendingRun() || WorldCreator.isStale())) WorldCreator.resetAbandonedRun();
         super.init();
         openTime = System.currentTimeMillis();
         if (online()) RealtimeClient.getInstance().setPresence("menu", null);
@@ -137,7 +148,7 @@ public class MainModScreen extends AbstractRandomRunScreen {
             updateWindowStartTime = now;
             updatesInCurrentWindow = 0;
         }
-        if (updatesInCurrentWindow >= MAX_UPDATES_PER_WINDOW) {
+        if (runsLoaded && updatesInCurrentWindow >= MAX_UPDATES_PER_WINDOW) {
             globalLastRunsFetchTime = now;
             return;
         }
@@ -148,11 +159,15 @@ public class MainModScreen extends AbstractRandomRunScreen {
         LeaderboardService.getInstance().getLatestRuns(5)
             .thenAccept(runs -> Minecraft.getInstance().execute(() -> {
                 latestRuns = runs;
+                runsLoaded = true;
                 isFetchingRuns = false;
             }))
             .exceptionally(error -> {
-                isFetchingRuns = false;
-                CompactLogger.warn("Failed to fetch runs: {}", error.getMessage());
+                Minecraft.getInstance().execute(() -> {
+                    isFetchingRuns = false;
+                    globalLastRunsFetchTime = System.currentTimeMillis() - LEADERBOARD_REFRESH_MS + 10000L;
+                });
+                CompactLogger.warn("[History] Run fetch failed: {}", error.getMessage());
                 return null;
             });
     }
@@ -174,7 +189,31 @@ public class MainModScreen extends AbstractRandomRunScreen {
     private int contentBottom() { return height / 2 + 85; }
     private int contentLeft() { return width / 2 - 120; }
     private int contentRight() { return width / 2 + 120; }
-    private boolean sidePanels() { return online() && contentLeft() - 20 > 15 + 110; }
+    private boolean sidePanels() { return online() && contentLeft() - 20 > SIDE + 110; }
+
+    private int[] networkBounds() {
+        float t = Ui.easeInOut(networkAnim);
+        int top = contentTop(), right = contentLeft() - 20, bottom = contentBottom();
+        int expandedTop = 10 + 16 + 6, expandedBottom = height - 30 - 6, expandedRight = Math.min(contentLeft() - 8, right + 10);
+        return new int[]{SIDE, Math.round(top + (expandedTop - top) * t), Math.round(right + (expandedRight - right) * t), Math.round(bottom + (expandedBottom - bottom) * t)};
+    }
+
+    private void updateNetworkPanel() {
+        long now = System.currentTimeMillis();
+        float step = networkFrame == 0 ? 0f : (now - networkFrame) / 260f;
+        networkFrame = now;
+        float target = networkExpanded ? 1f : 0f;
+        networkAnim = networkAnim < target ? Math.min(target, networkAnim + step) : Math.max(target, networkAnim - step);
+        if (friendsPanel == null) return;
+        int[] b = networkBounds();
+        friendsPanel.bounds(b[0], b[1], b[2], b[3]);
+        friendsPanel.setExpandHandler(() -> networkExpanded = !networkExpanded, networkExpanded);
+        if (lobbyButton != null) {
+            lobbyButton.setX(b[0] + 4);
+            lobbyButton.setY(b[3] - 22);
+            lobbyButton.setWidth(b[2] - b[0] - 8);
+        }
+    }
 
     private void initMainButtons() {
         int centerX = width / 2;
@@ -197,14 +236,14 @@ public class MainModScreen extends AbstractRandomRunScreen {
         friendsPanel = null;
         if (!sidePanels()) return;
         int buttonY = contentBottom() - 22;
-        int lpLeft = 15, lpRight = contentLeft() - 20;
+        int lpLeft = SIDE, lpRight = contentLeft() - 20;
         friendsPanel = new FriendsPanel(this, FriendsPanel.Context.MENU,
-            () -> { if (com.randomrun.infrastructure.version.VersionGate.requireOnline()) minecraft.gui.setScreen(new RoomHostScreenCreateImproved(new LobbyScreen(this), null)); });
+            () -> { if (com.randomrun.network.VersionGate.requireOnline()) minecraft.gui.setScreen(new RoomHostScreenCreateImproved(new LobbyScreen(this), null)); });
         friendsPanel.layout(lpLeft, contentTop(), lpRight, contentBottom(), this::addRenderableWidget);
-        addRenderableWidget(new ButtonGreen(lpLeft + 4, buttonY, lpRight - lpLeft - 8, 18,
+        lobbyButton = addRenderableWidget(new ButtonDefault(lpLeft + 4, buttonY, lpRight - lpLeft - 8, 18,
             LanguageManager.text("randomrun.main.lobby"),
-            button -> { if (com.randomrun.infrastructure.version.VersionGate.requireOnline()) minecraft.gui.setScreen(new LobbyScreen(this)); }));
-        int lbLeft = contentRight() + 20, lbRight = width - 15;
+            button -> { if (com.randomrun.network.VersionGate.requireOnline()) minecraft.gui.setScreen(new LobbyScreen(this)); }));
+        int lbLeft = contentRight() + 20, lbRight = width - SIDE;
         addRenderableWidget(new ButtonYellow(lbLeft + 4, buttonY, lbRight - lbLeft - 8, 18,
             LanguageManager.text("randomrun.main.leaderboard_title"),
             button -> minecraft.gui.setScreen(new LeaderboardScreen(this))));
@@ -221,7 +260,7 @@ public class MainModScreen extends AbstractRandomRunScreen {
         ModConfig config = RandomRunMod.getInstance().getConfig();
         if (!config.isOnlineMode()) {
             enableOnlineMode();
-            com.randomrun.infrastructure.version.VersionGate.start(true);
+            com.randomrun.network.VersionGate.start(true);
             return;
         }
         config.setOnlineMode(false);
@@ -247,8 +286,10 @@ public class MainModScreen extends AbstractRandomRunScreen {
         float fade = fade();
         Ui.panel(context, contentLeft(), contentTop(), contentRight(), contentBottom(), fade);
         if (sidePanels()) {
-            Ui.panel(context, 15, contentTop(), contentLeft() - 20, contentBottom(), GREEN_BG, GREEN_BORDER, fade);
-            Ui.panel(context, contentRight() + 20, contentTop(), width - 15, contentBottom(), GOLD_BG, GOLD_BORDER, fade);
+            updateNetworkPanel();
+            int[] b = networkBounds();
+            Ui.panel(context, b[0], b[1], b[2], b[3], fade);
+            Ui.panel(context, contentRight() + 20, contentTop(), width - SIDE, contentBottom(), goldBg(), goldBorder(), fade);
         }
         renderLogo(context, width / 2 - LOGO_WIDTH / 2, height / 2 - 85, mouseX, mouseY, fade);
     }
@@ -259,7 +300,7 @@ public class MainModScreen extends AbstractRandomRunScreen {
         float fade = fade();
         if (sidePanels()) {
             if (friendsPanel != null) friendsPanel.extract(context, mouseX, mouseY, fade);
-            renderLeaderboardContent(context, contentRight() + 20, contentTop(), width - 15, contentBottom(), mouseX, mouseY, fade);
+            renderLeaderboardContent(context, contentRight() + 20, contentTop(), width - SIDE, contentBottom(), mouseX, mouseY, fade);
         }
         renderOnlineBadge(context, mouseX, mouseY, fade);
     }
@@ -271,17 +312,20 @@ public class MainModScreen extends AbstractRandomRunScreen {
         String text = live ? LanguageManager.translate("randomrun.main.online_now", count) : LanguageManager.translate("randomrun.main.online_connecting");
         int w = font.width(text) + 20, h = 16;
         int x = width - 10 - w, y = 10;
-        context.fill(x, y, x + w, y + h, Ui.argb(0x000000, 0.55f * fade));
-        Ui.border(context, x, y, x + w, y + h, 1, Ui.argb(live ? 0x4ADE80 : 0x71717A, 0.35f * fade));
+        if (InterfaceStyle.isClassic()) {
+            Ui.bevel(context, x, y, x + w, y + h, 0x303030, fade, true);
+        } else {
+            context.fill(x, y, x + w, y + h, Ui.argb(0x000000, 0.55f * fade));
+            Ui.border(context, x, y, x + w, y + h, 1, Ui.argb(live ? 0x4ADE80 : 0x71717A, 0.35f * fade));
+        }
         int dot = live ? 0x4ADE80 : 0xA1A1AA;
         context.fill(x + 6, y + 6, x + 10, y + 10, Ui.argb(dot, fade));
-        if (live) {
+        if (live && !InterfaceStyle.isClassic()) {
             float pulse = 0.5f + 0.5f * (float) Math.sin(System.currentTimeMillis() / 350.0);
             int ring = Math.round(pulse * 2);
             Ui.border(context, x + 5 - ring, y + 5 - ring, x + 11 + ring, y + 11 + ring, 1, Ui.argb(dot, (1f - pulse) * 0.6f * fade));
         }
         GuiText.text(context, font, text, x + 15, y + 4, Ui.argb(live ? 0xFFFFFF : 0xA1A1AA, fade), false);
-        if (Ui.inside(mouseX, mouseY, x, y, w, h)) context.setTooltipForNextFrame(font, LanguageManager.text("randomrun.main.online_tooltip"), mouseX, mouseY);
     }
 
     private void renderLeaderboardContent(GuiGraphicsExtractor context, int left, int top, int right, int bottom, int mouseX, int mouseY, float fade) {
@@ -293,12 +337,11 @@ public class MainModScreen extends AbstractRandomRunScreen {
         refreshY = top + 8;
         boolean hover = Ui.inside(mouseX, mouseY, refreshX - 2, refreshY - 2, refreshW + 4, 12);
         GuiText.text(context, font, timer, refreshX, refreshY, Ui.argb(hover ? 0xFFFFFF : 0xC9A030, fade), false);
-        if (hover) context.setTooltipForNextFrame(font, LanguageManager.text("randomrun.main.refresh_now"), mouseX, mouseY);
-        Ui.divider(context, left + 8, right - 8, top + 21, GOLD_BORDER, fade);
+        Ui.divider(context, left + 8, right - 8, top + 21, goldBorder(), fade);
 
         int y = top + 28;
         if (latestRuns.isEmpty()) {
-            Component empty = LanguageManager.text(isFetchingRuns ? "randomrun.main.loading" : "randomrun.main.no_data");
+            Component empty = LanguageManager.text(isFetchingRuns || !runsLoaded ? "randomrun.main.loading" : "randomrun.main.no_data");
             GuiText.centeredText(context, font, empty, (left + right) / 2, y + 20, Ui.argb(0xAAAAAA, fade));
             return;
         }
@@ -306,13 +349,17 @@ public class MainModScreen extends AbstractRandomRunScreen {
         for (LatestRunEntry run : latestRuns) {
             if (y > bottom - 50) break;
             float appear = Ui.easeOut((System.currentTimeMillis() - openTime - 150L - index++ * 60L) / 320f);
-            if (appear <= 0f) { y += 28; continue; }
+            if (appear <= 0f) { y += 26; continue; }
             context.pose().pushMatrix();
-            context.pose().translate((1f - appear) * -16f, 0);
+            context.pose().translate(InterfaceStyle.isClassic() ? Math.round((1f - appear) * -8f) : (1f - appear) * -16f, 0);
             float rowFade = fade * appear;
             boolean rowHover = Ui.inside(mouseX, mouseY, left + 4, y - 3, right - left - 8, 26);
-            if (rowHover) context.fill(left + 4, y - 3, right - 4, y + 23, Ui.argb(0xFFFFFF, 0.06f * rowFade));
-            Heads.draw(context, run.getPlayerName(), left + 9, y, 18, Ui.argb(GOLD_BORDER, rowFade));
+            if (InterfaceStyle.isClassic()) {
+                Ui.bevel(context, left + 4, y - 3, right - 4, y + 23, rowHover ? 0x4B4B4B : 0x292929, rowFade, true);
+            } else {
+                if (rowHover) context.fill(left + 4, y - 3, right - 4, y + 23, Ui.argb(0xFFFFFF, 0.06f * rowFade));
+            }
+            Heads.draw(context, run.getPlayerName(), left + 9, y, 18, Ui.argb(goldBorder(), rowFade));
             int textX = left + 33;
             String time = run.getFormattedDuration();
             int timeWidth = font.width(time);
@@ -320,11 +367,15 @@ public class MainModScreen extends AbstractRandomRunScreen {
             GuiText.text(context, font, Ui.ellipsize(font, run.getPlayerName(), right - textX - timeWidth - 14), textX, y + 1, Ui.argb(0x55FFFF, rowFade), true);
             GuiText.text(context, font, Ui.ellipsize(font, LanguageManager.translateItem(run.getTargetId()), right - textX - 10), textX, y + 11, Ui.argb(0xDDDDDD, rowFade), false);
             context.pose().popMatrix();
-            y += 28;
+            y += 26;
         }
     }
 
     private void renderLogo(GuiGraphicsExtractor context, int x, int y, int mouseX, int mouseY, float fade) {
+        if (InterfaceStyle.isClassic()) {
+            Logo.draw(context, x, y, LOGO_WIDTH, LOGO_HEIGHT, fade);
+            return;
+        }
         boolean hovered = Ui.inside(mouseX, mouseY, x, y, LOGO_WIDTH, LOGO_HEIGHT);
         logoScale = Mth.lerp(0.2F, logoScale, hovered ? 1.06F : 1.0F);
         float centerX = x + LOGO_WIDTH / 2.0F;
@@ -340,7 +391,19 @@ public class MainModScreen extends AbstractRandomRunScreen {
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
         if (sidePanels()) {
             if (friendsPanel != null && friendsPanel.mouseClicked(event.x(), event.y())) return true;
-            if (Ui.inside(event.x(), event.y(), refreshX - 2, refreshY - 2, refreshW + 4, 12) && !isFetchingRuns) {
+            if (event.button() == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
+                int rowY = contentTop() + 28;
+                for (LatestRunEntry run : latestRuns) {
+                    if (rowY > contentBottom() - 50) break;
+                    if (Ui.inside(event.x(), event.y(), contentRight() + 24, rowY - 3, width - contentRight() - 43, 26)) {
+                        minecraft.gui.setScreen(new LeaderboardScreen(this, run.getTargetId()));
+                        Ui.click();
+                        return true;
+                    }
+                    rowY += 26;
+                }
+            }
+            if (event.button() == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && Ui.inside(event.x(), event.y(), refreshX - 2, refreshY - 2, refreshW + 4, 12) && !isFetchingRuns) {
                 fetchLatestRuns(true);
                 return true;
             }

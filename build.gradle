@@ -57,6 +57,6 @@ jar {
     from("LICENSE") {
         rename { "${it}_${project.archives_base_name}" }
     }
+    // the bundled WebRTC natives contain LGPL code (FFmpeg): notices and source pointers travel with the jar
+    from("THIRD_PARTY_NOTICES.md")
 }
-
-apply from: 'gradle/obfuscation.gradle'

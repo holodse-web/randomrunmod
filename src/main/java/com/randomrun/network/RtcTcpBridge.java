@@ -22,7 +22,8 @@ public final class RtcTcpBridge implements AutoCloseable {
     private final Object nativeAccess = new Object();
     private final CompletableFuture<Void> open = new CompletableFuture<>();
     private final CompletableFuture<Void> disposed = new CompletableFuture<>();
-    private volatile Socket socket;
+    private final Object socketLock = new Object();
+    private Socket socket;
     private final Runnable onClose;
     private long sentMessages, acknowledgedMessages;
 
@@ -70,7 +71,7 @@ public final class RtcTcpBridge implements AutoCloseable {
             while (!closed.get() && sentMessages - acknowledgedMessages >= WINDOW_MESSAGES) {
                 long now = System.nanoTime();
                 if (now >= deadline) throw new IOException("WebRTC receive window timeout");
-                if (!reported && now - start > TimeUnit.SECONDS.toNanos(4)) { reported = true; com.randomrun.infrastructure.util.CompactLogger.warn("WebRTC peer is not acknowledging data: sent={}, acked={}, state={}", sentMessages, acknowledgedMessages, channel.getState()); }
+                if (!reported && now - start > TimeUnit.SECONDS.toNanos(4)) { reported = true; com.randomrun.infrastructure.util.CompactLogger.warn("[WebRTC] Missing acknowledgments: sent={}, acked={}, state={}", sentMessages, acknowledgedMessages, channel.getState()); }
                 writable.wait(250);
             }
             if (closed.get()) throw new IOException("Bridge closed");
@@ -84,7 +85,7 @@ public final class RtcTcpBridge implements AutoCloseable {
             }
             if (buffered <= MAX_BUFFERED) return;
             if (System.nanoTime() >= deadline) throw new IOException("WebRTC send timeout");
-            if (!reported && System.nanoTime() - start > TimeUnit.SECONDS.toNanos(4)) { reported = true; com.randomrun.infrastructure.util.CompactLogger.warn("WebRTC send buffer is not draining: buffered={}", buffered); }
+            if (!reported && System.nanoTime() - start > TimeUnit.SECONDS.toNanos(4)) { reported = true; com.randomrun.infrastructure.util.CompactLogger.warn("[WebRTC] Send buffer stalled: {} bytes", buffered); }
             synchronized (writable) { writable.wait(100); }
         }
         throw new IOException("Bridge closed");
@@ -96,8 +97,11 @@ public final class RtcTcpBridge implements AutoCloseable {
         }
     }
     public void attach(Socket socket) throws IOException {
-        if (this.socket != null || closed.get()) { socket.close(); throw new IOException("Bridge already attached or closed"); }
-        socket.setTcpNoDelay(true); this.socket = socket;
+        synchronized (socketLock) {
+            if (this.socket != null || closed.get()) throw new IOException("Bridge already attached or closed");
+            socket.setTcpNoDelay(true);
+            this.socket = socket;
+        }
         Thread.ofVirtual().name("RandomRun-WebRTC-read").start(() -> {
             try {
                 open.get(30, TimeUnit.SECONDS);
@@ -119,7 +123,7 @@ public final class RtcTcpBridge implements AutoCloseable {
                     if (bytes != null) {
                         long started = System.nanoTime();
                         socket.getOutputStream().write(bytes);
-                        if (System.nanoTime() - started > TimeUnit.SECONDS.toNanos(4)) com.randomrun.infrastructure.util.CompactLogger.warn("Minecraft socket accepted data after {} ms", (System.nanoTime() - started) / 1000000);
+                        if (System.nanoTime() - started > TimeUnit.SECONDS.toNanos(4)) com.randomrun.infrastructure.util.CompactLogger.warn("[WebRTC] Minecraft socket write took {} ms", (System.nanoTime() - started) / 1000000);
                         send(ByteBuffer.wrap(Long.toString(++delivered).getBytes(StandardCharsets.US_ASCII)), false);
                     }
                 }
@@ -128,14 +132,19 @@ public final class RtcTcpBridge implements AutoCloseable {
         });
     }
     private void fail(String reason) {
-        if (!closed.get()) com.randomrun.infrastructure.util.CompactLogger.warn("WebRTC bridge stopped: {}", reason);
+        if (!closed.get()) com.randomrun.infrastructure.util.CompactLogger.warn("[WebRTC] Bridge stopped: {}", reason);
         close();
     }
     @Override public void close() {
-        if (!closed.compareAndSet(false, true)) return;
+        Socket attached;
+        synchronized (socketLock) {
+            if (!closed.compareAndSet(false, true)) return;
+            attached = socket;
+            socket = null;
+        }
         open.completeExceptionally(new IOException("WebRTC connection closed"));
         synchronized (writable) { writable.notifyAll(); }
-        try { if (socket != null) socket.close(); } catch (IOException ignored) { }
+        try { if (attached != null) attached.close(); } catch (IOException ignored) { }
         incoming.clear();
         CLEANUP.execute(() -> {
             synchronized (nativeAccess) {

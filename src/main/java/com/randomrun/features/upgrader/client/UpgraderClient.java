@@ -1,19 +1,28 @@
 package com.randomrun.features.upgrader.client;
 
-
-import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderWheel;
-import com.mojang.blaze3d.platform.InputConstants;
-import com.randomrun.core.session.RunSession;
-import com.randomrun.core.session.RunSessionManager;
-import com.randomrun.core.session.RunStatus;
+import com.randomrun.core.run.RunSession;
+import com.randomrun.core.run.RunSession.RunStatus;
+import com.randomrun.core.run.RunSessionManager;
 import com.randomrun.features.upgrader.UpgraderMath;
 import com.randomrun.features.upgrader.UpgraderNetwork;
 import com.randomrun.features.upgrader.UpgraderPackets;
 import com.randomrun.features.upgrader.UpgraderServer;
 import com.randomrun.features.upgrader.UpgraderTransaction;
 import com.randomrun.features.upgrader.UpgraderValues;
+import com.randomrun.features.upgrader.client.UpgraderVisuals.UpgraderWheel;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.util.LegacyKeyCodes;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -26,16 +35,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ThreadLocalRandom;
 
 public final class UpgraderClient {
     private static boolean openKeyDown;
@@ -52,6 +51,7 @@ public final class UpgraderClient {
         final CompletableFuture<RollResult> result = new CompletableFuture<>();
         final CompletableFuture<Boolean> settled = new CompletableFuture<>();
         final long requestedNanos = System.nanoTime();
+        final boolean fast = fastSpin();
         boolean skipped;
         double visualRoll;
         Attempt(MinecraftServer server, RunSession session) { this.server = server; this.session = session; }
@@ -59,14 +59,37 @@ public final class UpgraderClient {
 
     public record Offer(int slot, ItemStack stack, long value) {}
     public record RollResult(boolean accepted, boolean success, double chance, double roll,
-                             String message, ItemStack reward, double bonus, boolean bonusHit, int streak, int flips) {
+                             String message, ItemStack reward, double bonus, boolean bonusHit, int streak, int flips,
+                             List<ItemStack> ladder) {
         public RollResult(boolean accepted, boolean success, double chance, double roll, String message, ItemStack reward) {
-            this(accepted, success, chance, roll, message, reward, 0, false, 0, 0);
+            this(accepted, success, chance, roll, message, reward, 0, false, 0, 0, List.of());
         }
 
-        public int finalCount() {
-            return reward.isEmpty() ? 0 : reward.getCount() << (bonusHit ? streak : 0);
+        public ItemStack step(int wins) {
+            if (!bonusHit || ladder.isEmpty()) return reward;
+            return ladder.get(Math.clamp(wins, 0, ladder.size() - 1));
         }
+
+        public ItemStack finalReward() {
+            return step(streak);
+        }
+    }
+
+    public static boolean fastSpin() {
+        RandomRunMod mod = RandomRunMod.getInstance();
+        return mod != null && mod.getConfig().isUpgraderFastSpin();
+    }
+
+    public static void setFastSpin(boolean value) {
+        RandomRunMod mod = RandomRunMod.getInstance();
+        if (mod == null) return;
+        mod.getConfig().setUpgraderFastSpin(value);
+        mod.saveConfig();
+    }
+
+    public static boolean activeFast() {
+        Attempt attempt = active;
+        return attempt == null ? fastSpin() : attempt.fast;
     }
 
     private static long animationMillis = UpgraderMath.SPIN_MILLIS;
@@ -99,13 +122,14 @@ public final class UpgraderClient {
         RunSession session = RunSessionManager.getInstance().getCurrentSession();
         if (client.player == null || client.level == null || !client.player.isAlive()
                 || client.player.isSpectator() || client.player.isCreative() || session == null
-                || !session.isUpgrader() || session.getStatus() != RunStatus.RUNNING || session.isPaused()) return false;
+                || !session.isUpgrader() || session.getStatus() != RunStatus.RUNNING) return false;
         MinecraftServer server = client.getSingleplayerServer();
         if (server == null) return session.isBattle() && UpgraderNetwork.available(session.getBattleRoomId());
         return !server.isPublished() || session.isBattle();
     }
 
     private static void checkOpenKey(Minecraft client) {
+        if (com.randomrun.features.voice.control.VoiceController.get().isActive()) return;
         int key = LegacyKeyCodes.toInputKey(RandomRunMod.getInstance().getConfig().getUpgraderKey());
         boolean down = key > 0 && client.isWindowActive() && InputConstants.isKeyDown(key);
         if (key != observedOpenKey) {
@@ -191,14 +215,14 @@ public final class UpgraderClient {
         if (attempt.server != null) {
             var playerId = client.player.getUUID();
             attempt.server.execute(() -> UpgraderServer.request(attempt.server,
-                attempt.server.getPlayerList().getPlayer(playerId), attempt.id, room, selection, expected, target, targetCount,
+                attempt.server.getPlayerList().getPlayer(playerId), attempt.id, room, selection, expected, target, targetCount, attempt.fast,
                 result -> client.execute(() -> receiveResult(attempt.id, result)),
                 completed -> client.execute(() -> receiveSettled(attempt.id, completed))));
         } else {
             List<UpgraderPackets.Slot> slots = selection.entrySet().stream()
                 .map(entry -> new UpgraderPackets.Slot(entry.getKey(), entry.getValue(), expected.get(entry.getKey())))
                 .toList();
-            UpgraderNetwork.send(new UpgraderPackets.Roll(attempt.id, room, BuiltInRegistries.ITEM.getKey(target).toString(), targetCount, slots));
+            UpgraderNetwork.send(new UpgraderPackets.Roll(attempt.id, room, BuiltInRegistries.ITEM.getKey(target).toString(), targetCount, attempt.fast, slots));
         }
         return attempt.result;
     }
@@ -213,7 +237,7 @@ public final class UpgraderClient {
         }
         if (result.accepted()) {
             attempt.visualRoll = UpgraderWheel.presentationRoll(result.roll(), result.chance(), result.bonus(), ThreadLocalRandom.current().nextDouble());
-            animationMillis = UpgraderMath.totalMillis(result.flips());
+            animationMillis = UpgraderMath.totalMillis(result.flips(), attempt.fast);
             if (RunSessionManager.getInstance().getCurrentSession() == attempt.session) {
                 restingNeedleTurn();
                 restingNeedleTurn = UpgraderWheel.stoppedTurn(attempt.visualRoll, result.chance());

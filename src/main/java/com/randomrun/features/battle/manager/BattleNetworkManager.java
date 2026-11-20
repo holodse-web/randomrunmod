@@ -1,8 +1,8 @@
 package com.randomrun.features.battle.manager;
 
-
 import com.randomrun.features.battle.manager.BattleSupport.BattleRoomUpdates;
 import com.randomrun.network.WebRtcTransport;
+
 import java.net.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -20,7 +20,7 @@ public final class BattleNetworkManager {
     private volatile String lastConnectionAddress;
     private volatile long generation;
     public BattleNetworkManager(ScheduledExecutorService scheduler) { this.scheduler = scheduler; }
-    public void initializeListeners(Consumer<BattleRoom> update, Runnable failed) { updates = new BattleRoomUpdates(update, failed, scheduler); }
+    public void initializeListeners(Consumer<BattleRoom> update) { updates = new BattleRoomUpdates(update); }
     public BattleRoomUpdates getSseListener() { return updates; }
     public ConnectionState getState() { return state.get(); }
     public String getLastConnectionAddress() { return lastConnectionAddress; }
@@ -38,6 +38,7 @@ public final class BattleNetworkManager {
                 try { opened = server.publishServer(net.minecraft.server.MinecraftServer.MultiplayerScope.LAN, false, port); }
                 finally { WebRtcTransport.getInstance().setPublishing(false); }
                 if (!opened) { result.complete(false); return; }
+                WebRtcTransport.getInstance().guardPublishedServer(server);
                 server.setUsesAuthentication(false);
                 WebRtcTransport.getInstance().host(port).whenComplete((ignored, error) -> {
                     if (error != null || expected != generation) { result.complete(false); return; }
@@ -63,7 +64,7 @@ public final class BattleNetworkManager {
                 String host = endpoint.getAddress().getHostAddress();
                 String address = (host.contains(":") ? "[" + host + "]" : host) + ":" + endpoint.getPort();
                 var client = Minecraft.getInstance();
-                com.randomrun.network.ConnectionStatus.set(com.randomrun.network.ConnectionStatus.Stage.JOINING);
+                com.randomrun.network.WebRtcTransport.ConnectionStatus.set(com.randomrun.network.WebRtcTransport.ConnectionStatus.Stage.JOINING);
                 ConnectScreen.startConnecting(client.gui.screen(), client, ServerAddress.parseString(address), new ServerData("RandomRun", address, ServerData.Type.OTHER), false, null);
                 state.set(ConnectionState.CONNECTED);
             });

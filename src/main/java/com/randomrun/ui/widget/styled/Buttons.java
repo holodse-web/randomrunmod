@@ -1,7 +1,9 @@
 package com.randomrun.ui.widget.styled;
 
-import com.randomrun.ui.theme.ButtonPalette;
 import com.randomrun.ui.util.GuiQuadBatch;
+import com.randomrun.ui.util.InterfaceStyle;
+import com.randomrun.ui.util.Theme.ButtonPalette;
+
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
@@ -45,6 +47,7 @@ public final class Buttons {
         }
 
         private float calculateAppearanceProgress() {
+            if (InterfaceStyle.isClassic()) return 1f;
             if (skipAnimation) return 1f;
             long elapsed = System.currentTimeMillis() - creationTime;
             float delayMs = delay * 1000;
@@ -116,6 +119,7 @@ public final class Buttons {
         }
 
         private float calculateAppearanceProgress() {
+            if (InterfaceStyle.isClassic()) return 1f;
             long elapsed = System.currentTimeMillis() - creationTime;
             float delayMs = delay * 1000;
             if (elapsed < delayMs) {
@@ -154,12 +158,22 @@ public final class Buttons {
         }
 
         public ButtonRainbow setColors(int baseColor, int hoverColor) {
-            setPalette(com.randomrun.ui.theme.ButtonPalette.of(baseColor, hoverColor));
+            setPalette(com.randomrun.ui.util.Theme.ButtonPalette.of(baseColor, hoverColor));
             return this;
         }
 
         @Override
+        protected ButtonPalette defaultPalette() {
+            return InterfaceStyle.isClassic() ? ButtonPalette.GREEN : ButtonPalette.theme();
+        }
+
+        @Override
         public void extractContents(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+            if (InterfaceStyle.isClassic()) {
+                updateAnimations(delta);
+                extractStyled(context, getX(), getY(), 1f);
+                return;
+            }
             float alpha = calculateAppearanceProgress();
             if (alpha <= 0) return;
 
@@ -229,6 +243,7 @@ public final class Buttons {
         }
 
         private float calculateAppearanceProgress() {
+            if (InterfaceStyle.isClassic()) return 1f;
             long elapsed = System.currentTimeMillis() - creationTime;
             float delayMs = delay * 1000;
 

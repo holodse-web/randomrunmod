@@ -1,8 +1,13 @@
 package com.randomrun.features.upgrader;
 
-import com.randomrun.core.session.RunSession;
-import com.randomrun.core.session.RunSessionManager;
+import com.randomrun.core.run.RunSession;
+import com.randomrun.core.run.RunSessionManager;
 import com.randomrun.features.upgrader.client.UpgraderClient;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -12,11 +17,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 public final class UpgraderNetwork {
     private static String enabledRoom;
@@ -81,10 +81,10 @@ public final class UpgraderNetwork {
             }
             Identifier target = Identifier.tryParse(packet.target());
             UpgraderServer.request(context.server(), player, packet.id(), packet.room(), amounts, expected,
-                target == null ? null : BuiltInRegistries.ITEM.getValue(target), packet.targetCount(), result -> {
+                target == null ? null : BuiltInRegistries.ITEM.getValue(target), packet.targetCount(), packet.fast(), result -> {
                     request.reply = new UpgraderPackets.Reply(packet.id(), result.accepted(), result.success(),
                         result.chance(), result.roll(), result.message(), result.reward(),
-                        result.bonus(), result.bonusHit(), result.streak(), result.flips());
+                        result.bonus(), result.bonusHit(), result.streak(), result.flips(), result.ladder());
                     ServerPlayNetworking.send(player, request.reply);
                 }, completed -> {
                     request.settled = completed;
@@ -117,7 +117,7 @@ public final class UpgraderNetwork {
         ClientPlayNetworking.registerGlobalReceiver(UpgraderPackets.Reply.TYPE, (packet, context) ->
             UpgraderClient.receiveResult(packet.id(), new UpgraderClient.RollResult(packet.accepted(), packet.success(),
                 packet.chance(), packet.roll(), packet.message(), packet.reward(),
-                packet.bonus(), packet.bonusHit(), packet.streak(), packet.flips())));
+                packet.bonus(), packet.bonusHit(), packet.streak(), packet.flips(), packet.ladder())));
         ClientPlayNetworking.registerGlobalReceiver(UpgraderPackets.Settled.TYPE,
             (packet, context) -> UpgraderClient.receiveSettled(packet.id(), packet.completed()));
     }

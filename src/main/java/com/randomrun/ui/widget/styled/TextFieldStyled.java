@@ -1,242 +1,189 @@
 package com.randomrun.ui.widget.styled;
 
+import com.randomrun.ui.util.GuiText;
+import com.randomrun.ui.util.Icons;
+import com.randomrun.ui.util.InterfaceStyle;
+import com.randomrun.ui.util.Theme;
+import com.randomrun.ui.util.Ui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.sounds.SoundEvents;
+import net.minecraft.network.chat.MutableComponent;
 
 public class TextFieldStyled extends EditBox {
-    private static final int COLOR_PLACEHOLDER = 0xAAAAAA;
-
-    private static final float TEXT_SCALE = 1.2f;
-    private static final int TEXT_Y_ADJUSTMENT = 8;
-
-    protected int getTextYAdjustment() {
-        return height >= 20 ? TEXT_Y_ADJUSTMENT : Math.round(0.6f * (height - 8)) - 1;
-    }
-
-    private final AbstractStyledWidget styledHelper = new AbstractStyledWidget() {};
+    private final Font renderer;
+    private Integer baseColor, hoverColor, borderColor;
+    private Component placeholder;
+    private static final int EYE_SPACE = 14;
+    private boolean masked, revealable, revealed, centered, extractingText;
+    private int maskStart, maskHighlight;
+    private long focusTime;
+    private final long createdAt = System.currentTimeMillis();
     private final float delay;
-    private final long creationTime;
+    private float alpha = 1f;
 
-    private Integer baseColor;
-    private Integer hoverColor;
-    private Integer borderColor;
-    private Component centeredPlaceholder;
-    private boolean wasHovered = false;
-
-    public TextFieldStyled(Font textRenderer, int x, int y, int width, int height, Component message, float delay) {
-        super(textRenderer, x, y, width, height, message);
+    public TextFieldStyled(Font font, int x, int y, int width, int height, Component message, float delay) {
+        super(font, x, y, width, height, message);
+        renderer = font;
         this.delay = delay;
-        this.creationTime = System.currentTimeMillis();
-        this.setBordered(false);
+        setBordered(true);
+        setTextColor(0xFFE8E8E8);
+        setTextColorUneditable(0xFFA0A092);
     }
-
-    public TextFieldStyled(Font textRenderer, int x, int y, int width, int height, Component message) {
-        this(textRenderer, x, y, width, height, message, 0f);
+    public TextFieldStyled(Font font, int x, int y, int width, int height, Component message) {
+        this(font, x, y, width, height, message, 0f);
     }
-
     public TextFieldStyled setColors(int baseColor, int hoverColor) {
         this.baseColor = baseColor;
         this.hoverColor = hoverColor;
         return this;
     }
+    public TextFieldStyled setBorderColor(int borderColor) { this.borderColor = borderColor; return this; }
+    public TextFieldStyled masked() { return setMasked(true); }
+    public TextFieldStyled setMasked(boolean value) { masked = value; return this; }
+    public TextFieldStyled revealable() { revealable = true; return this; }
+    private boolean hidden() { return masked && !revealed; }
+    private boolean overEye(double mouseX, double mouseY) {
+        return revealable && mouseX >= getX() + width - EYE_SPACE - 2 && mouseX < getX() + width - 2 && mouseY >= getY() && mouseY < getY() + height;
+    }
+    public TextFieldStyled centered() { setCentered(true); return this; }
+    @Override public void setCentered(boolean value) { centered = value; super.setCentered(value); }
+    public void setCenteredPlaceholder(Component text) { placeholder = text; }
+    protected int getTextYAdjustment() { return 0; }
 
-    public TextFieldStyled setBorderColor(int borderColor) {
-        this.borderColor = borderColor;
-        return this;
+    @Override
+    public void setFocused(boolean value) {
+        if (value == isFocused()) return;
+        super.setFocused(value);
+        if (value) focusTime = System.currentTimeMillis();
     }
 
-    private boolean masked;
-
-    private boolean maskFormatter;
-
-    public TextFieldStyled masked() {
-        return setMasked(true);
+    private float appear() {
+        if (InterfaceStyle.isClassic()) return 1f;
+        float t = (System.currentTimeMillis() - createdAt - delay * 1000f) / 400f;
+        if (t <= 0f) return 0f;
+        if (t >= 1f) return 1f;
+        return 1f - (float) Math.pow(1f - t, 3);
     }
 
-    public TextFieldStyled setMasked(boolean value) {
-        masked = value;
-        if (!maskFormatter) {
-            maskFormatter = true;
-            addFormatter((text, offset) -> masked ? net.minecraft.util.FormattedCharSequence.forward("\u25CF".repeat(text.length()), net.minecraft.network.chat.Style.EMPTY) : null);
-        }
-        return this;
-    }
-
-    public void setCenteredPlaceholder(Component text) {
-        this.centeredPlaceholder = text;
+    private int fade(int argb) {
+        return alpha >= 1f ? argb : ((int) (((argb >>> 24) & 0xFF) * alpha) << 24) | (argb & 0xFFFFFF);
     }
 
     @Override
-    public void extractWidgetRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        float alpha = styledHelper.calculateAppearanceProgress(creationTime, delay);
-        if (alpha <= 0) return;
+    public void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+        float progress = appear();
+        if (progress <= 0f) return;
+        alpha = progress;
+        if (progress >= 1f) { extractField(graphics, mouseX, mouseY, delta); return; }
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(0f, (1f - progress) * 30f);
+        extractField(graphics, mouseX, mouseY, delta);
+        graphics.pose().popMatrix();
+        alpha = 1f;
+    }
 
-        int slideOffset = (int) ((1f - alpha) * AbstractStyledWidget.SLIDE_DISTANCE_VERTICAL);
-        int animatedY = getY() + slideOffset;
-
-        boolean hovered = isHovered() || isFocused();
-
-        if (hovered && !wasHovered) {
-            playHoverSound();
-        }
-        wasHovered = hovered;
-
-        styledHelper.updateAnimations(delta, hovered);
-
-        com.randomrun.ui.theme.Theme theme = com.randomrun.ui.theme.Theme.current();
-        int base = baseColor != null ? baseColor : theme.buttonBase;
-        int fieldBg = com.randomrun.ui.util.Ui.lerp(0xFF000000 | base, 0xFF000000, 0.55f) & 0xFFFFFF;
-        int idle = borderColor != null ? borderColor : base;
+    private void extractField(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+        int x = getX(), y = getY();
+        Theme theme = Theme.current();
         int accent = hoverColor != null ? hoverColor : theme.accent;
-        float focus = isFocused() ? 1f : styledHelper.hoverProgress * 0.5f;
-        int border = styledHelper.lerpColor(idle, accent, focus);
-        int bgAlpha = (int) (alpha * 235);
-        context.fill(getX(), animatedY, getX() + width, animatedY + height, (bgAlpha << 24) | fieldBg);
-        int a = ((int) (alpha * 255)) << 24 | (border & 0xFFFFFF);
-        context.fill(getX(), animatedY, getX() + width, animatedY + 2, a);
-        context.fill(getX(), animatedY + height - 2, getX() + width, animatedY + height, a);
-        context.fill(getX(), animatedY + 2, getX() + 2, animatedY + height - 2, a);
-        context.fill(getX() + width - 2, animatedY + 2, getX() + width, animatedY + height - 2, a);
-
-        int originalY = getY();
-        setY(animatedY);
-
-        renderScaledText(context, mouseX, mouseY, delta);
-
-        boolean shouldShowPlaceholder = centeredPlaceholder != null && 
-                                       (getValue() == null || getValue().trim().isEmpty()) && 
-                                       !isFocused();
-
-        if (shouldShowPlaceholder) {
-            renderCenteredPlaceholder(context);
+        if (InterfaceStyle.isClassic()) {
+            int face = baseColor == null ? 0x24241F : Ui.lerp(0xFF24241F, 0xFF000000 | baseColor, .15f) & 0xFFFFFF;
+            Ui.bevel(graphics, x, y, x + width, y + height, face, 1f, true);
+            if (active && isFocused()) Ui.border(graphics, x, y, x + width, y + height, 1, 0xFFFFFFA0);
+            else if (active && isHovered()) Ui.border(graphics, x, y, x + width, y + height, 1, Ui.argb(borderColor != null ? borderColor : accent, .7f));
+        } else {
+            int base = baseColor != null ? baseColor : theme.buttonBase;
+            graphics.fill(x, y, x + width, y + height, Ui.argb(Ui.lerp(0xFF000000 | base, 0xFF000000, .55f), .92f * alpha));
+            int idle = borderColor != null ? borderColor : base;
+            Ui.border(graphics, x, y, x + width, y + height, 2, Ui.argb(isFocused() ? accent : isHovered() ? Ui.lerp(0xFF000000 | idle, 0xFF000000 | accent, .5f) : idle, alpha));
         }
-
-        setY(originalY);
+        if (alpha < 0.6f) return;
+        if (hidden()) {
+            extractMasked(graphics);
+        } else {
+            extractingText = true;
+            try { super.extractWidgetRenderState(graphics, mouseX, mouseY, delta); }
+            finally { extractingText = false; }
+        }
+        if (placeholder != null && getValue().isEmpty() && !isFocused()) {
+            String text = Ui.ellipsize(renderer, placeholder.getString(), Math.max(0, width - 10 - (revealable ? EYE_SPACE * 2 : 0)));
+            int textX = centered ? x + (width - renderer.width(text)) / 2 : x + 4;
+            GuiText.text(graphics, renderer, text, textX, y + (height - 8) / 2, fade(0xFFA8A89E), true);
+        }
+        if (revealable) extractEye(graphics, mouseX, mouseY, accent);
     }
 
-    private void playHoverSound() {
-        if (!com.randomrun.infrastructure.RandomRunMod.getInstance().getConfig().isSoundEffectsEnabled()) return;
-
-        float volume = com.randomrun.infrastructure.RandomRunMod.getInstance().getConfig().getSoundVolume() / 100f;
-        Minecraft.getInstance().getSoundManager().play(
-            SimpleSoundInstance.forUI(
-                SoundEvents.NOTE_BLOCK_BELL.value(), 
-                1.8f,
-                volume * 0.25f
-            )
-        );
+    private void extractEye(GuiGraphicsExtractor graphics, int mouseX, int mouseY, int accent) {
+        boolean hover = active && overEye(mouseX, mouseY);
+        int color = !active ? 0xFF6E6E66 : hover ? (InterfaceStyle.isClassic() ? 0xFFFFFFA0 : Ui.argb(accent, 1f)) : 0xFFA8A89E;
+        Icons icon = revealed ? Icons.EYE : Icons.EYE_OFF;
+        icon.drawCentered(graphics, getX() + width - EYE_SPACE - 2, getY(), EYE_SPACE, height, fade(color));
+        if (hover) graphics.requestCursor(com.mojang.blaze3d.platform.cursor.CursorTypes.POINTING_HAND);
     }
 
-    private void renderScaledText(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        Font renderer = Minecraft.getInstance().font;
-        int textWidth = renderer.width(masked ? "\u25CF".repeat(getValue().length()) : getValue());
-
-        float baseTextX = 4.0f;
-        float baseTextY = (height - 8) / 2.0f;
-
-        float targetX = (width - textWidth * TEXT_SCALE) / 2.0f;
-        float targetY = (height - 8 * TEXT_SCALE) / 2.0f + getTextYAdjustment();
-
-        float tx = targetX - TEXT_SCALE * baseTextX;
-        float ty = targetY - TEXT_SCALE * baseTextY;
-
-        float matrixTx = getX() * (1 - TEXT_SCALE) + tx;
-        float matrixTy = getY() * (1 - TEXT_SCALE) + ty;
-
-        context.pose().pushMatrix();
-        context.pose().translate(matrixTx, matrixTy);
-        context.pose().scale(TEXT_SCALE, TEXT_SCALE);
-
-        int adjustedMouseX = (int)((mouseX - matrixTx) / TEXT_SCALE);
-        int adjustedMouseY = (int)((mouseY - matrixTy) / TEXT_SCALE);
-
-        super.extractWidgetRenderState(context, adjustedMouseX, adjustedMouseY, delta);
-
-        context.pose().popMatrix();
+    private int maskCapacity() { return Math.max(1, getInnerWidth() / Math.max(1, renderer.width("*"))); }
+    private void updateMaskScroll() {
+        int capacity = maskCapacity(), cursor = getCursorPosition();
+        maskStart = Math.min(maskStart, Math.max(0, getValue().length() - capacity));
+        if (cursor < maskStart) maskStart = cursor;
+        if (cursor > maskStart + capacity) maskStart = cursor - capacity;
     }
-
-    private void renderCenteredPlaceholder(GuiGraphicsExtractor context) {
-        if (getValue() != null && !getValue().trim().isEmpty()) {
+    private int maskTextX() {
+        int length = Math.min(maskCapacity(), getValue().length() - maskStart);
+        int textWidth = renderer.width("*".repeat(Math.max(0, length)));
+        return centered ? getX() + (width - textWidth) / 2 : getX() + 4;
+    }
+    private void extractMasked(GuiGraphicsExtractor graphics) {
+        updateMaskScroll();
+        int length = Math.min(maskCapacity(), getValue().length() - maskStart);
+        int x = maskTextX(), y = getY() + (height - 8) / 2;
+        int glyphWidth = Math.max(1, renderer.width("*"));
+        int cursor = Math.clamp(getCursorPosition() - maskStart, 0, length);
+        int highlight = Math.clamp(maskHighlight - maskStart, 0, length);
+        int color = active ? 0xFFE8E8E8 : 0xFFA0A092;
+        graphics.enableScissor(getX() + 3, getY() + 2, getX() + width - 3, getY() + height - 2);
+        GuiText.text(graphics, renderer, "*".repeat(length), x, y + 2, color, true);
+        if (cursor != highlight) graphics.textHighlight(x + Math.min(cursor, highlight) * glyphWidth, y - 1,
+            x + Math.max(cursor, highlight) * glyphWidth, y + 9, true);
+        int cursorX = x + cursor * glyphWidth;
+        if (isFocused() && ((System.currentTimeMillis() - focusTime) / 300L & 1L) == 0) graphics.fill(cursorX, y - 1, cursorX + 1, y + 9, color);
+        graphics.disableScissor();
+        if (canConsumeInput()) Minecraft.getInstance().textInputManager().setTextInputArea(cursorX, y, cursorX + 1, y + 10);
+    }
+    @Override public void setHighlightPos(int position) {
+        super.setHighlightPos(position);
+        maskHighlight = Math.clamp(position, 0, getValue().length());
+    }
+    @Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        boolean accepted = super.mouseClicked(event, doubleClick);
+        if (accepted) setFocused(true);
+        return accepted;
+    }
+    @Override public void onClick(MouseButtonEvent event, boolean doubleClick) {
+        if (overEye(event.x(), event.y())) {
+            revealed = !revealed;
+            moveCursorTo(getCursorPosition(), false);
             return;
         }
-
-        if (isFocused()) {
-            return;
-        }
-
-        Font renderer = Minecraft.getInstance().font;
-        int placeholderWidth = renderer.width(centeredPlaceholder);
-
-        float phX = getX() + (width - placeholderWidth) / 2.0f;
-        float phY = getY() + (height - 8) / 2.0f;
-
-        context.pose().pushMatrix();
-        context.pose().translate(phX, phY);
-        com.randomrun.ui.util.GuiText.text(context, renderer, centeredPlaceholder, 0, 0, COLOR_PLACEHOLDER);
-        context.pose().popMatrix();
+        if (!hidden()) { super.onClick(event, doubleClick); return; }
+        updateMaskScroll();
+        int position = Math.clamp(maskStart + (int) Math.round((event.x() - maskTextX()) / Math.max(1, renderer.width("*"))), 0, getValue().length());
+        if (doubleClick) { moveCursorToStart(false); moveCursorToEnd(true); }
+        else moveCursorTo(position, event.hasShiftDown());
     }
-
-    @Override
-    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
-        double mouseX = event.x();
-        double mouseY = event.y();
-        int button = event.button();
-        if (mouseX >= getX() && mouseX <= getX() + width && 
-            mouseY >= getY() && mouseY <= getY() + height) {
-            double[] adjusted = adjustMouseCoordinates(mouseX, mouseY);
-            boolean result = super.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(adjusted[0], adjusted[1], event.buttonInfo()), doubleClick);
-
-            if (result || button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
-                setFocused(true);
-                return true;
-            }
-            return result;
-        }
-        return super.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(mouseX, mouseY, event.buttonInfo()), doubleClick);
+    @Override protected void onDrag(MouseButtonEvent event, double dx, double dy) {
+        if (overEye(event.x(), event.y())) return;
+        if (!hidden()) { super.onDrag(event, dx, dy); return; }
+        int position = Math.clamp(maskStart + (int) Math.round((event.x() - maskTextX()) / Math.max(1, renderer.width("*"))), 0, getValue().length());
+        moveCursorTo(position, true);
     }
-
-    @Override
-    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double deltaX, double deltaY) {
-        double mouseX = event.x();
-        double mouseY = event.y();
-
-        double[] adjusted = adjustMouseCoordinates(mouseX, mouseY);
-        return super.mouseDragged(new net.minecraft.client.input.MouseButtonEvent(adjusted[0], adjusted[1], event.buttonInfo()), deltaX / TEXT_SCALE, deltaY / TEXT_SCALE);
+    @Override protected MutableComponent createNarrationMessage() {
+        return hidden() ? Component.translatable("gui.narrate.editBox", getMessage(), "*".repeat(getValue().length())) : super.createNarrationMessage();
     }
-
-    @Override
-    public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
-        double mouseX = event.x();
-        double mouseY = event.y();
-
-        double[] adjusted = adjustMouseCoordinates(mouseX, mouseY);
-        return super.mouseReleased(new net.minecraft.client.input.MouseButtonEvent(adjusted[0], adjusted[1], event.buttonInfo()));
-    }
-
-    private double[] adjustMouseCoordinates(double mouseX, double mouseY) {
-        Font renderer = Minecraft.getInstance().font;
-        int textWidth = renderer.width(masked ? "\u25CF".repeat(getValue().length()) : getValue());
-
-        float baseTextX = 4.0f;
-        float baseTextY = (height - 8) / 2.0f;
-
-        float targetX = (width - textWidth * TEXT_SCALE) / 2.0f;
-        float targetY = (height - 8 * TEXT_SCALE) / 2.0f + getTextYAdjustment();
-
-        float tx = targetX - TEXT_SCALE * baseTextX;
-        float ty = targetY - TEXT_SCALE * baseTextY;
-
-        float matrixTx = getX() * (1 - TEXT_SCALE) + tx;
-        float matrixTy = getY() * (1 - TEXT_SCALE) + ty;
-
-        return new double[] {
-            (mouseX - matrixTx) / TEXT_SCALE,
-            (mouseY - matrixTy) / TEXT_SCALE
-        };
-    }
+    @Override public boolean isBordered() { return !extractingText && super.isBordered(); }
+    @Override public int getInnerWidth() { return Math.max(1, width - 8 - (revealable ? EYE_SPACE * 2 : 0)); }
 }

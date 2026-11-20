@@ -1,12 +1,11 @@
 package com.randomrun.features.battle.manager;
 
-
+import com.randomrun.core.run.RunDataManager;
 import com.randomrun.features.battle.manager.BattleSupport.BattleConstants;
-import com.google.gson.JsonObject;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.data.RunDataManager;
 import com.randomrun.infrastructure.util.IdCompressor;
-import com.randomrun.ui.screen.endgame.DefeatScreen;
+import com.randomrun.ui.screen.endgame.EndgameScreen.DefeatScreen;
+
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -33,7 +32,7 @@ public class BattleEventHandler {
     public CompletableFuture<Boolean> reportBattleResult(String roomId, BattleRoom currentRoom,
                                                           long time, BattleResultType resultType) {
         if (!validateRoomId(roomId) || currentRoom == null) {
-            RandomRunMod.LOGGER.error("{} Невалидные данные для отчета", LOG_TAG);
+            RandomRunMod.LOGGER.error("{} Invalid battle result", LOG_TAG);
             return CompletableFuture.completedFuture(false);
         }
 
@@ -43,7 +42,7 @@ public class BattleEventHandler {
         }
 
         if (time <= 0 && resultType != BattleResultType.DRAW) {
-            RandomRunMod.LOGGER.warn("{} Некорректное время: {} для типа {}", LOG_TAG, time, resultType);
+            RandomRunMod.LOGGER.warn("{} Invalid duration {} for result {}", LOG_TAG, time, resultType);
             return CompletableFuture.completedFuture(false);
         }
 
@@ -59,6 +58,8 @@ public class BattleEventHandler {
 
         switch (resultType) {
             case VICTORY, SHARED_WORLD_VICTORY -> {
+                Map<String, Object> trace = BattleTrace.itemTrace();
+                if (trace != null) updates.put("trace", trace);
                 updates.put("w", playerName);
                 updates.put("st", "FINISHED");
                 if (time > 0) {
@@ -80,11 +81,11 @@ public class BattleEventHandler {
         return apiHelper.updateRoomFields(roomId, updates)
             .thenApply(success -> {
                 if (!success) {
-                    RandomRunMod.LOGGER.error("{} Не удалось отправить результат", LOG_TAG);
+                    RandomRunMod.LOGGER.error("{} Battle result rejected", LOG_TAG);
                 }
                 return success;
             }).exceptionally(e -> {
-            RandomRunMod.LOGGER.error("{} Ошибка отправки результата", LOG_TAG, e);
+            RandomRunMod.LOGGER.error("{} Battle result submission failed", LOG_TAG, e);
             return false;
         }).orTimeout(BattleConstants.EVENT_TIMEOUT_MS, TimeUnit.MILLISECONDS);
     }
@@ -93,7 +94,7 @@ public class BattleEventHandler {
 
     public CompletableFuture<Boolean> reportElimination(String roomId, BattleRoom currentRoom) {
         if (currentRoom == null) {
-            RandomRunMod.LOGGER.warn("{} Попытка элиминации без комнаты", LOG_TAG);
+            RandomRunMod.LOGGER.warn("{} Cannot report elimination outside a room", LOG_TAG);
             return CompletableFuture.completedFuture(false);
         }
 
@@ -108,11 +109,11 @@ public class BattleEventHandler {
                 if (success) {
                     currentRoom.addEliminatedPlayer(myName);
                 } else {
-                    RandomRunMod.LOGGER.error("{} Не удалось зафиксировать элиминацию", LOG_TAG);
+                    RandomRunMod.LOGGER.error("{} Elimination rejected", LOG_TAG);
                 }
                 return success;
             }).exceptionally(e -> {
-                RandomRunMod.LOGGER.error("{} Ошибка элиминации", LOG_TAG, e);
+                RandomRunMod.LOGGER.error("{} Elimination request failed", LOG_TAG, e);
                 return false;
             });
     }
@@ -152,7 +153,7 @@ public class BattleEventHandler {
         Minecraft.getInstance().execute(() -> {
             Item targetItem = BuiltInRegistries.ITEM.getValue(Identifier.parse(room.getTargetItem()));
             Minecraft.getInstance().gui.setScreen(
-                new com.randomrun.ui.screen.endgame.DrawScreen(targetItem, 0, finalReason));
+                new com.randomrun.ui.screen.endgame.EndgameScreen.DrawScreen(targetItem, 0, finalReason));
         });
     }
 
@@ -181,11 +182,11 @@ public class BattleEventHandler {
     private void showNormalVictory() {
         playSound(net.minecraft.sounds.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
 
-        com.randomrun.core.service.RunCompletionService.getInstance()
+        com.randomrun.core.run.RunCompletionService.getInstance()
             .completeWithSurvivorVictory()
             .thenAccept(record -> {
                 if (record == null) {
-                    RandomRunMod.LOGGER.error("{} Не удалось сохранить победу", LOG_TAG);
+                    RandomRunMod.LOGGER.error("{} Could not save win", LOG_TAG);
                 }
             });
     }
@@ -198,11 +199,11 @@ public class BattleEventHandler {
             return;
         }
 
-        com.randomrun.core.service.RunCompletionService.getInstance()
-            .completeWithDeath()
+        com.randomrun.core.run.RunCompletionService.getInstance()
+            .completeWithLoss()
             .thenAccept(record -> {
                 if (record == null) {
-                    RandomRunMod.LOGGER.error("{} Не удалось сохранить поражение", LOG_TAG);
+                    RandomRunMod.LOGGER.error("{} Could not save loss", LOG_TAG);
                 }
             });
 
@@ -239,7 +240,7 @@ public class BattleEventHandler {
             try {
                 targetItem = BuiltInRegistries.ITEM.getValue(Identifier.parse(IdCompressor.decompress(room.getTargetItem())));
             } catch (Exception e) {
-                RandomRunMod.LOGGER.error("{} Ошибка получения целевого предмета", LOG_TAG, e);
+                RandomRunMod.LOGGER.error("{} Could not load the target", LOG_TAG, e);
             }
         }
         return targetItem;
@@ -247,7 +248,7 @@ public class BattleEventHandler {
 
     private boolean validateRoomId(String roomId) {
         if (roomId == null || roomId.trim().isEmpty()) {
-            RandomRunMod.LOGGER.error("{} Пустой roomId", LOG_TAG);
+            RandomRunMod.LOGGER.error("{} Missing room ID", LOG_TAG);
             return false;
         }
         return true;
@@ -255,7 +256,7 @@ public class BattleEventHandler {
 
     private boolean validatePlayerName(String playerName) {
         if (playerName == null || playerName.trim().isEmpty()) {
-            RandomRunMod.LOGGER.error("{} Пустое имя игрока", LOG_TAG);
+            RandomRunMod.LOGGER.error("{} Missing player name", LOG_TAG);
             return false;
         }
         return true;

@@ -1,10 +1,13 @@
 package com.randomrun.network;
 
-import com.google.gson.*;
 import com.randomrun.features.battle.manager.BattleRoom;
 import com.randomrun.features.battle.manager.BattleRoomSerializer;
+
+import com.google.gson.*;
+import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.*;
 
@@ -12,6 +15,7 @@ public final class HttpClient {
     private static final Gson GSON = new GsonBuilder().registerTypeAdapter(BattleRoom.class, new BattleRoomSerializer()).create();
     private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(8, r -> { Thread thread = new Thread(r, "RandomRun-API"); thread.setDaemon(true); return thread; });
     private static final HttpClient INSTANCE = new HttpClient();
+    public static final String PROTOCOL = "2";
     private final java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).followRedirects(java.net.http.HttpClient.Redirect.NEVER).executor(EXECUTOR).build();
     private final ConcurrentHashMap<String, Cached> cache = new ConcurrentHashMap<>();
     private record Cached(JsonElement value, long expires, BackendSession.Session session) {}
@@ -24,14 +28,19 @@ public final class HttpClient {
     public static HttpClient getInstance() { return INSTANCE; }
     public static ExecutorService getNetworkExecutor() { return EXECUTOR; }
     public CompletableFuture<JsonElement> request(String method, String path, Object data, boolean authenticated) {
+
+        com.randomrun.infrastructure.RandomRunMod mod = com.randomrun.infrastructure.RandomRunMod.getInstance();
+        if (mod == null || mod.getConfig() == null || !mod.getConfig().isOnlineMode())
+            return CompletableFuture.failedFuture(new ApiException(0, "OFFLINE"));
         BackendSession.Session session = BackendSession.current();
         if (authenticated && !BackendSession.isAuthenticated()) return CompletableFuture.failedFuture(new ApiException(401, "AUTH_REQUIRED"));
-        HttpRequest.Builder builder = HttpRequest.newBuilder(BackendConfig.endpoint(path)).timeout(Duration.ofSeconds(30)).header("Accept", "application/json");
+        HttpRequest.Builder builder = HttpRequest.newBuilder(BackendConfig.endpoint(path)).timeout(Duration.ofSeconds(30)).header("Accept", "application/json").header("X-RRM-Protocol", PROTOCOL);
         if (authenticated) builder.header("Authorization", "Bearer " + session.token());
         builder.method(method, data == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(GSON.toJson(data)));
         if (data != null) builder.header("Content-Type", "application/json");
         return client.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofString()).thenApply(response -> {
             if (authenticated && BackendSession.current() != session) throw new CancellationException("Session changed");
+            if (authenticated) response.headers().firstValueAsLong("x-session-expires").ifPresent(expires -> BackendSession.extend(session, expires));
             JsonElement value;
             try { value = JsonParser.parseString(response.body()); } catch (Exception error) { throw new ApiException(response.statusCode(), "INVALID_SERVER_RESPONSE"); }
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
@@ -72,4 +81,24 @@ public final class HttpClient {
     private CompletableFuture<Boolean> mutate(String method, String path, Object data) { return request(method, path, data, true).thenApply(value -> { clearCache(); return true; }); }
     public void invalidateCache(String path) { clearCache(); }
     public void clearCache() { cache.clear(); }
+
+    public static final class BackendConfig {
+        private static final URI BASE = load();
+        private BackendConfig() {}
+        private static URI load() {
+            String address = System.getProperty("randomrun.api", "http://127.0.0.1:8787");
+            try (var input = BackendConfig.class.getResourceAsStream("/randomrun-online.json")) {
+                if (System.getProperty("randomrun.api") == null && input != null) address = JsonParser.parseString(new String(input.readAllBytes(), StandardCharsets.UTF_8)).getAsJsonObject().get("apiUrl").getAsString();
+            } catch (Exception error) { throw new IllegalStateException("Invalid RandomRun server configuration", error); }
+            URI value = URI.create(address);
+            boolean local = "127.0.0.1".equals(value.getHost()) || "localhost".equals(value.getHost()) || "[::1]".equals(value.getHost());
+            if (!("https".equals(value.getScheme()) || local && "http".equals(value.getScheme())) || value.getHost() == null || value.getUserInfo() != null || value.getQuery() != null || value.getFragment() != null || !(value.getPath().isEmpty() || "/".equals(value.getPath()))) throw new IllegalArgumentException("RandomRun requires an HTTPS API address");
+            return URI.create(address.replaceAll("/+$", "") + "/v1/");
+        }
+        public static URI endpoint(String path) {
+            if (path == null || !path.startsWith("/") || path.startsWith("//") || path.contains(":") || path.contains("..") || path.contains("?") || path.contains("#") || path.contains("%") || path.contains("\\")) throw new IllegalArgumentException("Invalid API path");
+            return BASE.resolve(path.substring(1));
+        }
+        public static URI events() { return URI.create(endpoint("/events").toString().replaceFirst("^http", "ws")); }
+    }
 }

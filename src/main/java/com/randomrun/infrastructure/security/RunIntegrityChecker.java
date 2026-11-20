@@ -1,9 +1,10 @@
 package com.randomrun.infrastructure.security;
 
-import com.randomrun.core.history.Run;
-import com.randomrun.core.profile.PlayerProfile;
+import com.randomrun.core.data.PlayerProfile;
+import com.randomrun.core.run.Run;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.util.CompactLogger;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.Minecraft;
@@ -12,9 +13,7 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffects;
 
 public class RunIntegrityChecker {
-    private static final long IMPOSSIBLE_TIME_MS = 100;
-    private static final long SUSPICIOUS_TIME_MS = 300;
-    private static final long VERY_FAST_TIME_MS = 500;
+    private static final long SUSPICIOUS_TIME_MS = 500;
 
     private static final int MIN_RUNS_FOR_STATS = 50;
     private static final double SUSPICIOUS_CONSISTENCY = 0.02;
@@ -41,7 +40,6 @@ public class RunIntegrityChecker {
         checkGameConditions(record, report);
         checkActiveEffects(report);
         checkDataConsistency(record, report);
-        checkWorldIntegrity(report);
 
         if (!report.isClean()) {
             applyPenalties(profile, report);
@@ -52,23 +50,14 @@ public class RunIntegrityChecker {
     }
 
     private static void checkTime(Run record, IntegrityReport report) {
+        if (record.getResult() != Run.RunResult.VICTORY || record.isRandomDrop()) return;
         long duration = record.getDuration();
-
-        if (duration < IMPOSSIBLE_TIME_MS) {
-            report.addViolation(ViolationType.IMPOSSIBLE_TIME,
-                String.format("Duration %dms is physically impossible", duration), Severity.CRITICAL);
-        } else if (duration < SUSPICIOUS_TIME_MS) {
+        if (duration < SUSPICIOUS_TIME_MS) {
             report.addViolation(ViolationType.SUSPICIOUS_TIME,
-                String.format("Duration %dms is suspiciously fast", duration), Severity.HIGH);
-        } else if (duration < VERY_FAST_TIME_MS) {
-            report.addViolation(ViolationType.VERY_FAST_TIME,
-                String.format("Duration %dms is very fast", duration), Severity.MEDIUM);
-        }
-
-        if (duration <= 0) {
-            report.addViolation(ViolationType.INVALID_TIME, "Duration must be positive", Severity.CRITICAL);
+                String.format("Victory in %dms", duration), Severity.HIGH);
         }
     }
+
 
     private static void checkPlayerStats(PlayerProfile profile, IntegrityReport report) {
         int totalRuns = profile.getTotalRuns();
@@ -77,13 +66,13 @@ public class RunIntegrityChecker {
         if (profile.getTrustScore() < PlayerProfile.LEADERBOARD_THRESHOLD) {
             report.addViolation(ViolationType.LOW_TRUST_SCORE,
                 String.format("Trust Score too low: %d/%d", profile.getTrustScore(), PlayerProfile.LEADERBOARD_THRESHOLD),
-                Severity.HIGH);
+                Severity.LOW);
         }
 
         if (profile.getSuspiciousFlags() > 5) {
             report.addViolation(ViolationType.HIGH_SUSPICIOUS_FLAGS,
                 String.format("Too many suspicious flags: %d", profile.getSuspiciousFlags()),
-                Severity.MEDIUM);
+                Severity.LOW);
         }
 
         if (profile.getLastCheatDetection() > 0) {
@@ -91,7 +80,7 @@ public class RunIntegrityChecker {
             if (daysSinceCheat < 7) {
                 report.addViolation(ViolationType.RECENT_CHEAT_DETECTION,
                     String.format("Cheat detected %d days ago", daysSinceCheat),
-                    Severity.HIGH);
+                    Severity.LOW);
             }
         }
     }
@@ -160,22 +149,7 @@ public class RunIntegrityChecker {
         }
     }
 
-    private static void checkWorldIntegrity(IntegrityReport report) {
-        try {
-            com.randomrun.core.session.RunSession session =
-                com.randomrun.core.session.RunSessionManager.getInstance().getCurrentSession();
 
-            if (session == null) return;
-
-            if (!session.validateWorldIntegrity()) {
-                report.addViolation(ViolationType.WORLD_MANIPULATION,
-                    "World dimension files modified during run (DIM-1/DIM1)",
-                    Severity.CRITICAL);
-            }
-        } catch (Exception e) {
-            CompactLogger.warn("[Integrity] World integrity check failed: {}", e.getMessage());
-        }
-    }
 
     private static void checkDataConsistency(Run record, IntegrityReport report) {
         long now = System.currentTimeMillis();
@@ -219,7 +193,7 @@ public class RunIntegrityChecker {
             CompactLogger.warn("[Integrity] Penalty {} for {} violations: {}",
                 totalPenalty, report.getViolations().size(), String.join(", ", penaltyReasons));
         } else if (!report.isClean()) {
-            CompactLogger.security("[Integrity] LOW violations (no penalty): {} violations",
+            CompactLogger.core("[Integrity] Minor violations: {}",
                 report.getViolations().size());
         }
     }
@@ -366,10 +340,7 @@ public class RunIntegrityChecker {
     }
 
     public enum ViolationType {
-        IMPOSSIBLE_TIME,
         SUSPICIOUS_TIME,
-        VERY_FAST_TIME,
-        INVALID_TIME,
         LOW_TRUST_SCORE,
         HIGH_SUSPICIOUS_FLAGS,
         RECENT_CHEAT_DETECTION,
@@ -381,8 +352,7 @@ public class RunIntegrityChecker {
         SUSPICIOUS_EFFECTS,
         FUTURE_TIMESTAMP,
         OLD_TIMESTAMP,
-        INVALID_DATA,
-        WORLD_MANIPULATION
+        INVALID_DATA
     }
 
     public enum Severity {

@@ -2,47 +2,39 @@
 
 <p align="center"><a href="README.ru.md">Русская версия</a> · <a href="https://t.me/rrmnetwork">Telegram</a> · <a href="CHANGELOG.md">Changelog</a></p>
 
-A Fabric client mod for Minecraft **26.3**, Java **25+**, mod version **27.1**. Obtain a random item as quickly as possible, alone or in a room with friends.
+A Fabric client mod for Minecraft **26.3**, Java **25+**, mod version **27.2**. Obtain a random item as quickly as possible, alone or in a room with friends.
 
 ## Playing
 
-- Solo runs: item targets, optional custom seed, timer, run history and personal records. Start with `/go` or the configured key.
-- **Random Drop:** randomized block drops. These runs are excluded from the leaderboard.
-- **RRM Upgrader:** bet up to 10 items of up to 3 types for a chance at more valuable items, stacks and bonus streaks up to x32. Open with **U** (configurable). The integrated server decides the outcome; room hosts enable it for everyone.
-- Rooms for **2–6 players** with optional passwords, a shared target and synchronized start. Play in the host's **shared world** through built-in WebRTC (the host must keep it running), or in **separate worlds** with the same seed.
-- A player who wins a room by outlasting everyone, without obtaining the item, does not enter the leaderboard.
-- Online profiles, history and leaderboards. Register with your launcher nickname; old database records are not imported.
-- Fair play: cheat clients, X-ray packs, minimaps and speedrun helpers are blocked before a run.
-- Offline solo play without an account. Rooms and cloud data require sign-in.
-- Friends with requests, live status and room invites; invited friends skip the room password.
-- HUD editor, interface/audio settings, six color themes, English/Russian/Ukrainian translations.
+- **Solo runs** with a random item target, optional custom seed, timer, history and personal records. A 5-second countdown starts automatically after the world loads.
+- **Battles for 2–6 players** with optional passwords, a shared target and a synchronized start. Race in the host's shared world through built-in WebRTC or in separate worlds with the same seed.
+- **Friends and global chat** in the Network panel. Add friends, see who's online and invite them directly into rooms.
+- **Random Drop** randomizes block drops. **RRM Upgrader** (default key **U**) lets you stake items for a chance to win more valuable ones.
+- **Voice control** for solo runs and rooms. After a one-time language pack download, recognition runs locally in English, Russian or Ukrainian.
+- **Streamer mode** lets you play as Zloy with his skin and voice lines, including in rooms.
+- **Modern and Classic interfaces** with six color themes and a customizable HUD. Change styles in **Settings → Interface Settings → Interface**.
+- **Online and offline play.** Play solo without an account, or sign in for rooms, cloud history and leaderboards. The HUD shows whether a run is eligible for the leaderboard. Runs with Random Drop or voice control stay out of the rankings.
 
-**Change seed** in the pause menu creates a new solo world, preserving the target, Random Drop and Upgrader. Available after the initial loading delay, even before `/go`.
+**Change seed** in the pause menu creates a new solo world, preserving the target, Random Drop and Upgrader. Available after the initial loading delay, even before the countdown ends.
 
 ## Installation
 
 1. Install Minecraft **26.3**, Fabric Loader **0.19.5+**, Java **25+**, and Fabric API for 26.3.
-2. Put `RandomRun-26.3Fabric-27.1.jar` in `mods` and remove older RandomRun jars.
-3. Use the same mod version on every player's client. WebRTC is bundled for Windows x64, Linux x64 and macOS (Intel and Apple Silicon); e4mc and a VPN are not required.
+2. Download [RandomRun 27.2](https://github.com/holodse-web/randomrunmod/releases/tag/v27.2), put `RandomRun-26.3Fabric-27.2.jar` in `mods` and remove older RandomRun JARs.
+3. Use version **27.2** on every player's client. Shared worlds work through built-in WebRTC on Windows x64, Linux x64 and macOS (Intel and Apple Silicon).
 
-## Development
+## Build from source
 
-Requires Java 25, Node.js 22+ and npm.
+Requires JDK 25. Run from the repository root.
 
 ```powershell
 .\gradlew.bat build
-.\gradlew.bat obfuscatedJar
-cd server
-npm ci
-npm run dev
 ```
 
-For a local Minecraft client set JVM property `-Drandomrun.api=http://127.0.0.1:8787`. The packaged API address is in `src/main/resources/randomrun-online.json`; remote overrides require HTTPS.
-
-Jars: `build/libs` (plain), `build/obfuscated/release` (obfuscated). The crash mapping in `build/obfuscated` is private: do not distribute it. Build tasks do not publish releases.
-
-The Upgrader catalog is regenerated with `python tools/upgrader/generate_values.py C:/path/to/minecraft-26.3-client.jar`. Its resource is `src/main/resources/assets/randomrun/upgrader_values.json`; audits go to `build/reports/upgrader`.
+The JAR is in `build/libs`.
 
 ## Links and license
 
-[Telegram](https://t.me/rrmnetwork). Copyright (c) 2026 Stanislav Kholod. All rights reserved. Source is published for reference; modification and redistribution of modified versions are not permitted. Modpack use is allowed with attribution. See [LICENSE](LICENSE).
+[Telegram](https://t.me/rrmnetwork) · [License](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+
+Copyright (c) 2026 Stanislav Kholod. All rights reserved. Source is published for reference. Modification and redistribution of modified versions are prohibited. Modpack use is allowed with attribution.

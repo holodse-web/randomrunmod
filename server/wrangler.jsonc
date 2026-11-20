@@ -20,8 +20,8 @@
     }
   ],
   "vars": {
-    "MOD_VERSION": "27.1",
-    "MIN_MOD_VERSION": "27.1"
+    "MOD_VERSION": "27.2",
+    "MIN_MOD_VERSION": "27.2"
   },
   "observability": {
     "enabled": true,

@@ -1,14 +1,14 @@
 package com.randomrun.features.leaderboard;
 
+import com.randomrun.features.leaderboard.LeaderboardEntry.LatestRunEntry;
+import com.randomrun.infrastructure.RandomRunMod;
+import com.randomrun.infrastructure.util.IdCompressor;
+import com.randomrun.network.HttpClient;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.randomrun.network.HttpClient;
-import com.randomrun.core.history.Run;
-import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.util.IdCompressor;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -50,7 +50,7 @@ public class LeaderboardService {
             try {
                 cache.entrySet().removeIf(entry -> entry.getValue().isExpired());
             } catch (Exception e) {
-                RandomRunMod.LOGGER.error("{} Ошибка очистки кэша: {}", LOG_TAG, e.getMessage());
+                RandomRunMod.LOGGER.error("{} Cache clear failed: {}", LOG_TAG, e.getMessage());
             }
         }, CACHE_TTL_MS, CACHE_TTL_MS, TimeUnit.MILLISECONDS);
     }
@@ -67,11 +67,7 @@ public class LeaderboardService {
             try {
                 final int finalLimit = (limit <= 0 || limit > MAX_LIMIT) ? 100 : limit;
                 
-                JsonElement dataElement = executeWithRetry(() -> 
-                    httpClient.get("/latest_runs")
-                        .orTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                        .join()
-                );
+                JsonElement dataElement = httpClient.get("/latest_runs").orTimeout(15, TimeUnit.SECONDS).join();
                     
                 if (dataElement == null || !dataElement.isJsonObject()) {
                     return new ArrayList<>();
@@ -110,7 +106,7 @@ public class LeaderboardService {
                             }
                         }
                     } catch (Exception e) {
-                        RandomRunMod.LOGGER.warn("{} Ошибка парсинга latest для {}: {}", LOG_TAG, playerName, e.getMessage());
+                        RandomRunMod.LOGGER.warn("{} Invalid recent run for {}: {}", LOG_TAG, playerName, e.getMessage());
                     }
                 }
                 
@@ -122,8 +118,8 @@ public class LeaderboardService {
 
                 return entries;
             } catch (Exception e) {
-                RandomRunMod.LOGGER.error("{} Ошибка загрузки latest: {}", LOG_TAG, e.getMessage());
-                return new ArrayList<>();
+                RandomRunMod.LOGGER.warn("{} Recent runs fetch failed: {}", LOG_TAG, e.getMessage());
+                throw new java.util.concurrent.CompletionException(e);
             }
         });
     }
@@ -162,7 +158,7 @@ public class LeaderboardService {
                 );
                     
                 if (dataElement == null) {
-                    RandomRunMod.LOGGER.warn("{} Нет данных для {}", LOG_TAG, targetId);
+                    RandomRunMod.LOGGER.warn("{} No scores for {}", LOG_TAG, targetId);
                     return new ArrayList<>();
                 }
                 
@@ -193,7 +189,7 @@ public class LeaderboardService {
                                 entries.add(entry);
                             }
                         } catch (Exception e) {
-                            RandomRunMod.LOGGER.warn("{} Ошибка парсинга для {}", LOG_TAG, playerName);
+                            RandomRunMod.LOGGER.warn("{} Invalid score for {}", LOG_TAG, playerName);
                         }
                     }
                 }
@@ -209,7 +205,7 @@ public class LeaderboardService {
                 
                 return result;
             } catch (Exception e) {
-                RandomRunMod.LOGGER.error("{} Ошибка загрузки топа {}: {}", LOG_TAG, targetId, e.getMessage());
+                RandomRunMod.LOGGER.error("{} Leaderboard fetch failed for {}: {}", LOG_TAG, targetId, e.getMessage());
                 return new ArrayList<>();
             }
         });
@@ -230,7 +226,7 @@ public class LeaderboardService {
                 );
                 
                 if (dataElement == null || !dataElement.isJsonObject()) {
-                    RandomRunMod.LOGGER.warn("{} Нет данных для предметов игрока", LOG_TAG);
+                    RandomRunMod.LOGGER.warn("{} No targets for player", LOG_TAG);
                     return new ArrayList<>();
                 }
                 
@@ -246,13 +242,13 @@ public class LeaderboardService {
                             itemsWithRecords.add(fullTargetId);
                         }
                     } catch (Exception e) {
-                        RandomRunMod.LOGGER.warn("{} Ошибка обработки {}", LOG_TAG, compressedTargetId);
+                        RandomRunMod.LOGGER.warn("{} Could not read target {}", LOG_TAG, compressedTargetId);
                     }
                 }
                 
                 return itemsWithRecords;
             } catch (Exception e) {
-                RandomRunMod.LOGGER.error("{} Ошибка загрузки предметов игрока: {}", LOG_TAG, e.getMessage());
+                RandomRunMod.LOGGER.error("{} Player targets fetch failed: {}", LOG_TAG, e.getMessage());
                 return new ArrayList<>();
             }
         });
@@ -268,7 +264,7 @@ public class LeaderboardService {
                 );
                 
                 if (dataElement == null || !dataElement.isJsonObject()) {
-                    RandomRunMod.LOGGER.warn("{} Нет данных для всех предметов", LOG_TAG);
+                    RandomRunMod.LOGGER.warn("{} No leaderboard targets", LOG_TAG);
                     return new ArrayList<>();
                 }
                 
@@ -284,13 +280,13 @@ public class LeaderboardService {
                             itemsWithRecords.add(fullTargetId);
                         }
                     } catch (Exception e) {
-                        RandomRunMod.LOGGER.warn("{} Ошибка обработки {}", LOG_TAG, compressedTargetId);
+                        RandomRunMod.LOGGER.warn("{} Could not read target {}", LOG_TAG, compressedTargetId);
                     }
                 }
                 
                 return itemsWithRecords;
             } catch (Exception e) {
-                RandomRunMod.LOGGER.error("{} Ошибка загрузки всех предметов: {}", LOG_TAG, e.getMessage());
+                RandomRunMod.LOGGER.error("{} Leaderboard targets fetch failed: {}", LOG_TAG, e.getMessage());
                 return new ArrayList<>();
             }
         });
@@ -306,7 +302,7 @@ public class LeaderboardService {
                 );
                 
                 if (dataElement == null || !dataElement.isJsonObject()) {
-                    RandomRunMod.LOGGER.warn("{} Нет данных для всех лидербордов", LOG_TAG);
+                    RandomRunMod.LOGGER.warn("{} No leaderboards returned", LOG_TAG);
                     return new java.util.HashMap<>();
                 }
                 
@@ -342,7 +338,7 @@ public class LeaderboardService {
                                     entries.add(entry);
                                 }
                             } catch (Exception e) {
-                                RandomRunMod.LOGGER.warn("{} Ошибка парсинга {} для {}", LOG_TAG, playerName, fullTargetId);
+                                RandomRunMod.LOGGER.warn("{} Invalid score for {} on {}", LOG_TAG, playerName, fullTargetId);
                             }
                         }
                         
@@ -350,13 +346,13 @@ public class LeaderboardService {
                         cache.put(fullTargetId, new CachedLeaderboard(entries));
                         allLeaderboards.put(fullTargetId, entries);
                     } catch (Exception e) {
-                        RandomRunMod.LOGGER.warn("{} Ошибка обработки {}", LOG_TAG, compressedTargetId);
+                        RandomRunMod.LOGGER.warn("{} Could not read target {}", LOG_TAG, compressedTargetId);
                     }
                 }
                 
                 return allLeaderboards;
             } catch (Exception e) {
-                RandomRunMod.LOGGER.error("{} Ошибка загрузки всех лидербордов: {}", LOG_TAG, e.getMessage());
+                RandomRunMod.LOGGER.error("{} Leaderboards fetch failed: {}", LOG_TAG, e.getMessage());
                 return new java.util.HashMap<>();
             }
         });
@@ -398,7 +394,7 @@ public class LeaderboardService {
                     );
                     
                     if (dataElement == null || !dataElement.isJsonObject()) {
-                        RandomRunMod.LOGGER.warn("{} Batch нет данных", LOG_TAG);
+                        RandomRunMod.LOGGER.warn("{} No batch scores returned", LOG_TAG);
                         continue;
                     }
                     
@@ -445,7 +441,7 @@ public class LeaderboardService {
                                         entries.add(entry);
                                     }
                                 } catch (Exception e) {
-                                    RandomRunMod.LOGGER.warn("{} Batch ошибка парсинга {}", LOG_TAG, playerName);
+                                    RandomRunMod.LOGGER.warn("{} Invalid batch score for {}", LOG_TAG, playerName);
                                 }
                             }
                         }
@@ -463,7 +459,7 @@ public class LeaderboardService {
                 
                 return allResults;
             } catch (Exception e) {
-                RandomRunMod.LOGGER.error("{} Batch ошибка: {}", LOG_TAG, e.getMessage());
+                RandomRunMod.LOGGER.error("{} Batch fetch failed: {}", LOG_TAG, e.getMessage());
                 return new java.util.HashMap<>();
             }
         });

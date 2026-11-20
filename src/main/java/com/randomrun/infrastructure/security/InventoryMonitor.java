@@ -1,8 +1,9 @@
 package com.randomrun.infrastructure.security;
 
-import com.randomrun.core.profile.PlayerProfile;
+import com.randomrun.core.data.PlayerProfile;
+import com.randomrun.core.run.RunDataManager;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.data.RunDataManager;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.Minecraft;
@@ -53,38 +54,38 @@ public class InventoryMonitor {
         for (var entry : enchantments.keySet()) {
             int level = enchantments.getLevel(entry);
             if (level > SUSPICIOUS_ENCHANT_LEVEL) {
-                violations.add(String.format("Читерское зачарование: %s уровень %d",
+                violations.add(String.format("Prohibited enchantment: %s level %d",
                     entry.getRegisteredName(), level));
             } else if (level > MAX_NORMAL_ENCHANT_LEVEL) {
-                violations.add(String.format("Подозрительное зачарование: %s уровень %d",
+                violations.add(String.format("Unusual enchantment: %s level %d",
                     entry.getRegisteredName(), level));
             }
         }
 
         if (stack.getCount() > stack.getMaxStackSize()) {
-            violations.add(String.format("Недопустимое количество: %d (макс %d)",
+            violations.add(String.format("Stack size %d exceeds limit %d",
                 stack.getCount(), stack.getMaxStackSize()));
         }
 
         if (stack.has(net.minecraft.core.component.DataComponents.UNBREAKABLE)) {
-            violations.add("Неразрушимый предмет");
+            violations.add("Unbreakable item");
         }
     }
 
     private static void handleViolations(List<String> violations) {
-        RandomRunMod.LOGGER.error("[AntiCheat] Обнаружены читерские предметы: {}", 
+        RandomRunMod.LOGGER.error("[AntiCheat] Prohibited items detected: {}",
             String.join(", ", violations));
         
         PlayerProfile profile = PlayerProfile.get();
         if (profile != null) {
-            profile.applyTrustPenalty(-8, 
-                "Читерские предметы: " + violations.size());
+            profile.applyTrustPenalty(PlayerProfile.PENALTY_CHEAT,
+                "Prohibited items: " + violations.size());
             PlayerProfile.save();
         }
 
         Minecraft client = Minecraft.getInstance();
         if (client.player != null) {
-            com.randomrun.infrastructure.util.ClientMessages.send(client.player, com.randomrun.infrastructure.util.LanguageManager.text("randomrun.anticheat.items"), false);
+            com.randomrun.infrastructure.util.CompactLogger.ClientMessages.send(client.player, com.randomrun.infrastructure.util.LanguageManager.text("randomrun.anticheat.items"), false);
         }
 
         RandomRunMod.getInstance().getRunDataManager().failRun();

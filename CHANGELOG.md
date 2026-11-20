@@ -1,5 +1,18 @@
 # Changelog
 
+## 27.2 — Minecraft 26.3
+
+- Choose a Modern or Classic interface when you first open RandomRun. Switch styles anytime in settings. Scrolling, the leaderboard and the item roulette are smoother.
+- Added voice control for solo runs and rooms, with offline recognition in English, Russian and Ukrainian after setup. Voice runs stay outside the leaderboard.
+- Added global chat in the expandable Network panel and faster friend status updates.
+- Streamer mode now works in rooms, with skins in the lobby, lines in chat and proximity audio in shared worlds.
+- Runs start automatically after a 5-second countdown. Players in rooms ready up automatically once their worlds load.
+- RRM Upgrader adds a fast spin toggle and upgrades bonus streak rewards into a different item worth about twice as much.
+- Survival, hardcore and verified battle wins count toward the leaderboard. Leaving an active battle counts as a loss, and wins by forfeit stay outside the leaderboard.
+- The HUD shows whether a run can count, and the victory screen shows the server's verdict. Improved run verification and limited world auto-deletion to worlds created by the mod.
+- Choose online or offline play when first opening the mod. "Remember me" keeps you signed in for five days, and results queued while disconnected are submitted on the next sign-in.
+- Online play requires version 27.2. Third-party license notices are included in the JAR.
+
 ## 27.1 — Minecraft 26.3
 
 - Shared-world rooms use built-in WebRTC: e4mc and Radmin VPN are no longer required. Separate worlds with the same seed are also available.

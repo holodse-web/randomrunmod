@@ -1,6 +1,8 @@
 package com.randomrun.ui.widget;
 
 import com.randomrun.infrastructure.RandomRunMod;
+import com.randomrun.ui.util.InterfaceStyle;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -76,8 +78,8 @@ public class GlobalParticleSystem {
     public void addExplosion(int x, int y, int count, int color) {
         if (isSimplifiedUI()) return;
         
-        for (int i = 0; i < count; i++) {
-            if (particles.size() >= MAX_PARTICLES) break;
+        for (int i = 0; i < (InterfaceStyle.isClassic() ? Math.min(count, 10) : count); i++) {
+            if (particles.size() >= (InterfaceStyle.isClassic() ? 24 : MAX_PARTICLES)) break;
             
             float angle = random.nextFloat() * TWO_PI;
             float speed = random.nextFloat() * EXPLOSION_SPEED_MAX + EXPLOSION_SPEED_MIN;
@@ -87,7 +89,7 @@ public class GlobalParticleSystem {
                 x, y,
                 (float)Math.cos(angle) * speed,
                 (float)Math.sin(angle) * speed,
-                random.nextInt(3) + 2,
+                InterfaceStyle.isClassic() ? random.nextInt(2) + 1 : random.nextInt(3) + 2,
                 1.0f,
                 color,
                 false
@@ -99,8 +101,8 @@ public class GlobalParticleSystem {
     public void addFastExplosion(int x, int y, int count, int color) {
         if (isSimplifiedUI()) return;
         
-        for (int i = 0; i < count; i++) {
-            if (particles.size() >= MAX_PARTICLES) break;
+        for (int i = 0; i < (InterfaceStyle.isClassic() ? Math.min(count, 10) : count); i++) {
+            if (particles.size() >= (InterfaceStyle.isClassic() ? 24 : MAX_PARTICLES)) break;
             
             float angle = random.nextFloat() * TWO_PI;
             float speed = random.nextFloat() * EXPLOSION_SPEED_MAX + EXPLOSION_SPEED_MIN;
@@ -110,7 +112,7 @@ public class GlobalParticleSystem {
                 x, y,
                 (float)Math.cos(angle) * speed,
                 (float)Math.sin(angle) * speed,
-                random.nextInt(3) + 2,
+                InterfaceStyle.isClassic() ? random.nextInt(2) + 1 : random.nextInt(3) + 2,
                 1.0f,
                 color,
                 true
@@ -129,7 +131,7 @@ public class GlobalParticleSystem {
         
         float deltaTime = delta * 60.0f;
         
-        spawnAmbientParticles(deltaTime);
+        if (!InterfaceStyle.isClassic()) spawnAmbientParticles(deltaTime);
         updateAndCleanParticles(deltaTime);
     }
     
@@ -142,7 +144,7 @@ public class GlobalParticleSystem {
                     random.nextInt(screenHeight),
                     (random.nextFloat() - 0.5f) * 0.5f,
                     (random.nextFloat() - 0.5f) * 0.5f,
-                    random.nextInt(3) + 2,
+                    InterfaceStyle.isClassic() ? random.nextInt(2) + 1 : random.nextInt(3) + 2,
                     random.nextFloat() * 0.6f + 0.4f,
                     -1,
                     false
@@ -154,7 +156,7 @@ public class GlobalParticleSystem {
     
     private void updateAndCleanParticles(float deltaTime) {
         particles.removeIf(particle -> {
-            particle.update(deltaTime, mouseX, mouseY, CURSOR_BOUNCE_RADIUS);
+            particle.update(deltaTime, mouseX, mouseY, InterfaceStyle.isClassic() ? 0 : CURSOR_BOUNCE_RADIUS);
             boolean remove = particle.isOutOfBounds(screenWidth, screenHeight);
             if (remove) {
                 pool.free(particle);
@@ -166,7 +168,7 @@ public class GlobalParticleSystem {
     public void extractRenderState(GuiGraphicsExtractor context) {
         if (particles.isEmpty()) return;
         
-        int baseColor = colorMode == ColorMode.DEFAULT ? com.randomrun.ui.theme.Theme.current().buttonHover : colorMode.getColor();
+        int baseColor = colorMode == ColorMode.DEFAULT ? com.randomrun.ui.util.Theme.current().buttonHover : colorMode.getColor();
         com.randomrun.ui.util.GuiQuadBatch.Builder batch = new com.randomrun.ui.util.GuiQuadBatch.Builder(particles.size());
         for (Particle particle : particles) {
             particle.extractRenderState(batch, baseColor);
@@ -180,7 +182,8 @@ public class GlobalParticleSystem {
             lastSimplifiedCheck = now;
             try {
                 simplifiedUI = RandomRunMod.getInstance().getConfig().getUIStyle() == 
-                    com.randomrun.infrastructure.config.ModConfig.UIStyle.SIMPLIFIED;
+                    com.randomrun.infrastructure.ModConfig.UIStyle.SIMPLIFIED
+                    || !RandomRunMod.getInstance().getConfig().isAnimationsEnabled();
             } catch (Exception e) {
                 simplifiedUI = false;
             }
@@ -294,11 +297,12 @@ public class GlobalParticleSystem {
             int alphaInt = (int) (alpha * 255);
             if (alphaInt > 0) {
                 int finalColor = colorOverride != -1 ? colorOverride : baseColor;
+                if (InterfaceStyle.isClassic()) finalColor = com.randomrun.ui.util.Ui.lerp(0xFF000000 | finalColor, 0xFFB1AC98, .3f);
                 int color = (alphaInt << 24) | (finalColor & 0xFFFFFF);
                 int x1 = (int) Math.floor(x);
                 int y1 = (int) Math.floor(y);
-                int x2 = (int) Math.ceil(x + size);
-                int y2 = (int) Math.ceil(y + size);
+                int x2 = InterfaceStyle.isClassic() ? x1 + size : (int) Math.ceil(x + size);
+                int y2 = InterfaceStyle.isClassic() ? y1 + size : (int) Math.ceil(y + size);
                 context.fill(x1, y1, x2, y2, color);
             }
         }

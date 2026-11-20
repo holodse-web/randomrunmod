@@ -1,8 +1,11 @@
 package com.randomrun.ui.widget.styled;
 
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.ui.theme.ButtonPalette;
+import com.randomrun.ui.util.InterfaceStyle;
+import com.randomrun.ui.util.Ui;
 import com.randomrun.ui.util.GuiQuadBatch;
+import com.randomrun.ui.util.Theme.ButtonPalette;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -51,6 +54,13 @@ public abstract class AbstractStyledButton extends Button {
 
     protected void extractStyled(GuiGraphicsExtractor context, int x, int y, float alpha) {
         ButtonPalette colors = palette();
+        if (InterfaceStyle.isClassic()) {
+            int face = active ? lerpColor(colors.base(), colors.hover(), hoverProgress) : 0x454541;
+            Ui.bevel(context, x, y, x + width, y + height, face, alpha, false);
+            if (active && (isHovered() || isFocused())) Ui.border(context, x, y, x + width, y + height, 1, Ui.argb(0xFFFFA0, alpha));
+            renderText(context, x, y, alpha);
+            return;
+        }
         int bgColor = lerpColor(colors.base(), colors.hover(), hoverProgress);
         if (!active) bgColor = lerpColor(bgColor, 0x202020, 0.55f);
         extractBackground(context, x, y, bgColor, alpha);
@@ -61,7 +71,7 @@ public abstract class AbstractStyledButton extends Button {
 
     protected void handleHoverSound(boolean allowed) {
         boolean hovered = isHovered() && active;
-        if (hovered && !wasHovered && allowed) playHoverSound();
+        if (!InterfaceStyle.isClassic() && hovered && !wasHovered && allowed) playHoverSound();
         wasHovered = hovered;
     }
     
@@ -70,6 +80,7 @@ public abstract class AbstractStyledButton extends Button {
     }
     
     protected void updateAnimations(float delta) {
+        if (InterfaceStyle.isClassic()) { hoverProgress = active && (isHovered() || isFocused()) ? 1f : 0f; return; }
         boolean hovered = isHovered();
         float targetHover = hovered ? 1f : 0f;
         hoverProgress = Mth.lerp(HOVER_SPEED, hoverProgress, targetHover);
@@ -112,7 +123,8 @@ public abstract class AbstractStyledButton extends Button {
     protected void renderText(GuiGraphicsExtractor context, int x, int y, float alpha) {
         Minecraft client = Minecraft.getInstance();
         int textAlpha = Math.max(4, (int) (alpha * 255));
-        int textColor = (textAlpha << 24) | 0xFFFFFF;
+        int rgb = InterfaceStyle.isClassic() ? (!active ? 0xA0A09A : isHovered() || isFocused() ? 0xFFFFA0 : 0xFFFFFF) : 0xFFFFFF;
+        int textColor = (textAlpha << 24) | rgb;
         if (icon != null) {
             icon.drawCentered(context, x, y, width, height, textColor);
             return;
@@ -120,7 +132,7 @@ public abstract class AbstractStyledButton extends Button {
         
         com.randomrun.ui.util.GuiText.centeredText(context, 
             client.font,
-            getMessage(),
+            client.font.width(getMessage()) <= width - 8 ? getMessage() : Component.literal(Ui.ellipsize(client.font, getMessage().getString(), Math.max(0, width - 8))).setStyle(getMessage().getStyle()),
             x + width / 2,
             y + (height - 8) / 2,
             textColor
@@ -138,8 +150,8 @@ public abstract class AbstractStyledButton extends Button {
     protected void renderBorderWithCursorEffect(GuiGraphicsExtractor context, int left, int top, int right, int bottom, 
                                                 int baseColor, int cursorColor, float alpha) {
         Minecraft mc = Minecraft.getInstance();
-        double mouseX = mc.mouseHandler.xpos() * mc.getWindow().getGuiScaledWidth() / mc.getWindow().getScreenWidth();
-        double mouseY = mc.mouseHandler.ypos() * mc.getWindow().getGuiScaledHeight() / mc.getWindow().getScreenHeight();
+        double mouseX = net.minecraft.client.MouseHandler.getScaledXPos(mc.getWindow(), mc.mouseHandler.xpos());
+        double mouseY = net.minecraft.client.MouseHandler.getScaledYPos(mc.getWindow(), mc.mouseHandler.ypos());
         GuiQuadBatch.Builder border = new GuiQuadBatch.Builder(2 * (right - left + bottom - top));
         
         renderBorderSegment(border, left, top, right, top + BORDER_THICKNESS,
@@ -230,8 +242,8 @@ public abstract class AbstractStyledButton extends Button {
         float volume = RandomRunMod.getInstance().getConfig().getSoundVolume() / 100f;
         soundManager.play(
             SimpleSoundInstance.forUI(
-                SoundEvents.NOTE_BLOCK_CHIME.value(), 
-                SOUND_CLICK_PITCH, 
+                InterfaceStyle.isClassic() ? SoundEvents.UI_BUTTON_CLICK.value() : SoundEvents.NOTE_BLOCK_CHIME.value(),
+                InterfaceStyle.isClassic() ? 1f : SOUND_CLICK_PITCH,
                 volume * SOUND_CLICK_VOLUME
             )
         );

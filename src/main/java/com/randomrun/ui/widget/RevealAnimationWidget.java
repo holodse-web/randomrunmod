@@ -1,8 +1,10 @@
 package com.randomrun.ui.widget;
 
+import com.randomrun.ui.util.InterfaceStyle;
 
-import com.randomrun.ui.util.Previews.PreviewRenderGeometry;
 import com.randomrun.infrastructure.RandomRunMod;
+import com.randomrun.ui.util.Previews.PreviewRenderGeometry;
+
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -94,7 +96,7 @@ public class RevealAnimationWidget implements Renderable, GuiEventListener, Narr
     private void updateRotation(float seconds) {
         physics.rotationSpeed = Math.min(
             physics.rotationSpeed + RESUME_ACCELERATION * seconds,
-            MAX_ROTATION_SPEED
+            InterfaceStyle.isClassic() ? 1f : MAX_ROTATION_SPEED
         );
         physics.rotationY = normalizeAngle(physics.rotationY + physics.rotationSpeed * 20 * seconds);
     }
@@ -106,7 +108,7 @@ public class RevealAnimationWidget implements Renderable, GuiEventListener, Narr
         );
         
         double elapsed = (now - physics.openTimeNanos) / 1_000_000.0;
-        physics.targetLevitationOffset = (float) Math.sin(elapsed / LEVITATION_PERIOD) * LEVITATION_AMPLITUDE * itemScale / 48f;
+        physics.targetLevitationOffset = (float) Math.sin(elapsed / LEVITATION_PERIOD) * (InterfaceStyle.isClassic() ? 2f : LEVITATION_AMPLITUDE) * itemScale / 48f;
         physics.levitationOffset += (physics.targetLevitationOffset - physics.levitationOffset) 
             * (float) (1 - Math.exp(-physics.levitationSpeed * LERP_SPEED * 20 * seconds));
     }

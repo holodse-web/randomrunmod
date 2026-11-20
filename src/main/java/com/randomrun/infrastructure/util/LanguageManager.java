@@ -1,8 +1,9 @@
 package com.randomrun.infrastructure.util;
 
+import com.randomrun.infrastructure.RandomRunMod;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.randomrun.infrastructure.RandomRunMod;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
@@ -54,12 +55,12 @@ public class LanguageManager {
 
     private static final Gson gson = new Gson();
 
-    public static void cycleLanguage() {
-        Language current = Language.fromCode(getCurrentLanguage());
+    public static void cycleLanguage() { cycleLanguage(1); }
+
+    public static void cycleLanguage(int step) {
         Language[] languages = Language.values();
-        int currentIndex = current.ordinal();
-        int nextIndex = (currentIndex + 1) % languages.length;
-        setLanguage(languages[nextIndex].getCode());
+        int index = Math.floorMod(Language.fromCode(getCurrentLanguage()).ordinal() + step, languages.length);
+        setLanguage(languages[index].getCode());
     }
 
     public static void setLanguage(String newLanguage) {

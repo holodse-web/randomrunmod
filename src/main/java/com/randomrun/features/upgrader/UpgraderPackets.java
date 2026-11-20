@@ -1,14 +1,13 @@
 package com.randomrun.features.upgrader;
 
 import io.netty.handler.codec.DecoderException;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public final class UpgraderPackets {
     private UpgraderPackets() {}
@@ -41,23 +40,23 @@ public final class UpgraderPackets {
         @Override public Type<Catalog> type() { return TYPE; }
     }
 
-    public record Roll(long id, String room, String target, int targetCount, List<Slot> slots) implements CustomPacketPayload {
-        public static final Type<Roll> TYPE = UpgraderPackets.type("roll_v2");
+    public record Roll(long id, String room, String target, int targetCount, boolean fast, List<Slot> slots) implements CustomPacketPayload {
+        public static final Type<Roll> TYPE = UpgraderPackets.type("roll_v3");
         public static final StreamCodec<RegistryFriendlyByteBuf, Roll> CODEC = StreamCodec.of((b, p) -> {
-            b.writeVarLong(p.id); b.writeUtf(p.room, 32); b.writeUtf(p.target, 128); b.writeVarInt(p.targetCount); b.writeVarInt(p.slots.size());
+            b.writeVarLong(p.id); b.writeUtf(p.room, 32); b.writeUtf(p.target, 128); b.writeVarInt(p.targetCount); b.writeBoolean(p.fast); b.writeVarInt(p.slots.size());
             for (Slot slot : p.slots) {
                 b.writeVarInt(slot.index); b.writeVarInt(slot.count);
                 ItemStack.OPTIONAL_UNTRUSTED_STREAM_CODEC.encode(b, slot.expected);
             }
         }, b -> {
-            long id = b.readVarLong(); String room = b.readUtf(32); String target = b.readUtf(128); int targetCount = b.readVarInt(); int count = b.readVarInt();
+            long id = b.readVarLong(); String room = b.readUtf(32); String target = b.readUtf(128); int targetCount = b.readVarInt(); boolean fast = b.readBoolean(); int count = b.readVarInt();
             if (targetCount < 1 || targetCount > 64) throw new DecoderException("Invalid upgrader target count");
             if (count < 1 || count > UpgraderTransaction.MAX_SELECTED_ITEMS) throw new DecoderException("Invalid upgrader selection size");
             List<Slot> slots = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
                 slots.add(new Slot(b.readVarInt(), b.readVarInt(), ItemStack.OPTIONAL_UNTRUSTED_STREAM_CODEC.decode(b)));
             }
-            return new Roll(id, room, target, targetCount, List.copyOf(slots));
+            return new Roll(id, room, target, targetCount, fast, List.copyOf(slots));
         });
         @Override public Type<Roll> type() { return TYPE; }
     }
@@ -75,23 +74,41 @@ public final class UpgraderPackets {
     }
 
     public record Reply(long id, boolean accepted, boolean success, double chance, double roll,
-                        String message, ItemStack reward, double bonus, boolean bonusHit, int streak, int flips) implements CustomPacketPayload {
+                        String message, ItemStack reward, double bonus, boolean bonusHit, int streak, int flips,
+                        List<ItemStack> ladder) implements CustomPacketPayload {
         public Reply(long id, boolean accepted, boolean success, double chance, double roll, String message, ItemStack reward) {
-            this(id, accepted, success, chance, roll, message, reward, 0, false, 0, 0);
+            this(id, accepted, success, chance, roll, message, reward, 0, false, 0, 0, List.of());
         }
-        public static final Type<Reply> TYPE = UpgraderPackets.type("reply_v2");
+        public static final Type<Reply> TYPE = UpgraderPackets.type("reply_v3");
         public static final StreamCodec<RegistryFriendlyByteBuf, Reply> CODEC = StreamCodec.of((b, p) -> {
             b.writeVarLong(p.id); b.writeBoolean(p.accepted); b.writeBoolean(p.success);
             b.writeDouble(p.chance); b.writeDouble(p.roll); b.writeUtf(p.message, 96);
             ItemStack.OPTIONAL_STREAM_CODEC.encode(b, p.reward);
             b.writeDouble(p.bonus); b.writeBoolean(p.bonusHit); b.writeVarInt(p.streak); b.writeVarInt(p.flips);
+            b.writeVarInt(p.ladder.size());
+            for (ItemStack stack : p.ladder) {
+                ItemStack.OPTIONAL_STREAM_CODEC.encode(b, stack.copyWithCount(1));
+                b.writeVarInt(stack.getCount());
+            }
         }, b -> {
-            Reply reply = new Reply(b.readVarLong(), b.readBoolean(), b.readBoolean(), b.readDouble(), b.readDouble(),
-                b.readUtf(96), ItemStack.OPTIONAL_STREAM_CODEC.decode(b), b.readDouble(), b.readBoolean(), b.readVarInt(), b.readVarInt());
-            if (!Double.isFinite(reply.bonus) || reply.bonus < 0 || reply.bonus > .25
-                    || reply.streak < 0 || reply.streak > UpgraderMath.MAX_STREAK
-                    || reply.flips < 0 || reply.flips > UpgraderMath.MAX_STREAK + 1) throw new DecoderException("Invalid upgrader reply");
-            return reply;
+            long id = b.readVarLong(); boolean accepted = b.readBoolean(), success = b.readBoolean();
+            double chance = b.readDouble(), roll = b.readDouble(); String message = b.readUtf(96);
+            ItemStack reward = ItemStack.OPTIONAL_STREAM_CODEC.decode(b);
+            double bonus = b.readDouble(); boolean bonusHit = b.readBoolean(); int streak = b.readVarInt(), flips = b.readVarInt();
+            int size = b.readVarInt();
+            if (!Double.isFinite(bonus) || bonus < 0 || bonus > .25
+                    || streak < 0 || streak > UpgraderMath.MAX_STREAK
+                    || flips < 0 || flips > UpgraderMath.MAX_STREAK + 1
+                    || size < 0 || size > UpgraderMath.MAX_STREAK + 1) throw new DecoderException("Invalid upgrader reply");
+            List<ItemStack> ladder = new ArrayList<>(size);
+            for (int i = 0; i < size; i++) {
+                ItemStack stack = ItemStack.OPTIONAL_STREAM_CODEC.decode(b);
+                int count = b.readVarInt();
+                if (count < 1 || count > 64 * 16) throw new DecoderException("Invalid upgrader reply");
+                ladder.add(stack.copyWithCount(count));
+            }
+            if (bonusHit && success && ladder.size() <= streak) throw new DecoderException("Invalid upgrader reply");
+            return new Reply(id, accepted, success, chance, roll, message, reward, bonus, bonusHit, streak, flips, List.copyOf(ladder));
         });
         @Override public Type<Reply> type() { return TYPE; }
     }

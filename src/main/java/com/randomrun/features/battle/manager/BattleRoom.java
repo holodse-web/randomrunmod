@@ -91,6 +91,10 @@ public class BattleRoom {
     @SerializedName("ug")
     private boolean upgrader;
 
+
+    @SerializedName("vo")
+    private boolean voice;
+
     @SerializedName("g")
     private Map<String, GuestData> guests = new HashMap<>();
 
@@ -103,6 +107,10 @@ public class BattleRoom {
 
         @SerializedName("t")
         public long time = 0;
+
+
+        @SerializedName("sc")
+        public String streamer;
 
         public GuestData() {}
         public GuestData(boolean ready, boolean loaded) {
@@ -208,6 +216,30 @@ public class BattleRoom {
         return false;
     }
 
+
+    public boolean hasStreamerMode() {
+        return getHost() != null && streamerOf(getHost()) != null;
+    }
+
+    public String streamerOf(String playerName) {
+        if (playerName == null) return null;
+        for (Map<String, GuestData> players : List.of(getHostData(), getGuests())) {
+            for (Map.Entry<String, GuestData> entry : players.entrySet()) {
+                if (entry.getKey().equalsIgnoreCase(playerName) && entry.getValue() != null) return entry.getValue().streamer;
+            }
+        }
+        return null;
+    }
+
+
+    public void setStreamer(String playerName, String streamer) {
+        for (Map<String, GuestData> players : List.of(getHostData(), getGuests())) {
+            for (Map.Entry<String, GuestData> entry : players.entrySet()) {
+                if (entry.getKey().equalsIgnoreCase(playerName) && entry.getValue() != null) entry.getValue().streamer = streamer;
+            }
+        }
+    }
+
     public boolean isPlayerLoaded(String playerName) {
         if (getHostData().containsKey(playerName)) {
             return getHostData().get(playerName).loaded;
@@ -280,6 +312,8 @@ public class BattleRoom {
     }
 
     public boolean isUpgrader() { return upgrader; }
+    public boolean isVoice() { return voice; }
+    public void setVoice(boolean voice) { this.voice = voice; }
     public void setUpgrader(boolean upgrader) { this.upgrader = upgrader; }
 
     public Map<String, GuestData> getGuests() {
@@ -288,6 +322,14 @@ public class BattleRoom {
     }
 
     public void setGuests(Map<String, GuestData> guests) { this.guests = guests; }
+
+    public int getPlayerCount() {
+        return (host == null ? 0 : host.size()) + (guests == null ? 0 : guests.size());
+    }
+
+    public boolean isJoinable() {
+        return getStatus() == RoomStatus.WAITING && getPlayerCount() < getMaxPlayers();
+    }
 
     public List<String> getPlayers() {
         List<String> result = new ArrayList<>();
@@ -463,5 +505,55 @@ public class BattleRoom {
             return guests.get(playerName).time;
         }
         return 0L;
+    }
+
+    public enum GameMode {
+        @SerializedName("default")
+        DEFAULT("default", "Обычный", "Стандартное соревнование", true),
+
+        @SerializedName("random_drop")
+        RANDOM_DROP("random_drop", "Random Drop", "Случайные предметы из блоков", false);
+
+        private final String id;
+        private final String displayName;
+        private final String description;
+        private final boolean countsForLeaderboard;
+
+        GameMode(String id, String displayName, String description, boolean countsForLeaderboard) {
+            this.id = id;
+            this.displayName = displayName;
+            this.description = description;
+            this.countsForLeaderboard = countsForLeaderboard;
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public String getDisplayName() {
+            return this == RANDOM_DROP ? com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.mode.random_drop.name") : displayName;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public boolean countsForLeaderboard() {
+            return countsForLeaderboard;
+        }
+
+        public static GameMode fromId(String id) {
+            if (id == null) return DEFAULT;
+            for (GameMode mode : values()) {
+                if (mode.id.equals(id)) {
+                    return mode;
+                }
+            }
+            return DEFAULT;
+        }
+
+        public static GameMode fromBoolean(boolean randomDrop) {
+            return randomDrop ? RANDOM_DROP : DEFAULT;
+        }
     }
 }

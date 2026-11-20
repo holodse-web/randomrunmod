@@ -1,15 +1,16 @@
 package com.randomrun.ui.screen.main;
 
-
-import com.randomrun.ui.widget.overlay.OverlayWidgets.ModInfoWidget;
-import com.randomrun.ui.background.BackgroundRenderer;
+import com.randomrun.ui.util.InterfaceStyle;
+import com.randomrun.ui.util.BackgroundRenderer;
 import com.randomrun.ui.widget.GlobalParticleSystem;
+import com.randomrun.ui.widget.OverlayWidgets.ModInfoWidget;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-public abstract class AbstractRandomRunScreen extends Screen {
+public abstract class AbstractRandomRunScreen extends Screen implements com.randomrun.ui.util.UiScale.Scaled {
     protected ModInfoWidget modInfoWidget;
     private static final float TRANSITION_MS = 340f;
     private long shownAt;
@@ -43,7 +44,7 @@ public abstract class AbstractRandomRunScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        setupGuiScale();
+
         initWidgets();
     }
 
@@ -102,11 +103,11 @@ public abstract class AbstractRandomRunScreen extends Screen {
 
     public float transition() {
         if (!com.randomrun.infrastructure.RandomRunMod.getInstance().getConfig().isAnimationsEnabled()) return 1f;
-        return Math.min(1f, (System.currentTimeMillis() - shownAt) / TRANSITION_MS);
+        return Math.min(1f, (System.currentTimeMillis() - shownAt) / (InterfaceStyle.isClassic() ? 160f : TRANSITION_MS));
     }
 
     private void beginContent(GuiGraphicsExtractor context) {
-        if (contentTransformed) return;
+        if (contentTransformed || InterfaceStyle.isClassic()) return;
         float t = com.randomrun.ui.util.Ui.easeOut(transition());
         if (t >= 1f) return;
         contentTransformed = true;
@@ -132,7 +133,6 @@ public abstract class AbstractRandomRunScreen extends Screen {
     @Override
     public void removed() {
         super.removed();
-        restoreGuiScale();
     }
 
     private void restoreGuiScale() {
@@ -147,9 +147,11 @@ public abstract class AbstractRandomRunScreen extends Screen {
     public void extractBackground(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         BackgroundRenderer.getInstance().extractBackground(context, mouseX, mouseY, delta);
 
-        GlobalParticleSystem particles = GlobalParticleSystem.getInstance();
-        particles.update(delta);
-        particles.extractRenderState(context);
+        if (!InterfaceStyle.isClassic()) {
+            GlobalParticleSystem particles = GlobalParticleSystem.getInstance();
+            particles.update(delta);
+            particles.extractRenderState(context);
+        }
         beginContent(context);
     }
 

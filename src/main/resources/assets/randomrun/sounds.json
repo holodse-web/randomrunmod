@@ -1,0 +1,6212 @@
+{
+  "streamer.zloy.ay": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/ay",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.bashni": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/bashni",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.boyus": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/boyus",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.bozhe": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/bozhe",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.brigada": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/brigada",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.chaklun1": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/chaklun1",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.chaklun2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/chaklun2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.derevnya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/derevnya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.deti": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/deti",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.do_svidaniya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/do_svidaniya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.enderdemon": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/enderdemon",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.endervasi1": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/endervasi1",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.endervasi2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/endervasi2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.endervasi3": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/endervasi3",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.kamenny": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/kamenny",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.karamelki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/karamelki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.kassa": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/kassa",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.kozyaki1": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/kozyaki1",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.kozyaki2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/kozyaki2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.kremen": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/kremen",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.kubik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/kubik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.kubik2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/kubik2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.lava": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/lava",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.miny": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/miny",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.mirny": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/mirny",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.mozgi": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/mozgi",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.mukayut": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/mukayut",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.naezdniki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/naezdniki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.octopus": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/octopus",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.odnoklassniki1": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/odnoklassniki1",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.odnoklassniki2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/odnoklassniki2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.oy_ne": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/oy_ne",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_20pshenic": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_20pshenic",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_48": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_48",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_almaziki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_almaziki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_atmosferka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_atmosferka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_babki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_babki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_baza": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_baza",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_biomchik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_biomchik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_buterbrod": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_buterbrod",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_bystree": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_bystree",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_chto_delat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_chto_delat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_daleko_vnizu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_daleko_vnizu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_dalshe": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_dalshe",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_delayu_kirku": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_delayu_kirku",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_derevo_da": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_derevo_da",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_derevya_nuzhny": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_derevya_nuzhny",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_detali": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_detali",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_do_kamnya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_do_kamnya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_dobyvat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_dobyvat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_domoy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_domoy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_dovolen": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_dovolen",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_dva_sunduka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_dva_sunduka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_dvigaetsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_dvigaetsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_dzhungli": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_dzhungli",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_eda_bystro": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_eda_bystro",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_eda_est": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_eda_est",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_fakel": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_fakel",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_farmit": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_farmit",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_gde_umer": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_gde_umer",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_gde_ya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_gde_ya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_golem_q": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_golem_q",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_golemchiki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_golemchiki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_hardkor": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_hardkor",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_hatki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_hatki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_havay": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_havay",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_hleb": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_hleb",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_hrepit": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_hrepit",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_hryukayut": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_hryukayut",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_investicii": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_investicii",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_issledovat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_issledovat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_izi": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_izi",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_kak_vernut": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_kak_vernut",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_kak_vstat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_kak_vstat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_kakoy_biom": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_kakoy_biom",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_kamen_kirka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_kamen_kirka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_kamen_takoy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_kamen_takoy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_kamenny_vek": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_kamenny_vek",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_kapaet": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_kapaet",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_karasiki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_karasiki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_kirku": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_kirku",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_kirku_delat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_kirku_delat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_kopaem_kamen": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_kopaem_kamen",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_kopayu_vniz": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_kopayu_vniz",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_kopnul": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_kopnul",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_koptim": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_koptim",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_koptitsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_koptitsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_koshechki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_koshechki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_koshku": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_koshku",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_krovat_s_soboy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_krovat_s_soboy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_krovat_shchit": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_krovat_shchit",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_kto_to_prishel": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_kto_to_prishel",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_lazurit": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_lazurit",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_legend_mech": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_legend_mech",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_lestnichka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_lestnichka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_letsgo": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_letsgo",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_lodku": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_lodku",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_lut_propadaet": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_lut_propadaet",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_marshrutik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_marshrutik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_masthev": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_masthev",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_mat_ucheniya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_mat_ucheniya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_mech_est": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_mech_est",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_med": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_med",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_mednyi_shchit": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_mednyi_shchit",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_molniya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_molniya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_myavkaet": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_myavkaet",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_nachinaem": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_nachinaem",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_nakachany": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_nakachany",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_naruzhu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_naruzhu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_ne_almaziki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_ne_almaziki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_ne_byl": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_ne_byl",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_ne_tam": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_ne_tam",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_ne_ubyu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_ne_ubyu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_ni_razu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_ni_razu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_novaya_zhizn": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_novaya_zhizn",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_novy_mir": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_novy_mir",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_odetsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_odetsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_palochki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_palochki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_pamyat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_pamyat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_pasika": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_pasika",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_pauki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_pauki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_pechenye": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_pechenye",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_pechka_kak": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_pechka_kak",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_perekusik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_perekusik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_pereplavka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_pereplavka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_peshcherka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_peshcherka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_peshcheru_vizhu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_peshcheru_vizhu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_petushok": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_petushok",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_plan": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_plan",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_plavat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_plavat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_po_almazam": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_po_almazam",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_podkopchik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_podkopchik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_podzemelye": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_podzemelye",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_poka_selu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_poka_selu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_poplavim": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_poplavim",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_poplyli": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_poplyli",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_poselyanie": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_poselyanie",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_pospim": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_pospim",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_poteryatsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_poteryatsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_pravilno_plyvu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_pravilno_plyvu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_prikol": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_prikol",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_privet_selyanine": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_privet_selyanine",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_privyazyvatsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_privyazyvatsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_progolodalsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_progolodalsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_prosto_idem": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_prosto_idem",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_prosto_kopaem": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_prosto_kopaem",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_rasti": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_rasti",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_razvivatsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_razvivatsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_rili_zheleza": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_rili_zheleza",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_ryzhaya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_ryzhaya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_shchit": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_shchit",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_shronchik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_shronchik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_shto_nuzhno": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_shto_nuzhno",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_skelety": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_skelety",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_slitok": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_slitok",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_slozhnye": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_slozhnye",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_spasibo_selo": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_spasibo_selo",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_spidraner": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_spidraner",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_sredizemye": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_sredizemye",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_start_go": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_start_go",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_sunduchok": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_sunduchok",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_svetitsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_svetitsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_svoboda": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_svoboda",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_svorovat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_svorovat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_tochka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_tochka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_tolk": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_tolk",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_torgashi": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_torgashi",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_torguem": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_torguem",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_tri_bloka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_tri_bloka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_tunec": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_tunec",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_uezzhayu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_uezzhayu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_ugol_nado": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_ugol_nado",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_ugolek": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_ugolek",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_umirat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_umirat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_v_pechku": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_v_pechku",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_vaybik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_vaybik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_vkusneyshiy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_vkusneyshiy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_vkusnyatina": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_vkusnyatina",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_vniz": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_vniz",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_vodichka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_vodichka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_volshebnik2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_volshebnik2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_voshod": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_voshod",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_vot_kamen": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_vot_kamen",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_vstrecha": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_vstrecha",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_vyzhivanie": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_vyzhivanie",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_zavedet": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_zavedet",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_zhelezyak": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_zhelezyak",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_zhelezyaka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_zhelezyaka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.p_zhelkuby": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/p_zhelkuby",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.patsany": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/patsany",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.podozhdite": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/podozhdite",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_a_vot_i": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_a_vot_i",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_almaza_golda": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_almaza_golda",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_ay_yay": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_ay_yay",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_baselki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_baselki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_bee": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_bee",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_betmen": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_betmen",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_bez_papy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_bez_papy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_bolno": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_bolno",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_bonusochku": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_bonusochku",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_bratika": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_bratika",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_bronyu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_bronyu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_chasik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_chasik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_chto_dalshe": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_chto_dalshe",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_chto_u_nas": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_chto_u_nas",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_delayu_svet": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_delayu_svet",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_dnevnoy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_dnevnoy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_do_ugley": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_do_ugley",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_dobytchik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_dobytchik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_dva_strima": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_dva_strima",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_dyadya_yosip": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_dyadya_yosip",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_dyrochka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_dyrochka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_eda_govno": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_eda_govno",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_elki_palki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_elki_palki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_ender_mir": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_ender_mir",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_ender_vasya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_ender_vasya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_endervassi": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_endervassi",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_endorfiny": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_endorfiny",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_esche_kirochku": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_esche_kirochku",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_fakel_ostavlyu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_fakel_ostavlyu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_fakelov_net": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_fakelov_net",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_fizika": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_fizika",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_fulbronyu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_fulbronyu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_fulset": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_fulset",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_gde_byl": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_gde_byl",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_geniy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_geniy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_glubinny": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_glubinny",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_glubinu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_glubinu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_gnil": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_gnil",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_gotov": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_gotov",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_gotovlyus": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_gotovlyus",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_idiotik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_idiotik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_kayf": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_kayf",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_kirochkoy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_kirochkoy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_kirochku": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_kirochku",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_kompyuter": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_kompyuter",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_kopatel": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_kopatel",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_kopnuli": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_kopnuli",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_krasota": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_krasota",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_kremen": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_kremen",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_krovat_postavlyu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_krovat_postavlyu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_krovatka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_krovatka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_krovatku": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_krovatku",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_kuda_on": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_kuda_on",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_kukareku": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_kukareku",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_kuyut": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_kuyut",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_lohovskoy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_lohovskoy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_malchishechka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_malchishechka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_maynkraft_razvivaet": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_maynkraft_razvivaet",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_moy_paren": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_moy_paren",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_my_day": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_my_day",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_na_potolke": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_na_potolke",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_na_rayone": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_na_rayone",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_nagrudnik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_nagrudnik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_narublyu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_narublyu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_nays": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_nays",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_ne_almaza": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_ne_almaza",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_ne_budu_srazhatsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_ne_budu_srazhatsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_ne_veril": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_ne_veril",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_ne_voroval": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_ne_voroval",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_nuzhny_ugli": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_nuzhny_ugli",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_oficialny": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_oficialny",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_osushitel": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_osushitel",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_ottalkivaet": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_ottalkivaet",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_papochka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_papochka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_pech": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_pech",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_perhot": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_perhot",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_perly": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_perly",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_petushki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_petushki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_plan_othoda": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_plan_othoda",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_plesen": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_plesen",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_po_srake": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_po_srake",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_pod_nogami": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_pod_nogami",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_pod_vodoy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_pod_vodoy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_podsushili": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_podsushili",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_posplyu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_posplyu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_preispodnyaya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_preispodnyaya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_priklyucheniya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_priklyucheniya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_prinyal": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_prinyal",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_propustil": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_propustil",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_provizia": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_provizia",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_rashititel": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_rashititel",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_redstoun": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_redstoun",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_ryhlyi": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_ryhlyi",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_sem_kusochkov": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_sem_kusochkov",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_sgorel": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_sgorel",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_shchit_est": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_shchit_est",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_shchit_polomali": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_shchit_polomali",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_shipish": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_shipish",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_shtuchki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_shtuchki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_sklety": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_sklety",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_slozhno": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_slozhno",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_sluzhit": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_sluzhit",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_smyvaet": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_smyvaet",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_soyuzny": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_soyuzny",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_spravlyus": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_spravlyus",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_stalaktity": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_stalaktity",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_stranny_kamen": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_stranny_kamen",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_strashno": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_strashno",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_stroyu_hatu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_stroyu_hatu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_svetitsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_svetitsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_sytyi": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_sytyi",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_temno": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_temno",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_topor": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_topor",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_tozhe_zhelezo": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_tozhe_zhelezo",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_ugo_ptica": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_ugo_ptica",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_ugolechek": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_ugolechek",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_ulov": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_ulov",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_usy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_usy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_utekayu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_utekayu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_uverenno": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_uverenno",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_uy_oy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_uy_oy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_v_nebe": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_v_nebe",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_vayb": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_vayb",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_vecherochek": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_vecherochek",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_vedro_lavy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_vedro_lavy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_vot_zheleza": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_vot_zheleza",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_vysosal": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_vysosal",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_vyzhili": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_vyzhili",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_vzorvatsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_vzorvatsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_vzryvaeshsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_vzryvaeshsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_yabloki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_yabloki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_zhituha": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_zhituha",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_zolotishko": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_zolotishko",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.q_zoloto_moem": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/q_zoloto_moem",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_22_almaza": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_22_almaza",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_almaznaya_delyuga": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_almaznaya_delyuga",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_almazy_iskat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_almazy_iskat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_bolshe_sveta": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_bolshe_sveta",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_chetyre": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_chetyre",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_chiter": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_chiter",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_chto_hripit": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_chto_hripit",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_chuvstvuyu_dozhd": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_chuvstvuyu_dozhd",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_danzhik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_danzhik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_dobry_vecher": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_dobry_vecher",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_dozhdik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_dozhdik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_dyrochki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_dyrochki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_ender_yosipy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_ender_yosipy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_fakely_zakonch": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_fakely_zakonch",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_ful": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_ful",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_gde_eto_ya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_gde_eto_ya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_gde_on_delsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_gde_on_delsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_gde_to_almazy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_gde_to_almazy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_gorit": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_gorit",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_idut_za_mnoy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_idut_za_mnoy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_igroman": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_igroman",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_kak_krovat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_kak_krovat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_kak_vybratsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_kak_vybratsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_kakoy_vayb": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_kakoy_vayb",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_kayfuem": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_kayfuem",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_kirka_lomaetsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_kirka_lomaetsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_krovat_zabrat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_krovat_zabrat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_lishnim": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_lishnim",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_litl_kriper": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_litl_kriper",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_mayonez": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_mayonez",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_na_fakelah": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_na_fakelah",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_na_vole": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_na_vole",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_na_volyu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_na_volyu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_nahodka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_nahodka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_ne_chiter": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_ne_chiter",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_ne_hochetsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_ne_hochetsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_ne_ponimayu_gde": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_ne_ponimayu_gde",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_neplokho": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_neplokho",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_next_level": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_next_level",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_nizhe_vaybik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_nizhe_vaybik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_no_problem": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_no_problem",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_nravitsya_mayn": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_nravitsya_mayn",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_ochistka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_ochistka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_odin_v_mire": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_odin_v_mire",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_pereputal": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_pereputal",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_peshcherochka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_peshcherochka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_podlutat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_podlutat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_poest": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_poest",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_pora_vyyti": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_pora_vyyti",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_prokopal": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_prokopal",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_pryanik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_pryanik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_put_nazad": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_put_nazad",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_rashititel": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_rashititel",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_rastut": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_rastut",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_rebenok_vassi": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_rebenok_vassi",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_redstonchik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_redstonchik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_sekretiki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_sekretiki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_sherst": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_sherst",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_sobrannom": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_sobrannom",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_stremno": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_stremno",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_tapnet": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_tapnet",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_ty_zastryala": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_ty_zastryala",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_uluchshatsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_uluchshatsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_vizhu_zoloto": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_vizhu_zoloto",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_vot_krovatka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_vot_krovatka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_vyhodim_na_volyu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_vyhodim_na_volyu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_zakryl": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_zakryl",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_zapah_dozhdya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_zapah_dozhdya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_zapakovanny": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_zapakovanny",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_zastryal": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_zastryal",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.r_zvuk": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/r_zvuk",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.rechka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/rechka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.regayus": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/regayus",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_29_almazov": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_29_almazov",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_barerchik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_barerchik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_bekap": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_bekap",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_bez_krovati": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_bez_krovati",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_biomchik_nravitsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_biomchik_nravitsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_bronenosec": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_bronenosec",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_chto_za_mir": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_chto_za_mir",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_daleko_ot_krovati": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_daleko_ot_krovati",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_delfinchiki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_delfinchiki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_dezert": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_dezert",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_dokoptitsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_dokoptitsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_emocionalny": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_emocionalny",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_esche_kirku": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_esche_kirku",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_gadyuki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_gadyuki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_igra_klassnaya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_igra_klassnaya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_kartofel": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_kartofel",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_kisloroda": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_kisloroda",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_kochevnik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_kochevnik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_korovochka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_korovochka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_letat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_letat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_na_pereplavochku": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_na_pereplavochku",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_nadybaem": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_nadybaem",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_ne_dovarilas": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_ne_dovarilas",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_ne_poydet": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_ne_poydet",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_normalny_biom": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_normalny_biom",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_nuzhna_krovat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_nuzhna_krovat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_pandy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_pandy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_pirogov": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_pirogov",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_plan_est": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_plan_est",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_plavilnya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_plavilnya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_poplavaem": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_poplavaem",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_portalchik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_portalchik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_puteshestvovat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_puteshestvovat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_ryzhie_zemli": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_ryzhie_zemli",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_shmotki_sgoryat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_shmotki_sgoryat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_toporchik_almazny": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_toporchik_almazny",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_uverennost": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_uverennost",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_v_preispodnyuyu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_v_preispodnyuyu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_vedra": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_vedra",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_verstochek": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_verstochek",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.s_zemlya_drugaya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/s_zemlya_drugaya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.shishki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/shishki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.start_first": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/start_first",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.start_hello": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/start_hello",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.start_letsplay": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/start_letsplay",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.stolovka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/stolovka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_25_almazov": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_25_almazov",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_almazy_esche": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_almazy_esche",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_ay_yay": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_ay_yay",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_chto_to_gorit": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_chto_to_gorit",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_chto_za_peshchera": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_chto_za_peshchera",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_chto_za_peshchera2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_chto_za_peshchera2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_chut_ne_sdoh": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_chut_ne_sdoh",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_chut_ne_sdoh2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_chut_ne_sdoh2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_dikie_korovy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_dikie_korovy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_dlya_portala": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_dlya_portala",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_eda_konchaetsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_eda_konchaetsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_eda_konchaetsya2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_eda_konchaetsya2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_edy_nayti": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_edy_nayti",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_gde_lodka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_gde_lodka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_gde_topor": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_gde_topor",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_kishki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_kishki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_krasavchik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_krasavchik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_krovat_sdelat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_krovat_sdelat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_krovat_tut": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_krovat_tut",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_lava_est": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_lava_est",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_ne_lomay": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_ne_lomay",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_ne_lyublyu_paukov": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_ne_lyublyu_paukov",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_odna_derevnya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_odna_derevnya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_pauk_ukusit": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_pauk_ukusit",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_pervoe_pravilo": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_pervoe_pravilo",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_peshchery_dlinnye": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_peshchery_dlinnye",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_pobedit_drakona": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_pobedit_drakona",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_poroh": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_poroh",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_shchit_slomalsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_shchit_slomalsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_sherst": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_sherst",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_shipish": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_shipish",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_shipyat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_shipyat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_skolko_perlov": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_skolko_perlov",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_so_svinkami": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_so_svinkami",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_sunduk_nashel": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_sunduk_nashel",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_topor_propal": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_topor_propal",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_v_nebo": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_v_nebo",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_vas_stoy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_vas_stoy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_vizhu_lavu2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_vizhu_lavu2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_vosstanovit_krovat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_vosstanovit_krovat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_vyyti_s_peshchery": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_vyyti_s_peshchery",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_yadovitye": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_yadovitye",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_zabludilsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_zabludilsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_zachar": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_zachar",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_zachar2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_zachar2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.t_zombi_napadat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/t_zombi_napadat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.tiktok": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/tiktok",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_chut_ne_sdoh": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_chut_ne_sdoh",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_dan": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_dan",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_dobyt_myaso": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_dobyt_myaso",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_edy_net": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_edy_net",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_gde_upal": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_gde_upal",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_krepost_nuzhna": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_krepost_nuzhna",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_krepost_v_mire": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_krepost_v_mire",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_lohovskaya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_lohovskaya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_metody_perlov": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_metody_perlov",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_mirny_chel": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_mirny_chel",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_myaso_zharitsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_myaso_zharitsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_nastal_moment": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_nastal_moment",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_ne_veril": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_ne_veril",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_nol_edy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_nol_edy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_odno_serdechko": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_odno_serdechko",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_ovechki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_ovechki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_pochemu_sdoh": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_pochemu_sdoh",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_podgotovka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_podgotovka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_ponesslas": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_ponesslas",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_portalchik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_portalchik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_portaly": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_portaly",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_proydu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_proydu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_rebenok_svin": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_rebenok_svin",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_shchit_noviy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_shchit_noviy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_shmotki_sgoryat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_shmotki_sgoryat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_svini_zhivut": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_svini_zhivut",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_v_ad": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_v_ad",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_vtorgayus": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_vtorgayus",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_vzglyanu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_vzglyanu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.u_zhivoy_mir": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/u_zhivoy_mir",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_chalitsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_chalitsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_derevnyu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_derevnyu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_drakon_steny": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_drakon_steny",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_dvizhuha": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_dvizhuha",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_ender_vasechka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_ender_vasechka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_gde_portal": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_gde_portal",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_idem_v_ender": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_idem_v_ender",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_kak_zacharovat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_kak_zacharovat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_kataem": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_kataem",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_krasavchik": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_krasavchik",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_krepost_uvidel": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_krepost_uvidel",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_kto_strelyal": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_kto_strelyal",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_luk": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_luk",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_ne_bylo_sunduka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_ne_bylo_sunduka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_plavat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_plavat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_podvodny": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_podvodny",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_pohavaem_hleba": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_pohavaem_hleba",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_pohitit": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_pohitit",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_prokopat_vverh": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_prokopat_vverh",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_sobirayu_perly": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_sobirayu_perly",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_srazhenie": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_srazhenie",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_strely": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_strely",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_sunduk_chek": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_sunduk_chek",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_torgovat_svini": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_torgovat_svini",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_ubit_drakona": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_ubit_drakona",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_umeesh_plavat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_umeesh_plavat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_v_ender_mir": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_v_ender_mir",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_vot_krepost": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_vot_krepost",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_vverh1": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_vverh1",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_vverh2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_vverh2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_vybral_krovat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_vybral_krovat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_vykopalsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_vykopalsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_vyshe_kopat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_vyshe_kopat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_zacharovat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_zacharovat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.v_zolotye_yabloki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/v_zolotye_yabloki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.voda": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/voda",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.vodopoy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/vodopoy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_ahuet1": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_ahuet1",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_ahuet2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_ahuet2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_blyat1": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_blyat1",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_blyat2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_blyat2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_blyat3": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_blyat3",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_blyat4": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_blyat4",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_blyat6": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_blyat6",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_blyat7": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_blyat7",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_blyat8": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_blyat8",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_blyat9": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_blyat9",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_ebat1": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_ebat1",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_ebat2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_ebat2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_nihuya_sebe1": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_nihuya_sebe1",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_nihuya_sebe2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_nihuya_sebe2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_nihuya_sebe3": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_nihuya_sebe3",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_pizdec1": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_pizdec1",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_pizdec2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_pizdec2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_suka1": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_suka1",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_suka2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_suka2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.w_suka3": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/w_suka3",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_bylo_kruto": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_bylo_kruto",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_chto_nado": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_chto_nado",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_dlya_boya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_dlya_boya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_drugoy_biom": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_drugoy_biom",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_dzhungli": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_dzhungli",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_goloduyu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_goloduyu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_istoriyu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_istoriyu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_kak_vybratsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_kak_vybratsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_karasey": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_karasey",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_naruzhu_resursy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_naruzhu_resursy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_ne_pomogayut": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_ne_pomogayut",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_ne_poteryal_portal": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_ne_poteryal_portal",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_ne_sudyat": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_ne_sudyat",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_noviy_shchit": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_noviy_shchit",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_ostrov": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_ostrov",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_pervaya_popytka": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_pervaya_popytka",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_pozdravleniya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_pozdravleniya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_pozharilas": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_pozharilas",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_prosto_lava": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_prosto_lava",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_raznica_yabloko": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_raznica_yabloko",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_spasibo": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_spasibo",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_sunduki_vnizu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_sunduki_vnizu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.x_ya_smog": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/x_ya_smog",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_chas_begayu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_chas_begayu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_derevo_dobyt": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_derevo_dobyt",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_derevo_malo": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_derevo_malo",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_derevo_v_nebe": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_derevo_v_nebe",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_derevu_pizdanu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_derevu_pizdanu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_derevya_nuzhny": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_derevya_nuzhny",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_dolboeb_begayu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_dolboeb_begayu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_esche_chut_derevo": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_esche_chut_derevo",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_esche_fakelov": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_esche_fakelov",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_esche_palochku": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_esche_palochku",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_fakelochek": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_fakelochek",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_fakely_konchilis": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_fakely_konchilis",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_fakely_zakanchivayutsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_fakely_zakanchivayutsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_hryushki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_hryushki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_idite_nahuy": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_idite_nahuy",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_karasey_pozharim": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_karasey_pozharim",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_lokaciya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_lokaciya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_minus": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_minus",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_molnii": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_molnii",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_molniya_svinya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_molniya_svinya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_narublyu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_narublyu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_narublyu2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_narublyu2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_ne_mogu_vyprygnut": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_ne_mogu_vyprygnut",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_ne_zadyhaeshsya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_ne_zadyhaeshsya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_palka_budet": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_palka_budet",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_palochki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_palochki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_palochku_lopatochku": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_palochku_lopatochku",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_pechka_kak": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_pechka_kak",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_pechka_poleznaya": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_pechka_poleznaya",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_pechku_esche": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_pechku_esche",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_podpischiki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_podpischiki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_poem_pirozhki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_poem_pirozhki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_razdobudem": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_razdobudem",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_s_derevom_vernus": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_s_derevom_vernus",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_shchit_suki": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_shchit_suki",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_uezzhayu": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_uezzhayu",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_upal_ohuenno": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_upal_ohuenno",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_v_ebalo": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_v_ebalo",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_verstachok": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_verstachok",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_vybrosit1": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_vybrosit1",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_vybrosit2": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_vybrosit2",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_vybrosit3": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_vybrosit3",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_vybrosit4": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_vybrosit4",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.y_zadyhayus": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/y_zadyhayus",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.yama": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/yama",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_01": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_01",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_02": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_02",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_03": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_03",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_04": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_04",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_06": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_06",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_07": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_07",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_11": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_11",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_12": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_12",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_14": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_14",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_15": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_15",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_16": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_16",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_18": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_18",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_20": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_20",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_21": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_21",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_22": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_22",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_24": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_24",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_26": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_26",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_28": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_28",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_29": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_29",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_30": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_30",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_31": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_31",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_32": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_32",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_33": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_33",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_34": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_34",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_37": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_37",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_38": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_38",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_39": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_39",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_40": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_40",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_42": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_42",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_44": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_44",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_45": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_45",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_46": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_46",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_50": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_50",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_51": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_51",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_52": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_52",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_53": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_53",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_54": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_54",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_55": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_55",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_57": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_57",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_58": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_58",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_60": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_60",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_62": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_62",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.z_63": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/z_63",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  },
+  "streamer.zloy.za_chto": {
+    "sounds": [
+      {
+        "name": "randomrun:streamer/zloy/za_chto",
+        "attenuation_distance": 24,
+        "stream": true
+      }
+    ]
+  }
+}

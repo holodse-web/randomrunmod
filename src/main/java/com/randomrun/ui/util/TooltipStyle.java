@@ -1,6 +1,5 @@
 package com.randomrun.ui.util;
 
-import com.randomrun.ui.theme.Theme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -18,7 +17,13 @@ public final class TooltipStyle {
     }
 
     public static boolean draw(GuiGraphicsExtractor graphics, int x, int y, int width, int height, Identifier style) {
-        if (style != null || !active()) return false;
+        if (!active()) return false;
+        if (InterfaceStyle.isClassic()) {
+            int left = x - 5, top = y - 5, right = x + width + 5, bottom = y + height + 5;
+            Ui.shadow(graphics, left, top, right, bottom, 1f);
+            Ui.bevel(graphics, left, top, right, bottom, 0x292A25, 1f, false);
+            return true;
+        }
         long now = System.currentTimeMillis();
         if (now - lastFrame > 500) shownAt = now;
         lastFrame = now;

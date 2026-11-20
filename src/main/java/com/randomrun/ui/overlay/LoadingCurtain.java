@@ -1,14 +1,16 @@
 package com.randomrun.ui.overlay;
 
+import com.randomrun.ui.util.InterfaceStyle;
 import com.randomrun.features.battle.manager.BattleManager;
-import com.randomrun.features.challenges.classic.world.WorldCreator;
+import com.randomrun.features.speedrun.WorldCreator;
 import com.randomrun.infrastructure.util.LanguageManager;
-import com.randomrun.network.ConnectionStatus;
-import com.randomrun.ui.screen.loading.LoadingTips;
-import com.randomrun.ui.theme.Theme;
+import com.randomrun.network.WebRtcTransport.ConnectionStatus;
 import com.randomrun.ui.util.GuiText;
 import com.randomrun.ui.util.Logo;
+import com.randomrun.ui.util.Theme;
 import com.randomrun.ui.util.Ui;
+
+import java.util.concurrent.ThreadLocalRandom;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -107,6 +109,12 @@ public final class LoadingCurtain {
     }
 
     public static void abort() {
+        Minecraft client = Minecraft.getInstance();
+        if (!client.isSameThread()) {
+            client.execute(LoadingCurtain::abort);
+            return;
+        }
+        pending = null;
         open();
     }
 
@@ -151,7 +159,7 @@ public final class LoadingCurtain {
             case HOST -> battle.getCurrentRoom() == null || !battle.isLoadingTriggered() && !WorldCreator.isSpeedrunLoading();
             case WORLD -> now - closedAt > 2500 && !WorldCreator.isSpeedrunLoading() && !(screen instanceof LevelLoadingScreen);
         };
-        if (timedOut || failed || cancelled) open();
+        if (timedOut || failed || cancelled) abort();
     }
 
     private static float targetProgress() {
@@ -215,8 +223,11 @@ public final class LoadingCurtain {
 
         Minecraft client = Minecraft.getInstance();
         Font font = client.font;
-        int width = graphics.guiWidth();
-        int height = graphics.guiHeight();
+        float canvas = com.randomrun.ui.util.UiScale.factor();
+        int width = com.randomrun.ui.util.UiScale.width();
+        int height = com.randomrun.ui.util.UiScale.height();
+        graphics.pose().pushMatrix();
+        graphics.pose().scale(canvas, canvas);
         int edge = Math.round(height * cover);
         int offset = edge - height;
         Theme theme = Theme.current();
@@ -225,15 +236,22 @@ public final class LoadingCurtain {
         graphics.pose().pushMatrix();
         graphics.pose().translate(0, offset);
 
-        int base = Ui.lerp(0xFF000000 | theme.bgBottom, 0xFF000000, 0.55f);
-        graphics.fill(0, 0, width, height, base);
-        if (cover < 0.999f) graphics.fill(0, height - 2, width, height, 0xFF000000 | theme.accent);
+
+        com.randomrun.ui.util.BackgroundRenderer.getInstance().renderBackground(graphics, width, height);
+        com.randomrun.ui.widget.GlobalParticleSystem particles = com.randomrun.ui.widget.GlobalParticleSystem.getInstance();
+        particles.updateScreenSize(width, height);
+        if (!(client.gui.screen() instanceof com.randomrun.ui.screen.main.AbstractRandomRunScreen)) particles.update(dt);
+        particles.extractRenderState(graphics);
 
         float contentAlpha = Math.clamp((cover - 0.35f) / 0.5f, 0f, 1f);
         if (contentAlpha > 0f) extractContent(graphics, font, width, height, contentAlpha, theme);
 
         graphics.pose().popMatrix();
-        if (edge < height) graphics.fillGradient(0, edge, width, Math.min(height, edge + 14), 0x99000000, 0x00000000);
+        if (edge < height) {
+            if (InterfaceStyle.isClassic()) graphics.fill(0, edge, width, Math.min(height, edge + 3), 0x99000000);
+            else graphics.fillGradient(0, edge, width, Math.min(height, edge + 14), 0x99000000, 0x00000000);
+        }
+        graphics.pose().popMatrix();
     }
 
     private static void extractContent(GuiGraphicsExtractor graphics, Font font, int width, int height, float alpha, Theme theme) {
@@ -262,6 +280,31 @@ public final class LoadingCurtain {
         if (screen instanceof LevelLoadingScreen || mode == Mode.GUEST) {
             Component hint = LanguageManager.text(mode == Mode.GUEST ? "randomrun.curtain.hint.leave" : "randomrun.curtain.hint.cancel");
             GuiText.text(graphics, font, hint, 8, height - 14, Ui.argb(0x888888, alpha), false);
+        }
+    }
+
+    public static final class LoadingTips {
+        private static final int TIP_COUNT = 24;
+        private static final long TIP_REFRESH_INTERVAL = 8000;
+        private static String currentTip = "";
+        private static long lastChangeTime;
+        private static int lastIndex = -1;
+
+        private LoadingTips() {}
+
+        public static void refreshTip() {
+            int index;
+            do index = 1 + ThreadLocalRandom.current().nextInt(TIP_COUNT); while (index == lastIndex && TIP_COUNT > 1);
+            lastIndex = index;
+            String key = "randomrun.loading.tip." + index;
+            String text = LanguageManager.translate(key);
+            currentTip = text.equals(key) ? "" : LanguageManager.translate("randomrun.loading.tip.prefix") + " §f" + text;
+            lastChangeTime = System.currentTimeMillis();
+        }
+
+        public static String getCurrentTip() {
+            if (currentTip.isEmpty() || System.currentTimeMillis() - lastChangeTime > TIP_REFRESH_INTERVAL) refreshTip();
+            return currentTip;
         }
     }
 }

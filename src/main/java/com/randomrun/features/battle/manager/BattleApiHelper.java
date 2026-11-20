@@ -1,12 +1,11 @@
 package com.randomrun.features.battle.manager;
 
-
 import com.randomrun.features.battle.manager.BattleSupport.BattleConstants;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.network.HttpClient;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -27,21 +26,13 @@ public enum BattleApiHelper {
 
     public CompletableFuture<BattleRoom> getRoomData(String code) {
         if (!validateCode(code)) {
-            return CompletableFuture.completedFuture(null);
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Invalid room code"));
         }
-
-        return retryOperation(() -> 
-            HttpClient.getInstance().getNoCache("/rooms/" + code)
-        ).thenApply(element -> {
-            if (element != null && element.isJsonObject()) {
-                BattleRoom room = gson.fromJson(element.getAsJsonObject(), BattleRoom.class);
-                room.setRoomCode(code);
-                return room;
-            }
-            return null;
-        }).exceptionally(e -> {
-            RandomRunMod.LOGGER.error("{} Получение комнаты - ОШИБКА: {}", LOG_TAG, e.getMessage());
-            return null;
+        return HttpClient.getInstance().getNoCache("/rooms/" + code).thenApply(element -> {
+            BattleRoom room = gson.fromJson(element, BattleRoom.class);
+            if (room == null) throw new IllegalStateException("Missing room data");
+            room.setRoomCode(code);
+            return room;
         });
     }
 
@@ -54,7 +45,7 @@ public enum BattleApiHelper {
             HttpClient.getInstance().patch("/rooms/" + code, updates)
         ).thenApply(success -> {
             if (!success) {
-                RandomRunMod.LOGGER.warn("{} Обновление полей - ОШИБКА: {}", LOG_TAG, code);
+                RandomRunMod.LOGGER.warn("{} Room update failed: {}", LOG_TAG, code);
             }
             return success;
         });
@@ -69,7 +60,7 @@ public enum BattleApiHelper {
             HttpClient.getInstance().delete("/rooms/" + roomId)
         ).thenApply(success -> {
             if (!success) {
-                RandomRunMod.LOGGER.warn("{} Удаление комнаты - ОШИБКА: {}", LOG_TAG, roomId);
+                RandomRunMod.LOGGER.warn("{} Could not delete room {}", LOG_TAG, roomId);
             }
             return null;
         });
@@ -106,7 +97,7 @@ public enum BattleApiHelper {
                     long delay = (long) Math.pow(2, attempt) * 500;
 
                     if (scheduler == null) {
-                        RandomRunMod.LOGGER.error("{} Scheduler не инициализирован", LOG_TAG);
+                        RandomRunMod.LOGGER.error("{} Retry scheduler unavailable", LOG_TAG);
                         return CompletableFuture.failedFuture(new RuntimeException(e));
                     }
 
@@ -121,7 +112,7 @@ public enum BattleApiHelper {
                         delay, TimeUnit.MILLISECONDS);
                     return delayed;
                 }
-                RandomRunMod.LOGGER.error("{} Операция провалена после {} попыток", LOG_TAG, BattleConstants.API_MAX_RETRIES);
+                RandomRunMod.LOGGER.error("{} Request failed after {} attempts", LOG_TAG, BattleConstants.API_MAX_RETRIES);
                 return CompletableFuture.failedFuture(new RuntimeException(e));
             });
     }

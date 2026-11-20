@@ -4,8 +4,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -13,7 +15,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public final class SocialService {
     public enum Activity { OFFLINE, MENU, LOBBY, SOLO, ROOM, BATTLE }
 
-    public record Friend(String name, boolean online, Activity activity, String target, String room, int roomPlayers, int roomMax, boolean roomPrivate) {}
+    public record Friend(String name, boolean online, Activity activity, String target, String room, int roomPlayers, int roomMax, boolean roomPrivate, long seen) {}
     public record Invite(String from, String code, long expires) {}
     public record Snapshot(List<Friend> friends, List<String> incoming, List<String> outgoing, List<Invite> invites) {
         public static final Snapshot EMPTY = new Snapshot(List.of(), List.of(), List.of(), List.of());
@@ -73,7 +75,8 @@ public final class SocialService {
             JsonObject friend = element.getAsJsonObject();
             friends.add(new Friend(string(friend, "name"), friend.has("online") && friend.get("online").getAsBoolean(),
                 activity(string(friend, "activity")), string(friend, "target"), string(friend, "room"),
-                integer(friend, "roomPlayers"), integer(friend, "roomMax"), friend.has("roomPrivate") && friend.get("roomPrivate").getAsBoolean()));
+                integer(friend, "roomPlayers"), integer(friend, "roomMax"), friend.has("roomPrivate") && friend.get("roomPrivate").getAsBoolean(),
+                friend.has("seen") && friend.get("seen").isJsonPrimitive() ? friend.get("seen").getAsLong() : 0L));
         }
         List<String> incoming = names(array(value, "incoming"));
         List<String> outgoing = names(array(value, "outgoing"));
@@ -90,7 +93,18 @@ public final class SocialService {
         notifyListeners();
     }
 
+    private final Map<String, Long> onlineNotified = new ConcurrentHashMap<>();
+
     private static void announce(Snapshot before, Snapshot after) {
+        long now = System.currentTimeMillis();
+        for (Friend friend : after.friends()) {
+            if (!friend.online()) continue;
+            boolean wasOnline = before.friends().stream().anyMatch(old -> old.name().equalsIgnoreCase(friend.name()) && old.online());
+            boolean known = before.friends().stream().anyMatch(old -> old.name().equalsIgnoreCase(friend.name()));
+            if (wasOnline || !known) continue;
+            Long last = INSTANCE.onlineNotified.put(friend.name().toLowerCase(java.util.Locale.ROOT), now);
+            if (last == null || now - last > 600000) notify(com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.friends.notify.online", friend.name()));
+        }
         for (String name : after.incoming()) {
             if (!before.incoming().contains(name)) notify(com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.friends.notify.request", name));
         }
@@ -107,7 +121,7 @@ public final class SocialService {
 
     private static void notify(String text) {
         net.minecraft.client.Minecraft.getInstance().execute(() -> {
-            com.randomrun.ui.widget.overlay.CustomNotification.show(text);
+            com.randomrun.ui.overlay.CustomNotification.show(text);
             com.randomrun.ui.util.Ui.playSound(net.minecraft.sounds.SoundEvents.NOTE_BLOCK_PLING.value(), 1.4f, 0.5f);
         });
     }
@@ -188,5 +202,25 @@ public final class SocialService {
 
     private static int integer(JsonObject object, String key) {
         return object.has(key) && object.get(key).isJsonPrimitive() ? object.get(key).getAsInt() : 0;
+    }
+
+    public static final class PendingInvites {
+        private static final Set<String> NAMES = new LinkedHashSet<>();
+
+        private PendingInvites() {}
+
+        public static synchronized void add(String name) {
+            NAMES.add(name);
+        }
+
+        public static synchronized Set<String> drain() {
+            Set<String> copy = new LinkedHashSet<>(NAMES);
+            NAMES.clear();
+            return copy;
+        }
+
+        public static synchronized void clear() {
+            NAMES.clear();
+        }
     }
 }

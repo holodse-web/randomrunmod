@@ -1,6 +1,8 @@
 package com.randomrun.ui.screen.settings;
 
+import com.randomrun.ui.util.InterfaceStyle;
 import com.randomrun.ui.screen.main.AbstractRandomRunScreen;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -57,7 +59,7 @@ public abstract class AnimatedSettingsScreen extends AbstractRandomRunScreen {
             return;
         }
         
-        int blurAlpha = (int) (180 * fadeProgress);
+        int blurAlpha = (int) ((InterfaceStyle.isClassic() ? 70 : 180) * fadeProgress);
         context.fill(0, 0, width, height, blurAlpha << 24);
         
         extractWidgetRenderState(context, fadeProgress, delta);
@@ -66,10 +68,10 @@ public abstract class AnimatedSettingsScreen extends AbstractRandomRunScreen {
     protected float getFadeProgress() {
         if (closing) {
             long elapsed = System.currentTimeMillis() - closeStartTime;
-            return 1.0f - Math.min(1.0f, elapsed / (float) FADE_DURATION);
+            return 1.0f - Math.min(1.0f, elapsed / (InterfaceStyle.isClassic() ? 160f : (float) FADE_DURATION));
         } else {
             long elapsed = System.currentTimeMillis() - screenOpenTime;
-            return Math.min(1.0f, elapsed / (float) FADE_DURATION);
+            return Math.min(1.0f, elapsed / (InterfaceStyle.isClassic() ? 160f : (float) FADE_DURATION));
         }
     }
     
@@ -85,9 +87,8 @@ public abstract class AnimatedSettingsScreen extends AbstractRandomRunScreen {
         int x = getWidgetX(), y = getWidgetY();
         int right = x + widgetWidth(), bottom = y + widgetHeight();
         com.randomrun.ui.util.Ui.panel(context, x, y, right, bottom, fadeProgress);
-        com.randomrun.ui.util.Ui.glowBorder(context, x, y, right, bottom, 2, 0xFFFFFF);
         com.randomrun.ui.util.GuiText.centeredText(context, font, title, width / 2, y + 10, com.randomrun.ui.util.Ui.argb(0xFFFFFF, fadeProgress));
-        com.randomrun.ui.util.Ui.divider(context, x + 12, right - 12, y + 24, com.randomrun.ui.theme.Theme.current().border, fadeProgress);
+        com.randomrun.ui.util.Ui.divider(context, x + 12, right - 12, y + 24, com.randomrun.ui.util.Theme.current().border, fadeProgress);
         renderWidgetContent(context, x, y, fadeProgress);
     }
 

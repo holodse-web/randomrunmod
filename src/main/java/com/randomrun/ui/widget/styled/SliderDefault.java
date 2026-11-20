@@ -1,6 +1,10 @@
 package com.randomrun.ui.widget.styled;
 
 import java.util.function.Consumer;
+import com.randomrun.ui.util.InterfaceStyle;
+import com.randomrun.ui.util.Ui;
+import com.randomrun.ui.util.Theme;
+import com.randomrun.ui.util.GuiText;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractSliderButton;
@@ -45,6 +49,18 @@ public class SliderDefault extends AbstractSliderButton {
     
     @Override
     public void extractWidgetRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        if (InterfaceStyle.isClassic()) {
+            int x = getX(), y = getY();
+            Theme theme = Theme.current();
+            Ui.bevel(context, x, y, x + width, y + height, 0x30302C, 1f, true);
+            int handleX = x + (int) (value * (width - HANDLE_WIDTH));
+            context.fill(x + 2, y + height - 4, Math.max(x + 2, handleX + HANDLE_WIDTH / 2), y + height - 2, Ui.argb(theme.accent, active ? .9f : .35f));
+            Ui.bevel(context, handleX, y, handleX + HANDLE_WIDTH, y + height, active && (isHovered() || isFocused()) ? 0xA6A69E : 0x808078, 1f, false);
+            if (active && (isHovered() || isFocused())) Ui.border(context, x, y, x + width, y + height, 1, 0xFFFFFFA0);
+            var font = Minecraft.getInstance().font;
+            GuiText.centeredText(context, font, Ui.ellipsize(font, getMessage().getString(), Math.max(0, width - 12)), x + width / 2, y + (height - 8) / 2, active ? 0xFFFFFFFF : 0xFFA0A09A);
+            return;
+        }
         float alpha = styledHelper.calculateAppearanceProgress(creationTime, delay);
         if (alpha <= 0) return;
         
@@ -62,7 +78,7 @@ public class SliderDefault extends AbstractSliderButton {
         }
         styledHelper.wasHovered = hovered;
         
-        com.randomrun.ui.theme.Theme theme = com.randomrun.ui.theme.Theme.current();
+        com.randomrun.ui.util.Theme theme = com.randomrun.ui.util.Theme.current();
         int colorBase = theme.buttonBase, colorActive = theme.buttonHover, colorBorder = theme.buttonHover, colorOverlay = theme.overlay;
         int bgAlpha = (int) (alpha * AbstractStyledWidget.ALPHA_BACKGROUND);
         int finalBgColor = (bgAlpha << 24) | (colorBase & 0x00FFFFFF);

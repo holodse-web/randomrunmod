@@ -1,11 +1,11 @@
 package com.randomrun.features.battle.manager;
 
-
+import com.randomrun.core.run.RunDataManager;
 import com.randomrun.features.battle.manager.BattleSupport.BattleConstants;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.data.RunDataManager;
 import com.randomrun.infrastructure.util.CompactLogger;
 import com.randomrun.infrastructure.util.IdCompressor;
+
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
@@ -20,7 +20,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 
 public class BattleStateController {
-    private static final String LOG_TAG = "BattleState";
+    private static final String LOG_TAG = "[BattleState]";
     
     private final BattleApiHelper apiHelper;
     private final ScheduledExecutorService scheduler;
@@ -29,7 +29,9 @@ public class BattleStateController {
     private final AtomicBoolean waitingForWorldLoad = new AtomicBoolean(false);
     private final AtomicBoolean isFrozen = new AtomicBoolean(false);
     private final AtomicBoolean worldCreationInitiated = new AtomicBoolean(false);
-    private final AtomicReference<com.randomrun.core.session.RunSession> scheduledSession = new AtomicReference<>();
+    private final AtomicReference<Object> freezeUpdate = new AtomicReference<>();
+    private volatile long generation;
+    private final AtomicReference<com.randomrun.core.run.RunSession> scheduledSession = new AtomicReference<>();
     private volatile boolean countdownCancelled = false;
     private ScheduledFuture<?> countdownTask;
     private ScheduledFuture<?> unfreezeTask;
@@ -46,14 +48,14 @@ public class BattleStateController {
     public boolean isWaitingForWorldLoad() { return waitingForWorldLoad.get(); }
     public boolean isFrozen() { return isFrozen.get(); }
 
-    public static com.randomrun.features.challenges.classic.world.WorldCreationRequest createWorldRequest(BattleRoom room) {
+    public static com.randomrun.features.speedrun.WorldCreationRequest createWorldRequest(BattleRoom room) {
         Objects.requireNonNull(room, "room");
         String targetId = IdCompressor.decompress(room.getTargetItem());
         Item target = targetId == null || targetId.isEmpty() ? null
             : BuiltInRegistries.ITEM.getValue(Identifier.parse(targetId));
-        return new com.randomrun.features.challenges.classic.world.WorldCreationRequest.Builder()
+        return new com.randomrun.features.speedrun.WorldCreationRequest.Builder()
             .targetItem(target).seed(room.getSeed())
-            .mode(com.randomrun.features.challenges.classic.world.WorldMode.STANDARD)
+            .mode(com.randomrun.features.speedrun.WorldCreationRequest.WorldMode.STANDARD)
             .randomDrop(room.isRandomDrop()).upgrader(room.isUpgrader()).build();
     }
     
@@ -62,109 +64,62 @@ public class BattleStateController {
     }
     
     public void setStatusLoading(String roomId, BattleRoom currentRoom, boolean isHost) {
-        if (roomId == null || currentRoom == null) return;
-        
-        if (!loadingTriggered.compareAndSet(false, true)) return;
-        
-        CompletableFuture.runAsync(() -> {
-            try {
-                Map<String, Object> update = new HashMap<>();
-                update.put("st", "LOADING");
-                
-                boolean success = apiHelper.updateRoomFields(roomId, update).join();
-                if (!success) {
-                    loadingTriggered.set(false);
-                    CompactLogger.error(LOG_TAG, "Failed to set LOADING status");
-                    com.randomrun.ui.overlay.LoadingCurtain.abort();
-                    return;
-                }
-                if (currentRoom.isSharedWorld() && isHost) com.randomrun.network.WebRtcTransport.getInstance().prefetch();
-                
-                if (isHost) createOwnWorld(currentRoom);
-            } catch (Exception e) {
+        if (roomId == null || currentRoom == null || !loadingTriggered.compareAndSet(false, true)) return;
+        long expected = generation;
+        apiHelper.updateRoomFields(roomId, Map.of("st", "LOADING")).whenComplete((success, error) -> {
+            if (generation != expected) return;
+            if (!Boolean.TRUE.equals(success)) {
                 loadingTriggered.set(false);
                 com.randomrun.ui.overlay.LoadingCurtain.abort();
-                CompactLogger.error(LOG_TAG, "Error setting LOADING: " + e.getMessage());
+                return;
             }
-        }, scheduler);
+            if (!isHost) return;
+            if (currentRoom.isSharedWorld()) com.randomrun.network.WebRtcTransport.getInstance().prefetch();
+            createOwnWorld(currentRoom);
+        });
     }
-    
+
     public void createOwnWorld(BattleRoom room) {
         Minecraft client = Minecraft.getInstance();
         if (client == null || room == null) return;
+        long expected = generation;
         client.execute(() -> {
-            if (!worldCreationInitiated.compareAndSet(false, true)) return;
+            if (generation != expected || !worldCreationInitiated.compareAndSet(false, true)) return;
             waitingForWorldLoad.set(true);
-            com.randomrun.features.challenges.classic.world.WorldCreator.getInstance().createWorld(createWorldRequest(room));
+            com.randomrun.features.speedrun.WorldCreator.getInstance().createWorld(createWorldRequest(room));
         });
     }
 
     public void setPlayerLoaded(String roomId, BattleRoom currentRoom) {
         if (roomId == null) return;
-        
-        CompletableFuture.runAsync(() -> {
-            try {
-                String playerName = com.randomrun.network.BackendSession.playerName();
-                boolean isHost = currentRoom != null && currentRoom.isHost(playerName);
-                
-                Map<String, Object> update = new HashMap<>();
-                String path = isHost ? "h/" + playerName + "/l" : "g/" + playerName + "/l";
-                update.put(path, true);
-                
-                boolean success = apiHelper.updateRoomFields(roomId, update).join();
-                
-                if (!success) {
-                    CompactLogger.error(LOG_TAG, "Failed to update loaded for: " + playerName);
-                    return;
-                }
-                
-                if (currentRoom != null) {
-                    currentRoom.setPlayerLoaded(playerName, true);
-                    currentRoom.markUpdated();
-                }
-            } catch (Exception e) {
-                CompactLogger.error(LOG_TAG, "Error in setPlayerLoaded: " + e.getMessage());
+        long expected = generation;
+        String playerName = com.randomrun.network.BackendSession.playerName();
+        boolean isHost = currentRoom != null && currentRoom.isHost(playerName);
+        String path = (isHost ? "h/" : "g/") + playerName + "/l";
+        apiHelper.updateRoomFields(roomId, Map.of(path, true)).thenAccept(success -> {
+            if (generation == expected && success && currentRoom != null) {
+                currentRoom.setPlayerLoaded(playerName, true);
+                currentRoom.markUpdated();
             }
-        }, scheduler);
+        });
     }
 
     public void sendReady(String roomId, BattleRoom currentRoom, boolean isLobby, boolean isHost, Runnable onAllReady) {
         if (currentRoom == null || roomId == null) return;
-        
-        CompletableFuture.runAsync(() -> {
-            try {
-                String playerName = com.randomrun.network.BackendSession.playerName();
-                
-                Map<String, Object> updates = new HashMap<>();
-                String readyPath = isHost ? "h/" + playerName + "/r" : "g/" + playerName + "/r";
-                updates.put(readyPath, true);
-                
-                if (!isLobby && currentRoom.isPlayerDisconnected(playerName)) {
-                    updates.put("dd/" + playerName, false);
-                }
-                
-                boolean success = apiHelper.updateRoomFields(roomId, updates).join();
-                
-                if (!success) {
-                    CompactLogger.error(LOG_TAG, "Failed to update ready for: " + playerName);
-                    return;
-                }
-                
-                currentRoom.setPlayerReady(playerName, true);
-                if (!isLobby && currentRoom.isPlayerDisconnected(playerName)) {
-                    currentRoom.setPlayerDisconnected(playerName, false);
-                }
-                currentRoom.markUpdated();
-                
-                if (!isLobby) {
-                    sendPlayerMessage(com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.battle.you_ready"));
-                }
-            } catch (Exception e) {
-                CompactLogger.error(LOG_TAG, "Error in sendReady: " + e.getMessage());
-            }
-        }, scheduler);
+        long expected = generation;
+        String playerName = com.randomrun.network.BackendSession.playerName();
+        Map<String, Object> updates = new HashMap<>();
+        updates.put((isHost ? "h/" : "g/") + playerName + "/r", true);
+        if (!isLobby && currentRoom.isPlayerDisconnected(playerName)) updates.put("dd/" + playerName, false);
+        apiHelper.updateRoomFields(roomId, updates).thenAccept(success -> {
+            if (generation != expected || !success) return;
+            currentRoom.setPlayerReady(playerName, true);
+            if (!isLobby && currentRoom.isPlayerDisconnected(playerName)) currentRoom.setPlayerDisconnected(playerName, false);
+            currentRoom.markUpdated();
+            if (!isLobby) sendPlayerMessage(com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.battle.you_ready"));
+        });
     }
-    
+
     public void handleBattleStart(String roomId, BattleRoom latestRoom, Runnable onAllReady) {
         long sent = System.currentTimeMillis();
         com.randomrun.network.HttpClient.getInstance().request("PATCH", "/rooms/" + roomId, Map.of("st", "STARTED"), true)
@@ -178,26 +133,18 @@ public class BattleStateController {
                 Minecraft.getInstance().execute(onAllReady);
             }).exceptionally(error -> {
                 BattleManager.getInstance().startFailed();
-                CompactLogger.error(LOG_TAG, "Failed to start battle: " + error.getClass().getSimpleName());
+                CompactLogger.error("{} Start failed: {}", LOG_TAG, error.getClass().getSimpleName());
                 return null;
             });
     }
     
-    public void transitionToFrozen(String roomCode, BattleRoom currentRoom) {
-        CompletableFuture.runAsync(() -> {
-            try {
-                Map<String, Object> statusUpdate = new HashMap<>();
-                statusUpdate.put("st", "FROZEN");
-                
-                apiHelper.updateRoomFields(roomCode, statusUpdate).join();
-                
-                if (currentRoom != null) {
-                    currentRoom.setStatus(BattleRoom.RoomStatus.FROZEN);
-                }
-            } catch (Exception e) {
-                CompactLogger.error(LOG_TAG, "Error setting FROZEN: " + e.getMessage());
-            }
-        }, scheduler);
+    public void transitionToFrozen(String roomId) {
+        Object request = new Object();
+        if (!freezeUpdate.compareAndSet(null, request)) return;
+        com.randomrun.network.HttpClient.getInstance().patch("/rooms/" + roomId, Map.of("st", "FROZEN"))
+            .whenComplete((success, error) -> {
+                if (!Boolean.TRUE.equals(success)) freezeUpdate.compareAndSet(request, null);
+            });
     }
     
 
@@ -215,7 +162,7 @@ public class BattleStateController {
         }
         
         boolean amIReady = updatedRoom.isPlayerReady(playerName);
-        int totalPlayers = updatedRoom.getPlayers().size();
+        int totalPlayers = updatedRoom.getPlayerCount();
         int readyCount = newReady != null ? newReady.size() : 0;
         
         if (!amIReady && readyCount == totalPlayers - 1) {
@@ -228,8 +175,8 @@ public class BattleStateController {
     }
 
     private void scheduleStart(BattleRoom room, Runnable onUnfreeze, int attempt) {
-        var session = com.randomrun.core.session.RunSessionManager.getInstance().getCurrentSession();
-        if (session == null || session.getStatus() != com.randomrun.core.session.RunStatus.FROZEN) {
+        var session = com.randomrun.core.run.RunSessionManager.getInstance().getCurrentSession();
+        if (session == null || session.getStatus() != com.randomrun.core.run.RunSession.RunStatus.FROZEN) {
             if (attempt < 300 && scheduler != null && !scheduler.isShutdown()) {
                 scheduler.schedule(() -> Minecraft.getInstance().execute(() -> {
                     if (!countdownCancelled) scheduleStart(room, onUnfreeze, attempt + 1);
@@ -250,7 +197,7 @@ public class BattleStateController {
             if (countdownCancelled) return;
             
             Minecraft.getInstance().execute(() -> {
-                if (countdownCancelled || com.randomrun.core.session.RunSessionManager.getInstance().getCurrentSession() != session) return;
+                if (countdownCancelled || com.randomrun.core.run.RunSessionManager.getInstance().getCurrentSession() != session) return;
                 onUnfreeze.run();
                 healAllPlayers();
                 
@@ -261,7 +208,7 @@ public class BattleStateController {
                 if (runManager != null) {
                     runManager.unfreezeRun();
                 }
-                com.randomrun.core.session.RunSessionManager.getInstance().unfreezeRun();
+                com.randomrun.core.run.RunSessionManager.getInstance().unfreezeRun();
             });
         }, delayToStart, TimeUnit.MILLISECONDS);
     }
@@ -280,7 +227,7 @@ public class BattleStateController {
 
     private void startCountdown(long totalDelay) {
         if (scheduler == null || scheduler.isShutdown()) {
-            CompactLogger.error(LOG_TAG, "Scheduler unavailable for countdown");
+            CompactLogger.error("{} Countdown scheduler unavailable", LOG_TAG);
             return;
         }
         
@@ -353,6 +300,8 @@ public class BattleStateController {
     }
     
     public void reset() {
+        generation++;
+        freezeUpdate.set(null);
         if (unfreezeTask != null) unfreezeTask.cancel(false);
         loadingTriggered.set(false);
         waitingForWorldLoad.set(false);
@@ -383,7 +332,7 @@ public class BattleStateController {
                 }
                 });
             } catch (Exception e) {
-                CompactLogger.error(LOG_TAG, "Error healing players: " + e.getMessage());
+                CompactLogger.error("{} Could not heal players", LOG_TAG, e);
             }
         } else if (client.player != null) {
             client.player.setHealth(client.player.getMaxHealth());
@@ -402,7 +351,7 @@ public class BattleStateController {
         if (client != null) {
             client.execute(() -> {
                 if (client.player != null) {
-                    com.randomrun.infrastructure.util.ClientMessages.send(client.player, Component.literal(message), actionBar);
+                    com.randomrun.infrastructure.util.CompactLogger.ClientMessages.send(client.player, Component.literal(message), actionBar);
                 }
             });
         }

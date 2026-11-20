@@ -1,34 +1,29 @@
 package com.randomrun.infrastructure;
 
-
-import com.randomrun.features.battle.manager.BattleSupport.BattleCleanupHandler;
-import com.randomrun.infrastructure.config.ModConfig;
+import com.randomrun.core.data.DataSyncService.CoreInitializer;
+import com.randomrun.core.run.RunDataManager;
 import com.randomrun.features.battle.manager.BattleManager;
-import com.randomrun.features.challenges.classic.data.ItemDifficulty;
-import com.randomrun.features.challenges.classic.hud.HudRenderer;
-import com.randomrun.infrastructure.command.GoCommand;
+import com.randomrun.features.battle.manager.BattleSupport.BattleCleanupHandler;
+import com.randomrun.features.speedrun.HudRenderer;
+import com.randomrun.features.speedrun.ItemDifficulty;
+
 import com.randomrun.infrastructure.handler.TickHandler;
 import com.randomrun.infrastructure.security.ModScannerService;
 import com.randomrun.infrastructure.util.CompactLogger;
 import com.randomrun.infrastructure.util.LanguageManager;
-import com.randomrun.infrastructure.version.VersionChecker;
-import com.randomrun.core.init.CoreInitializer;
-import com.randomrun.infrastructure.data.RunDataManager;
-import com.randomrun.ui.widget.overlay.CustomNotification;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.resources.Identifier;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class RandomRunMod implements ClientModInitializer {
     public static final String MOD_ID = "randomrun";
-    public static final String MOD_VERSION = "27.1";
+    public static final String MOD_VERSION = "27.2";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     private static RandomRunMod instance;
@@ -39,7 +34,7 @@ public class RandomRunMod implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         if (instance != null) {
-            CompactLogger.warn("Duplicate mod initialization blocked");
+            CompactLogger.warn("[Core] Duplicate initialization skipped");
             return;
         }
         
@@ -52,15 +47,15 @@ public class RandomRunMod implements ClientModInitializer {
             initializeSecurity();
             initializeDataManager();
             initializeDifficulty();
-            registerCommands();
+
             registerHudElements();
             registerHandlers();
             registerConnectionEvents();
             registerShutdownHook();
             
-            CompactLogger.core("Initialization complete");
+            CompactLogger.core("[Core] Initialized");
         } catch (Exception e) {
-            CompactLogger.error("Critical initialization error", e);
+            CompactLogger.error("[Core] Initialization failed", e);
             throw new RuntimeException("Failed to initialize RandomRun", e);
         }
     }
@@ -70,8 +65,8 @@ public class RandomRunMod implements ClientModInitializer {
     }
 
     private void initializeVersion() {
-        com.randomrun.network.ModIntegrity.fingerprint();
-        if (config.isOnlineMode()) com.randomrun.infrastructure.version.VersionGate.start(false);
+        com.randomrun.network.RunVerifier.ModIntegrity.fingerprint();
+        if (config.isOnlineMode()) com.randomrun.network.VersionGate.start(false);
     }
     
     private void initializeSecurity() {
@@ -90,38 +85,61 @@ public class RandomRunMod implements ClientModInitializer {
         ItemDifficulty.initialize();
     }
 
-    private void registerCommands() {
-        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-            GoCommand.register(dispatcher);
-        });
-    }
+
 
     private void registerHudElements() {
         com.randomrun.ui.util.Previews.ItemPreviewRenderer.register();
         HudElementRegistry.addLast(
             Identifier.fromNamespaceAndPath(MOD_ID, "run_hud"), new HudRenderer());
+        HudElementRegistry.addLast(
+            Identifier.fromNamespaceAndPath(MOD_ID, "voice_hud"), new com.randomrun.features.voice.ui.VoiceHud());
+        HudElementRegistry.addLast(
+            Identifier.fromNamespaceAndPath(MOD_ID, "speech_bubbles"), new com.randomrun.features.voice.ui.SpeechBubbles());
     }
 
     private void registerHandlers() {
         TickHandler.register();
         com.randomrun.ui.overlay.LoadingCurtain.register();
-        com.randomrun.infrastructure.version.VersionGate.register();
+        com.randomrun.network.VersionGate.register();
         com.randomrun.features.upgrader.client.UpgraderClient.register();
         BattleCleanupHandler.register();
+        com.randomrun.features.voice.control.VoiceController.register();
+        com.randomrun.features.voice.VoiceSpeech.register();
+        com.randomrun.features.streamer.StreamerNet.register();
+        com.randomrun.features.streamer.StreamerPhrases.register();
     }
 
     private void registerConnectionEvents() {
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            com.randomrun.features.voice.VoiceSpeech.clear();
+            com.randomrun.features.streamer.StreamerRender.clear();
+            com.randomrun.features.streamer.StreamerVoice.clear();
+            client.execute(RandomRunMod::closeRunAfterDisconnect);
+        });
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             try {
                 String playerName = com.randomrun.network.BackendSession.playerName();
                 CoreInitializer.initialize(playerName);
             } catch (Exception e) {
-                CompactLogger.error("Core initialization failed", e);
+                CompactLogger.error("[Core] Data initialization failed", e);
             }
         });
     }
 
+    private static void closeRunAfterDisconnect() {
+        if (BattleManager.getInstance().isInBattle()) return;
+        var sessions = com.randomrun.core.run.RunSessionManager.getInstance();
+        if (sessions.hasActiveRun()) {
+            CompactLogger.warn("[Run] Run cancelled after disconnect");
+            sessions.cancelRun();
+        }
+        var runs = instance.runDataManager;
+        if (runs != null && (runs.getStatus() == com.randomrun.core.run.RunDataManager.RunStatus.RUNNING
+                || runs.getStatus() == com.randomrun.core.run.RunDataManager.RunStatus.FROZEN)) runs.cancelRun();
+    }
+
     private void registerShutdownHook() {
+        ClientLifecycleEvents.CLIENT_STARTED.register(client -> com.randomrun.ui.util.Previews.PreviewItems.warmUp());
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> shutdown());
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown, "RandomRun-Cleanup"));
     }
@@ -134,6 +152,7 @@ public class RandomRunMod implements ClientModInitializer {
         stopResource("realtime", () -> com.randomrun.network.RealtimeClient.getInstance().disconnect());
         stopResource("WebRTC", () -> com.randomrun.network.WebRtcTransport.getInstance().shutdown());
         stopResource("battle cleanup", BattleCleanupHandler::shutdown);
+        stopResource("voice", () -> com.randomrun.features.voice.engine.VoiceEngine.get().stop());
         if (runDataManager != null) {
             stopResource("run history", runDataManager::shutdown);
         }
@@ -143,7 +162,7 @@ public class RandomRunMod implements ClientModInitializer {
         try {
             action.run();
         } catch (Exception e) {
-            CompactLogger.error("Shutdown failed for " + name, e);
+            CompactLogger.error("[Core] Shutdown failed for {}", name, e);
         }
     }
 

@@ -1,13 +1,14 @@
 package com.randomrun.features.battle.manager;
 
-import com.google.gson.Gson;
-import com.randomrun.features.battle.screen.lobby.LobbyScreen;
-import com.randomrun.features.battle.screen.room.RoomWaitingScreen;
+import com.randomrun.features.battle.screen.LobbyScreen;
+import com.randomrun.features.battle.screen.RoomWaitingScreen;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.network.BackendSession;
 import com.randomrun.network.HttpClient;
 import com.randomrun.network.RealtimeClient;
 import com.randomrun.ui.widget.GlobalParticleSystem;
+
+import com.google.gson.Gson;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -31,7 +32,7 @@ public final class BattleSupport {
         public static final long EVENT_TIMEOUT_MS = 5000;
         public static final long API_OPERATION_TIMEOUT_MS = 10000;
         public static final int API_MAX_RETRIES = 3;
-        public static final int COUNTDOWN_START_NUMBER = 3;
+        public static final int COUNTDOWN_START_NUMBER = 5;
         public static final long COUNTDOWN_INTERVAL_MS = 1000;
 
         private BattleConstants() {}
@@ -68,7 +69,7 @@ public final class BattleSupport {
         public void cleanupOnShutdown(String code, BattleRoom room, boolean host) { notifyDeparture(code, room, host, ""); }
     }
 
-    public static enum RoomJoinResult {
+    public enum RoomJoinResult {
         JOINED(null),
         INVALID_PASSWORD("password"),
         ROOM_FULL("full"),
@@ -96,7 +97,7 @@ public final class BattleSupport {
         private final Consumer<BattleRoom> listener;
         private RealtimeClient.Subscription subscription;
         private volatile long generation;
-        public BattleRoomUpdates(Consumer<BattleRoom> listener, Runnable failed, ScheduledExecutorService scheduler) { this.listener = listener; }
+        public BattleRoomUpdates(Consumer<BattleRoom> listener) { this.listener = listener; }
         public synchronized void start(String roomId) {
             stop();
             long expected = generation;
@@ -136,7 +137,7 @@ public final class BattleSupport {
     }
 
     public final static class BattleCleanupHandler {
-        private static BattleRoom cleaningRoom;
+        private static final java.util.concurrent.atomic.AtomicLong cleaningGeneration = new java.util.concurrent.atomic.AtomicLong(-1);
 
         public static void register() {
             ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
@@ -148,18 +149,19 @@ public final class BattleSupport {
                 client.execute(manager::releaseFinishedConnection);
                 BattleRoom room = manager.getCurrentRoom();
                 String roomId = manager.getCurrentRoomId();
-                if (!manager.isInBattle() || room == null || roomId == null || cleaningRoom == room) return;
-                cleaningRoom = room;
+                if (!manager.isInBattle() || room == null || roomId == null) return;
+                long generation = manager.roomGeneration();
+                if (!manager.isCurrentRoom(roomId, generation) || cleaningGeneration.getAndSet(generation) == generation) return;
                 BattleCleanupTask.finish(manager.notifyDisconnect(roomId, room), 2000, client,
-                    () -> manager.getCurrentRoom() == room && roomId.equals(manager.getCurrentRoomId()),
+                    () -> manager.isCurrentRoom(roomId, generation),
                     manager::stopBattle).whenComplete((notified, error) -> {
-                        if (cleaningRoom == room) cleaningRoom = null;
-                        if (error != null) RandomRunMod.LOGGER.error("[BattleCleanup] Ошибка локальной очистки", error);
-                        else if (!notified) RandomRunMod.LOGGER.warn("[BattleCleanup] Сервер не подтвердил выход из комнаты {}", roomId);
+                        cleaningGeneration.compareAndSet(generation, -1);
+                        if (error != null) RandomRunMod.LOGGER.error("[BattleCleanup] Local cleanup failed", error);
+                        else if (!notified) RandomRunMod.LOGGER.warn("[BattleCleanup] Server did not confirm departure from room {}", roomId);
                     });
             });
         }
 
-        public static void shutdown() { cleaningRoom = null; }
+        public static void shutdown() { cleaningGeneration.set(-1); }
     }
 }

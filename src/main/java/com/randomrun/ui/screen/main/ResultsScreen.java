@@ -1,22 +1,22 @@
 package com.randomrun.ui.screen.main;
 
-
-
-import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
-import com.randomrun.ui.util.Previews.PreviewItems;
-import com.randomrun.core.history.Run;
-import com.randomrun.core.history.RunHistory;
-import com.randomrun.core.profile.PlayerProfile;
-import com.randomrun.core.service.DataSyncService;
+import com.randomrun.ui.util.InterfaceStyle;
+import com.randomrun.core.data.DataSyncService;
+import com.randomrun.core.data.PlayerProfile;
+import com.randomrun.core.run.Run;
+import com.randomrun.core.run.RunDataManager;
+import com.randomrun.core.run.RunHistory;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.data.RunDataManager;
 import com.randomrun.infrastructure.util.LanguageManager;
 import com.randomrun.network.BackendSession;
-import com.randomrun.ui.theme.Theme;
 import com.randomrun.ui.util.GuiText;
-import com.randomrun.ui.util.Heads;
+import com.randomrun.ui.util.Previews.Heads;
+import com.randomrun.ui.util.Previews.PreviewItems;
+import com.randomrun.ui.util.Theme;
 import com.randomrun.ui.util.Ui;
+import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
 import com.randomrun.ui.widget.styled.TextFieldStyled;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -187,7 +187,7 @@ public class ResultsScreen extends AbstractRandomRunScreen {
             int w = font.width(chip) + 8;
             Ui.chip(context, font, chip, width - MARGIN - w, 12, Ui.argb(0x000000, 0.55f * fade), Ui.argb(color, fade));
         }
-        String mode = upgraderMode ? "RRM Upgrader" : LanguageManager.translate("randomrun.results.mode.classic");
+        String mode = upgraderMode ? com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.mode.upgrader.name") : LanguageManager.translate("randomrun.results.mode.classic");
         Component title = LanguageManager.text("randomrun.results.heading", mode);
         GuiText.centeredText(context, font, title, width / 2, 14, Ui.argb(0xFFFFFF, fade));
     }
@@ -244,7 +244,11 @@ public class ResultsScreen extends AbstractRandomRunScreen {
 
     private void segment(GuiGraphicsExtractor context, Theme theme, String label, int x, int y, int w, boolean active, int mouseX, int mouseY, float fade, Runnable action) {
         boolean hover = Ui.inside(mouseX, mouseY, x, y, w, 18);
-        context.fill(x, y, x + w, y + 18, Ui.argb(active ? theme.buttonHover : hover ? theme.buttonBase : 0x000000, (active ? 0.95f : hover ? 0.85f : 0.45f) * fade));
+        if (InterfaceStyle.isClassic()) {
+            Ui.bevel(context, x, y, x + w, y + 18, active ? theme.buttonHover : hover ? 0x666666 : theme.buttonBase, fade, active);
+        } else {
+            context.fill(x, y, x + w, y + 18, Ui.argb(active ? theme.buttonHover : hover ? theme.buttonBase : 0x000000, (active ? 0.95f : hover ? 0.85f : 0.45f) * fade));
+        }
         Ui.border(context, x, y, x + w, y + 18, 1, Ui.argb(active ? theme.accent : theme.buttonBase, fade));
         GuiText.centeredText(context, font, label, x + w / 2, y + 5, Ui.argb(active ? 0xFFFFFF : 0xC4C4CC, fade));
         segments.add(new Segment(x, y, w, 18, action));
@@ -253,7 +257,11 @@ public class ResultsScreen extends AbstractRandomRunScreen {
     private void renderList(GuiGraphicsExtractor context, Theme theme, int mouseX, int mouseY, float fade) {
         int top = listTop(), bottom = listBottom();
         int left = MARGIN, right = width - MARGIN;
-        context.fill(left, top, right, bottom, Ui.argb(0x000000, 0.45f * fade));
+        if (InterfaceStyle.isClassic()) {
+            Ui.slot(context, left, top, right, bottom, fade);
+        } else {
+            context.fill(left, top, right, bottom, Ui.argb(0x000000, 0.45f * fade));
+        }
         Ui.border(context, left, top, right, bottom, 1, Ui.argb(theme.border, 0.6f * fade));
         if (loading) {
             Ui.spinner(context, width / 2, (top + bottom) / 2 - 6, 6, theme.accent);
@@ -287,10 +295,14 @@ public class ResultsScreen extends AbstractRandomRunScreen {
 
     private void renderRow(GuiGraphicsExtractor context, Theme theme, Summary summary, int index, int left, int y, int right, int mouseX, int mouseY, int clipTop, int clipBottom, float fade) {
         boolean hover = Ui.inside(mouseX, mouseY, left, y, right - left, ROW_HEIGHT - 2) && mouseY >= clipTop && mouseY < clipBottom;
-        context.fill(left, y, right, y + ROW_HEIGHT - 2, Ui.argb(hover ? theme.buttonBase : 0xFFFFFF, hover ? 0.55f * fade : (index % 2 == 0 ? 0.03f : 0.0f) * fade));
+        if (InterfaceStyle.isClassic()) {
+            Ui.bevel(context, left, y, right, y + ROW_HEIGHT - 2, hover ? 0x505050 : index % 2 == 0 ? 0x303030 : 0x272727, fade, true);
+        } else {
+            context.fill(left, y, right, y + ROW_HEIGHT - 2, Ui.argb(hover ? theme.buttonBase : 0xFFFFFF, hover ? 0.55f * fade : (index % 2 == 0 ? 0.03f : 0.0f) * fade));
+        }
         if (hover) context.fill(left, y, left + 2, y + ROW_HEIGHT - 2, Ui.argb(theme.accent, fade));
         GuiText.text(context, font, "#" + (index + 1), left + 6, y + 8, Ui.argb(0x71717A, fade), false);
-        if (!summary.stack().isEmpty()) context.item(summary.stack(), left + 30, y + 4);
+        if (!summary.stack().isEmpty()) com.randomrun.ui.util.Previews.ItemPreviewRenderer.extractInSlot(context, summary.stack(), left + 28, y + 1, left + 48, y + ROW_HEIGHT - 3, 3);
         int textX = left + 52;
         int statsWidth = Math.min(170, (right - left) / 3);
         GuiText.text(context, font, Ui.ellipsize(font, summary.name(), right - textX - statsWidth - 10), textX, y + 3, Ui.argb(0xFFFFFF, fade), false);

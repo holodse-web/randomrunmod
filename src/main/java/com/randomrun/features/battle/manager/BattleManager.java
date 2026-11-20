@@ -1,16 +1,15 @@
 package com.randomrun.features.battle.manager;
 
-
+import com.randomrun.core.run.RunDataManager;
 import com.randomrun.features.battle.manager.BattleSupport.BattleConstants;
 import com.randomrun.features.battle.manager.BattleSupport.BattleRoomUpdates;
 import com.randomrun.features.battle.manager.BattleSupport.DisconnectHandler;
 import com.randomrun.features.battle.manager.BattleSupport.RoomJoinResult;
-import com.google.gson.JsonElement;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.util.CompactLogger;
 import com.randomrun.infrastructure.util.IdCompressor;
-import com.randomrun.infrastructure.data.RunDataManager;
 import com.randomrun.network.HttpClient;
+
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -21,7 +20,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 
 public class BattleManager {
-    private static final String LOG_TAG = "BattleMgr";
+    private static final String LOG_TAG = "[BattleManager]";
     private static volatile BattleManager instance;
     private ScheduledExecutorService scheduler;
 
@@ -29,7 +28,7 @@ public class BattleManager {
     private BattleNetworkManager connectionManager;
     private BattleStateController stateController;
     private BattleEventHandler eventHandler;
-    private RoomLifecycleManager roomLifecycle;
+    private final RoomLifecycleManager roomLifecycle = new RoomLifecycleManager();
     private BattleApiHelper apiHelper;
     private DisconnectHandler disconnectHandler;
     private BattleRoomUpdates sseListener;
@@ -45,7 +44,6 @@ public class BattleManager {
     private volatile boolean isInBattle;
     private volatile boolean disconnectConfirmed = false;
     private ScheduledFuture<?> pollingTask;
-    private int consecutiveErrors = 0;
 
     private BattleManager() {
         ensureScheduler();
@@ -71,13 +69,10 @@ public class BattleManager {
         final long generation = lifecycleGeneration;
         this.networkManager.initializeListeners(room -> {
             if (generation == lifecycleGeneration) handleSseRoomUpdate(room);
-        }, () -> {
-            if (generation == lifecycleGeneration) handleSseReconnectFailed();
         });
         this.sseListener = this.networkManager.getSseListener();
         this.stateController = new BattleStateController(apiHelper, scheduler);
         this.eventHandler = new BattleEventHandler(scheduler, apiHelper);
-        this.roomLifecycle = new RoomLifecycleManager(apiHelper);
         this.disconnectHandler = new DisconnectHandler(apiHelper);
     }
 
@@ -99,10 +94,15 @@ public class BattleManager {
 
     public CompletableFuture<String> createRoom(String playerName, Item targetItem, boolean isSharedWorld,
                                                  boolean isPrivate, String password, int maxPlayers, String creationMode, boolean randomDrop, boolean upgrader) {
+        return createRoom(playerName, targetItem, isSharedWorld, isPrivate, password, maxPlayers, creationMode, randomDrop, upgrader, false);
+    }
+
+    public CompletableFuture<String> createRoom(String playerName, Item targetItem, boolean isSharedWorld,
+                                                 boolean isPrivate, String password, int maxPlayers, String creationMode, boolean randomDrop, boolean upgrader, boolean voice) {
         resetForNewGame();
         final long generation = lifecycleGeneration;
         return roomLifecycle.createRoom(playerName, targetItem, isSharedWorld, isPrivate, password,
-            maxPlayers, creationMode, randomDrop, upgrader, (room, code, host) -> {
+            maxPlayers, creationMode, randomDrop, upgrader, voice, (room, code, host) -> {
                 synchronized (roomLock) {
                     if (generation != lifecycleGeneration) return;
                     setupRoom(room, code, host);
@@ -116,6 +116,11 @@ public class BattleManager {
     }
 
     public CompletableFuture<RoomJoinResult> joinRoomDetailed(String playerName, String roomCode, String password) {
+        String previous = currentRoomId;
+        if (previous != null) {
+            if (previous.equals(roomCode) && currentRoom != null) return CompletableFuture.completedFuture(RoomJoinResult.JOINED);
+            roomLifecycle.leaveRoom(previous);
+        }
         resetForNewGame();
         final long generation = lifecycleGeneration;
         return roomLifecycle.joinRoomDetailed(playerName, roomCode, password, (room, code, host) -> {
@@ -154,7 +159,7 @@ public class BattleManager {
             Map<String, Object> updates = new HashMap<>();
             updates.put("ip", domain);
             apiHelper.updateRoomFields(roomId, updates).thenAccept(success -> {
-                if (!success) CompactLogger.error(LOG_TAG, "Failed to update server address");
+                if (!success) CompactLogger.error("{} Server address update failed", LOG_TAG);
             });
         }
     }
@@ -206,59 +211,12 @@ public class BattleManager {
 
     private void startRoomListener(String roomId) {
         final long generation = lifecycleGeneration;
-        final BattleRoomUpdates listener = sseListener;
         if (!isCurrentRoom(roomId, generation)) return;
-        if (pollingTask != null && !pollingTask.isCancelled()) {
-            pollingTask.cancel(false);
-            pollingTask = null;
-        }
-        if (sseListener != null) sseListener.stop();
-
-        consecutiveErrors = 0;
-
-        scheduler.schedule(() -> {
-            synchronized (roomLock) {
-                if (!isCurrentRoom(roomId, generation)) return;
-                if (listener != null) listener.start(roomId);
-            }
-        }, 500, TimeUnit.MILLISECONDS);
-
-        scheduler.schedule(() -> {
-            synchronized (roomLock) {
-                if (!isCurrentRoom(roomId, generation)) return;
-                if (listener == null || !listener.isConnected()) {
-                    RandomRunMod.LOGGER.warn("{} SSE недоступен, запуск polling", LOG_TAG);
-                    startPolling(roomId);
-                }
-            }
-        }, 2500, TimeUnit.MILLISECONDS);
-    }
-
-    private void startPolling(String roomId) {
-        synchronized (roomLock) {
-            final long generation = lifecycleGeneration;
-            if (!isCurrentRoom(roomId, generation)) return;
-            if (pollingTask != null && !pollingTask.isCancelled()) {
-                return;
-            }
-
-            long interval = BattleConstants.POLLING_INTERVAL_FALLBACK_MS;
-
-            pollingTask = scheduler.scheduleAtFixedRate(
-                () -> pollRoom(roomId, generation),
-                0,
-                interval,
-                TimeUnit.MILLISECONDS
-            );
-        }
-    }
-
-    private void handleSseReconnectFailed() {
-        RandomRunMod.LOGGER.error("{} SSE переподключение не удалось, переход на polling", LOG_TAG);
-
-        if (currentRoomId != null) {
-            startPolling(currentRoomId);
-        }
+        if (pollingTask != null) pollingTask.cancel(false);
+        if (sseListener != null) sseListener.start(roomId);
+        AtomicBoolean polling = new AtomicBoolean();
+        pollingTask = scheduler.scheduleWithFixedDelay(() -> pollRoom(roomId, generation, polling),
+            2500, BattleConstants.POLLING_INTERVAL_FALLBACK_MS, TimeUnit.MILLISECONDS);
     }
 
     private void handleSseRoomUpdate(BattleRoom updatedRoom) {
@@ -279,51 +237,41 @@ public class BattleManager {
         handleRoomUpdate(updatedRoom.getRoomCode(), updatedRoom);
     }
 
-    private boolean isCurrentRoom(String roomId, long generation) {
+    public long roomGeneration() { return lifecycleGeneration; }
+
+    public boolean isCurrentRoom(String roomId, long generation) {
         return generation == lifecycleGeneration && isInBattle && Objects.equals(roomId, currentRoomId);
     }
 
-    private void pollRoom(String roomId, long generation) {
-        if (!isCurrentRoom(roomId, generation)) return;
-        if (sseListener != null && sseListener.isHealthy()) {
-            return;
+    private void advanceFromLoading(String roomId, BattleRoom room) {
+        if (isHost && room != null && room.getStatus() == BattleRoom.RoomStatus.LOADING
+                && stateController.areAllPlayersLoaded(room)) {
+            stateController.transitionToFrozen(roomId);
         }
+    }
 
-        try {
-            BattleRoom updatedRoom = apiHelper.getRoomData(roomId).join();
-            synchronized (roomLock) {
-                if (!isCurrentRoom(roomId, generation)) return;
-
-                if (updatedRoom == null) {
-                    consecutiveErrors++;
-                    if (consecutiveErrors >= BattleConstants.MAX_CONSECUTIVE_ERRORS) {
-                        RandomRunMod.LOGGER.error("{} Слишком много ошибок ({}), остановка polling",
-                            LOG_TAG, consecutiveErrors);
-                        if (pollingTask != null) {
-                            pollingTask.cancel(false);
-                        }
-                    }
-                    return;
-                }
-
-                consecutiveErrors = 0;
-                handleRoomUpdate(roomId, updatedRoom);
-            }
-        } catch (Exception e) {
-            synchronized (roomLock) {
-                if (!isCurrentRoom(roomId, generation)) return;
-                consecutiveErrors++;
-                RandomRunMod.LOGGER.error("{} Ошибка polling ({}/{}): {}",
-                    LOG_TAG, consecutiveErrors, BattleConstants.MAX_CONSECUTIVE_ERRORS, e.getMessage());
-
-                if (consecutiveErrors >= BattleConstants.MAX_CONSECUTIVE_ERRORS) {
-                    RandomRunMod.LOGGER.error("{} Критическая ошибка, остановка polling", LOG_TAG);
-                    if (pollingTask != null) {
-                        pollingTask.cancel(false);
+    private void pollRoom(String roomId, long generation, AtomicBoolean polling) {
+        synchronized (roomLock) {
+            if (!isCurrentRoom(roomId, generation)) return;
+            advanceFromLoading(roomId, currentRoom);
+            if (sseListener != null && sseListener.isHealthy() || !polling.compareAndSet(false, true)) return;
+        }
+        apiHelper.getRoomData(roomId).whenComplete((room, error) -> {
+            try {
+                synchronized (roomLock) {
+                    if (!isCurrentRoom(roomId, generation) || sseListener != null && sseListener.isHealthy()) return;
+                    if (error == null) {
+                        handleSseRoomUpdate(room);
+                    } else {
+                        Throwable cause = error instanceof CompletionException ? error.getCause() : error;
+                        if (cause instanceof HttpClient.ApiException apiError && apiError.status() == 404
+                                && "ROOM_NOT_FOUND".equals(apiError.getMessage())) handleSseRoomUpdate(null);
                     }
                 }
+            } finally {
+                polling.set(false);
             }
-        }
+        });
     }
 
     private void handleRoomUpdate(String roomId, BattleRoom updatedRoom) {
@@ -340,7 +288,7 @@ public class BattleManager {
                         if (!updatedRoom.isPlayerReady(player)) { allReady = false; break; }
                     }
 
-                    if (allReady && updatedRoom.getPlayers().size() > 1) {
+                    if (allReady && updatedRoom.getPlayerCount() > 1) {
                         Minecraft.getInstance().execute(() -> {
                             if (!isCurrentRoom(roomId, generation)) return;
                             stateController.handleBattleStart(roomId, updatedRoom, () -> {
@@ -371,7 +319,7 @@ public class BattleManager {
                 currentRoom = updatedRoom;
             }
          } catch (Exception e) {
-             RandomRunMod.LOGGER.error("{} Ошибка обновления состояния комнаты", LOG_TAG, e);
+             RandomRunMod.LOGGER.error("{} Room update failed", LOG_TAG, e);
          }
     }
 
@@ -419,19 +367,13 @@ public class BattleManager {
         }
 
         if (!isHost && oldStatus == BattleRoom.RoomStatus.WAITING && newStatus == BattleRoom.RoomStatus.LOADING) {
-            com.randomrun.network.ConnectionStatus.set(com.randomrun.network.ConnectionStatus.Stage.WAITING_HOST);
+            com.randomrun.network.WebRtcTransport.ConnectionStatus.set(com.randomrun.network.WebRtcTransport.ConnectionStatus.Stage.WAITING_HOST);
             com.randomrun.ui.overlay.LoadingCurtain.close(com.randomrun.ui.overlay.LoadingCurtain.Mode.GUEST);
             if (updatedRoom.isSharedWorld()) com.randomrun.network.WebRtcTransport.getInstance().prefetch();
             else stateController.createOwnWorld(updatedRoom);
         }
 
-        boolean allLoadedNow = stateController.areAllPlayersLoaded(updatedRoom);
-        boolean allLoadedBefore = stateController.areAllPlayersLoaded(currentRoom);
-
-        if (isHost && newStatus == BattleRoom.RoomStatus.LOADING &&
-            allLoadedNow && !allLoadedBefore) {
-            stateController.transitionToFrozen(roomId, currentRoom);
-        }
+        advanceFromLoading(roomId, updatedRoom);
 
         if (updatedRoom.isSharedWorld() && !isHost && updatedRoom.getServerAddress() != null) {
             handleGuestConnection(updatedRoom);
@@ -456,11 +398,11 @@ public class BattleManager {
             boolean isDisconnected = updatedRoom.isPlayerDisconnected(player);
 
             if (!wasDisconnected && isDisconnected && !player.equals(myName)) {
-                RandomRunMod.LOGGER.warn("{} Игрок отключился: {}", LOG_TAG, player);
+                RandomRunMod.LOGGER.warn("{} Player disconnected: {}", LOG_TAG, player);
                 sendPlayerMessage(com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.battle.player_disconnected", player));
 
                 if (updatedRoom.isHost(player) && updatedRoom.isSharedWorld() && !eventHandler.isBattleEndHandled()) {
-                    RandomRunMod.LOGGER.error("{} Хост отключился в Shared World!", LOG_TAG);
+                    RandomRunMod.LOGGER.error("{} Shared World host disconnected", LOG_TAG);
                     sendPlayerMessage(com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.battle.host_disconnected"));
 
                     scheduler.schedule(() -> {
@@ -514,7 +456,7 @@ public class BattleManager {
                         freezePlayer();
                     }
                 }
-                var sessions = com.randomrun.core.session.RunSessionManager.getInstance();
+                var sessions = com.randomrun.core.run.RunSessionManager.getInstance();
                 var session = sessions.getCurrentSession();
                 if (roomItem != null && (session == null || session.getTargetItem() != roomItem
                         || !session.isBattle() || !Objects.equals(session.getBattleRoomId(), roomId)
@@ -559,11 +501,6 @@ public class BattleManager {
 
         if (scheduler != null && !scheduler.isShutdown()) {
             scheduler.shutdownNow();
-            try {
-                scheduler.awaitTermination(2, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
             scheduler = null;
         }
     }
@@ -572,17 +509,12 @@ public class BattleManager {
         cancelAllTasks();
         resetAllFlags();
 
-        com.randomrun.features.challenges.classic.world.WorldCreator.clearPendingData();
+        com.randomrun.features.speedrun.WorldCreator.clearPendingData();
 
-        com.randomrun.core.session.RunSessionManager.getInstance().cancelRun();
+        com.randomrun.core.run.RunSessionManager.getInstance().cancelRun();
 
         if (scheduler != null && !scheduler.isShutdown()) {
             scheduler.shutdownNow();
-            try {
-                scheduler.awaitTermination(2, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
         }
         ensureScheduler();
         initializeManagers();
@@ -596,7 +528,7 @@ public class BattleManager {
 
     public void leaveRoom() {
         String leaving = currentRoomId;
-        if (leaving != null) HttpClient.getInstance().post("/rooms/" + leaving + "/leave", Map.of());
+        if (leaving != null) roomLifecycle.leaveRoom(leaving);
         resetForNewGame();
     }
 
@@ -662,11 +594,11 @@ public class BattleManager {
         String myName = com.randomrun.network.BackendSession.playerName();
         synchronized (roomLock) {
             if (currentRoom == null || !currentRoom.isHost(myName)) {
-                RandomRunMod.LOGGER.warn("{} Только хост может кикнуть игрока", LOG_TAG);
+                RandomRunMod.LOGGER.warn("{} Only the host can kick players", LOG_TAG);
                 return CompletableFuture.completedFuture(false);
             }
             if (currentRoom.isHost(playerName)) {
-                RandomRunMod.LOGGER.warn("{} Нельзя кикнуть хоста", LOG_TAG);
+                RandomRunMod.LOGGER.warn("{} Cannot kick the host", LOG_TAG);
                 return CompletableFuture.completedFuture(false);
             }
         }
@@ -684,7 +616,7 @@ public class BattleManager {
                 }
                 return success;
             }).exceptionally(e -> {
-                RandomRunMod.LOGGER.error("{} Ошибка кика игрока", LOG_TAG, e);
+                RandomRunMod.LOGGER.error("{} Could not kick player", LOG_TAG, e);
                 return false;
             });
     }
@@ -693,11 +625,10 @@ public class BattleManager {
         String playerName = com.randomrun.network.BackendSession.playerName();
         synchronized (roomLock) {
             if (currentRoom == null || !currentRoom.isHost(playerName)) {
-                RandomRunMod.LOGGER.warn("{} Только хост может выбрать предмет", LOG_TAG);
+                RandomRunMod.LOGGER.warn("{} Only the host can select the target", LOG_TAG);
                 return CompletableFuture.completedFuture(false);
             }
             if (currentRoom.hasItemSelected()) {
-                RandomRunMod.LOGGER.warn("{} Предмет уже выбран", LOG_TAG);
                 return CompletableFuture.completedFuture(false);
             }
         }
@@ -712,11 +643,11 @@ public class BattleManager {
                         if (currentRoom != null) currentRoom.setTargetItem(itemId);
                     }
                 } else {
-                    RandomRunMod.LOGGER.warn("{} Не удалось обновить предмет", LOG_TAG);
+                    RandomRunMod.LOGGER.warn("{} Target update rejected", LOG_TAG);
                 }
                 return success;
             }).exceptionally(e -> {
-                RandomRunMod.LOGGER.error("{} Ошибка выбора предмета", LOG_TAG, e);
+                RandomRunMod.LOGGER.error("{} Target update failed", LOG_TAG, e);
                 return false;
             });
     }
@@ -725,13 +656,13 @@ public class BattleManager {
         String playerName = com.randomrun.network.BackendSession.playerName();
         synchronized (roomLock) {
             if (currentRoom == null || !currentRoom.isHost(playerName)) {
-                RandomRunMod.LOGGER.warn("{} Только хост может выбрать предмет", LOG_TAG);
+                RandomRunMod.LOGGER.warn("{} Only the host can select the target", LOG_TAG);
                 return CompletableFuture.completedFuture(null);
             }
         }
         boolean allowUnobtainable = com.randomrun.infrastructure.RandomRunMod.getInstance()
             .getConfig().isAllowUnobtainableItems();
-        java.util.List<Item> allItems = com.randomrun.features.challenges.classic.data.ItemDifficulty.getAllItems(allowUnobtainable);
+        java.util.List<Item> allItems = com.randomrun.features.speedrun.ItemDifficulty.getAllItems(allowUnobtainable);
         if (allItems.isEmpty()) return CompletableFuture.completedFuture(null);
         Item randomItem = allItems.get(new java.util.Random().nextInt(allItems.size()));
         String itemId = IdCompressor.compress(BuiltInRegistries.ITEM.getKey(randomItem).toString());
@@ -746,10 +677,10 @@ public class BattleManager {
                     }
                     return randomItem;
                 }
-                RandomRunMod.LOGGER.warn("{} Не удалось установить случайный предмет", LOG_TAG);
+                RandomRunMod.LOGGER.warn("{} Random target update rejected", LOG_TAG);
                 return null;
             }).exceptionally(e -> {
-                RandomRunMod.LOGGER.error("{} Ошибка случайного выбора предмета", LOG_TAG, e);
+                RandomRunMod.LOGGER.error("{} Random target selection failed", LOG_TAG, e);
                 return null;
             });
     }
@@ -786,7 +717,7 @@ public class BattleManager {
     private void resetAllFlags(boolean keepConnection) {
         synchronized (roomLock) {
             lifecycleGeneration++;
-            if (roomLifecycle != null) roomLifecycle.cancelPendingOperations();
+            roomLifecycle.cancelPendingOperations();
             this.currentRoom = null;
             this.currentRoomId = null;
             this.isHost = false;
@@ -794,7 +725,6 @@ public class BattleManager {
             this.victoryReported.set(false);
             this.battleStartTriggered.set(false);
             this.disconnectConfirmed = false;
-            this.consecutiveErrors = 0;
 
             if (connectionManager != null) {
                 if (keepConnection) connectionManager.detach();
@@ -814,7 +744,7 @@ public class BattleManager {
     private void sendPlayerMessage(String message) {
         Minecraft.getInstance().execute(() -> {
             if (Minecraft.getInstance().player != null) {
-                com.randomrun.infrastructure.util.ClientMessages.send(Minecraft.getInstance().player, Component.literal(message), false);
+                com.randomrun.infrastructure.util.CompactLogger.ClientMessages.send(Minecraft.getInstance().player, Component.literal(message), false);
             }
         });
     }

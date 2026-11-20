@@ -1,7 +1,8 @@
 package com.randomrun.infrastructure.security;
 
-import com.randomrun.core.session.RunSessionManager;
+import com.randomrun.core.run.RunSessionManager;
 import com.randomrun.infrastructure.util.CompactLogger;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.phys.Vec3;
@@ -16,6 +17,7 @@ public class AntiCheatService {
     private static final int SPEED_VIOLATION_THRESHOLD = 20;
     private static final int ATTACK_RATE_THRESHOLD = 25;
     private static final long CHECK_INTERVAL_MS = 50;
+    private int graceTicks;
 
     private Vec3 lastPosition = null;
     private long lastCheckTime = 0;
@@ -68,6 +70,11 @@ public class AntiCheatService {
         double dz = currentPos.z - lastPosition.z;
         double horizontalSpeedSquared = dx * dx + dz * dz;
 
+        if (player.hurtTime > 0 || player.isAutoSpinAttack()) graceTicks = 40;
+        if (graceTicks > 0) {
+            graceTicks--;
+            return;
+        }
         if (player.isFallFlying() || player.isPassenger() || player.isUnderWater()) {
             return;
         }
@@ -75,8 +82,7 @@ public class AntiCheatService {
         if (exceedsSpeedLimit(horizontalSpeedSquared)) {
             speedViolations++;
             if (speedViolations >= SPEED_VIOLATION_THRESHOLD) {
-                flagViolation(player.getName().getString(),
-                    String.format("Speed violation: %.2f blocks/tick (%d violations)", Math.sqrt(horizontalSpeedSquared), speedViolations));
+                flagViolation(String.format("Speed violation: %.2f blocks/tick (%d violations)", Math.sqrt(horizontalSpeedSquared), speedViolations));
                 speedViolations = 0;
             }
         } else {
@@ -90,10 +96,7 @@ public class AntiCheatService {
         if (exceedsTeleportLimit(distanceSquared)) {
             teleportViolations++;
             if (teleportViolations >= 3) {
-                Minecraft client = Minecraft.getInstance();
-                String playerName = client.player != null ? client.player.getName().getString() : "unknown";
-                flagViolation(playerName,
-                    String.format("Teleport: %.1f blocks (%d times)", Math.sqrt(distanceSquared), teleportViolations));
+                flagViolation(String.format("Teleport: %.1f blocks (%d times)", Math.sqrt(distanceSquared), teleportViolations));
                 teleportViolations = 0;
             }
         } else {
@@ -110,39 +113,32 @@ public class AntiCheatService {
     }
 
     public void registerAttack() {
+        if (!enabled || !RunSessionManager.getInstance().hasActiveRun()) return;
         long now = System.currentTimeMillis();
-        if (now - attackWindowStart > 1000) {
-            attackWindowStart = now;
-            attackCount = 0;
-        }
+        checkAttackRate(now);
         attackCount++;
     }
 
     private void checkAttackRate(long now) {
-        if (now - attackWindowStart > 1000 && attackCount > 0) {
+        if (now - attackWindowStart >= 1000) {
             if (attackCount > ATTACK_RATE_THRESHOLD) {
-                Minecraft client = Minecraft.getInstance();
-                String playerName = client.player != null ? client.player.getName().getString() : "unknown";
-                flagViolation(playerName,
-                    String.format("KillAura: %d attacks/sec", attackCount));
+                flagViolation(String.format("KillAura: %d attacks/sec", attackCount));
             }
             attackCount = 0;
             attackWindowStart = now;
         }
     }
 
-    private void flagViolation(String playerName, String description) {
+    private void flagViolation(String description) {
         totalFlags++;
-        CompactLogger.warn("{} Player {}: {}", LOG_TAG, playerName, description);
         try {
-            com.randomrun.core.profile.PlayerProfile profile = com.randomrun.core.profile.PlayerProfile.get();
+            com.randomrun.core.data.PlayerProfile profile = com.randomrun.core.data.PlayerProfile.get();
             if (profile != null) {
                 profile.applyTrustPenalty(
-                    com.randomrun.core.profile.PlayerProfile.PENALTY_CHEAT,
+                    com.randomrun.core.data.PlayerProfile.PENALTY_SUSPICIOUS,
                     description
                 );
-                profile.addSuspiciousFlag();
-                com.randomrun.core.profile.PlayerProfile.save();
+                com.randomrun.core.data.PlayerProfile.save();
             }
         } catch (Exception e) {
             CompactLogger.error("{} Penalty error: {}", LOG_TAG, e.getMessage());

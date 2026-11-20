@@ -1,10 +1,11 @@
 package com.randomrun.infrastructure.security;
 
+import com.randomrun.infrastructure.util.CompactLogger;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.randomrun.infrastructure.util.CompactLogger;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -32,7 +33,9 @@ public class ModScannerService {
         CHEAT_MOD("randomrun.modblock.reason.mod"),
         MAP("randomrun.modblock.reason.map"),
         HELPER("randomrun.modblock.reason.helper"),
-        XRAY_PACK("randomrun.modblock.reason.pack");
+        XRAY_PACK("randomrun.modblock.reason.pack"),
+        TAMPER("randomrun.modblock.reason.tamper"),
+        AGENT("randomrun.modblock.reason.agent");
 
         public final String key;
 
@@ -67,6 +70,17 @@ public class ModScannerService {
 
     private static final List<String> XRAY_MARKERS = List.of("xray", "x-ray", "orefinder", "ore-finder", "cavefinder", "oredetector");
 
+    private static final Set<String> SYSTEM_MODS = Set.of("randomrun", "minecraft", "java", "fabricloader", "mixinextras");
+
+    private static final List<String> SAFE_AGENTS = List.of(
+        "authlib-injector", "authlib", "idea_rt", "jetbrains", "debugger-agent", "jacoco", "yourkit", "yjpagent",
+        "jprofiler", "async-profiler", "asyncprofiler", "spark", "tlauncher", "legacylauncher", "mcl", "theseus", "modrinth",
+        "prism", "multimc", "polymc", "atlauncher", "gdlauncher", "curseforge", "overwolf", "feather", "lunar", "badlion"
+    );
+
+    private static final byte[] OWN_PACKAGE = "com/randomrun".getBytes(StandardCharsets.UTF_8);
+    private static final byte[] OWN_PACKAGE_DOTTED = "com.randomrun".getBytes(StandardCharsets.UTF_8);
+
     private static final List<String> PACK_NAME_MARKERS = List.of(
         "xray", "x-ray", "orefinder", "ore-finder", "orehighlight", "ore-highlight", "oreoutline", "ore-outline",
         "wallhack", "see-through", "seethrough"
@@ -99,13 +113,24 @@ public class ModScannerService {
             if (reason == null) continue;
             String label = mod.getMetadata().getName() + " (" + id + ")";
             mods.put(label, reason);
-            CompactLogger.warn("Blacklisted mod: {}", label);
+            CompactLogger.warn("[ModScanner] Restricted mod: {}", label);
+        }
+        for (ModContainer mod : FabricLoader.getInstance().getAllMods()) {
+            String id = mod.getMetadata().getId().toLowerCase(Locale.ROOT);
+            if (SYSTEM_MODS.contains(id) || id.startsWith("fabric") || id.startsWith("randomrun")) continue;
+            if (!targetsRandomRun(mod)) continue;
+            String label = mod.getMetadata().getName() + " (" + id + ")";
+            mods.put(label, Reason.TAMPER);
+            CompactLogger.warn("[ModScanner] Mod alters RandomRun: {}", label);
+        }
+        for (String agent : unknownAgents()) {
+            mods.put(agent, Reason.AGENT);
+            CompactLogger.warn("[ModScanner] Unknown Java agent: {}", agent);
         }
         packKey = "";
         refreshPacks();
         scanned = true;
-        if (isTrusted()) CompactLogger.security("Trusted mode");
-        else CompactLogger.warn("Untrusted mode: {} mods, {} packs", mods.size(), packs.size());
+        if (!isTrusted()) CompactLogger.warn("[ModScanner] Untrusted mode: {} mods, {} packs", mods.size(), packs.size());
     }
 
     private static Reason classify(String id, String name) {
@@ -116,6 +141,64 @@ public class ModScannerService {
         if (MAP_MODS.contains(id) || id.contains("minimap") || id.contains("worldmap") || name.contains("minimap") || name.contains("world map")) return Reason.MAP;
         if (HELPER_MODS.contains(id) || id.contains("fullbright") || id.contains("zoom")) return Reason.HELPER;
         return null;
+    }
+
+    private static boolean targetsRandomRun(ModContainer mod) {
+        try {
+            var descriptor = mod.findPath("fabric.mod.json");
+            if (descriptor.isEmpty()) return false;
+            JsonObject root = JsonParser.parseString(Files.readString(descriptor.get(), StandardCharsets.UTF_8)).getAsJsonObject();
+            if (!root.has("mixins")) return false;
+            for (JsonElement entry : root.getAsJsonArray("mixins")) {
+                String config = entry.isJsonObject() ? entry.getAsJsonObject().get("config").getAsString() : entry.getAsString();
+                var configPath = mod.findPath(config);
+                if (configPath.isEmpty()) continue;
+                JsonObject json = JsonParser.parseString(Files.readString(configPath.get(), StandardCharsets.UTF_8)).getAsJsonObject();
+                if (!json.has("package")) continue;
+                String base = json.get("package").getAsString().replace('.', '/');
+                for (String section : List.of("mixins", "client", "server")) {
+                    if (!json.has(section) || !json.get(section).isJsonArray()) continue;
+                    for (JsonElement name : json.getAsJsonArray(section)) {
+                        var classPath = mod.findPath(base + "/" + name.getAsString().replace('.', '/') + ".class");
+                        if (classPath.isEmpty()) continue;
+                        byte[] bytes = Files.readAllBytes(classPath.get());
+                        if (contains(bytes, OWN_PACKAGE) || contains(bytes, OWN_PACKAGE_DOTTED)) return true;
+                    }
+                }
+            }
+        } catch (Exception error) {
+            CompactLogger.warn("[ModScanner] Mixin scan failed for {}: {}", mod.getMetadata().getId(), error.getClass().getSimpleName());
+        }
+        return false;
+    }
+
+    private static boolean contains(byte[] data, byte[] pattern) {
+        outer:
+        for (int i = 0; i <= data.length - pattern.length; i++) {
+            for (int j = 0; j < pattern.length; j++) if (data[i + j] != pattern[j]) continue outer;
+            return true;
+        }
+        return false;
+    }
+
+    private static List<String> unknownAgents() {
+        List<String> result = new ArrayList<>();
+        try {
+            for (String argument : java.lang.management.ManagementFactory.getRuntimeMXBean().getInputArguments()) {
+                String lower = argument.toLowerCase(Locale.ROOT);
+                if (!lower.startsWith("-javaagent:") && !lower.startsWith("-agentpath:") && !lower.startsWith("-agentlib:")) continue;
+                if (lower.startsWith("-agentlib:jdwp")) continue;
+                String path = argument.substring(argument.indexOf(':') + 1);
+                int options = path.indexOf('=');
+                if (options > 0) path = path.substring(0, options);
+                String file = Path.of(path).getFileName() == null ? path : Path.of(path).getFileName().toString();
+                String name = file.toLowerCase(Locale.ROOT);
+                if (SAFE_AGENTS.stream().noneMatch(name::contains)) result.add(file);
+            }
+        } catch (Exception error) {
+            CompactLogger.warn("[ModScanner] Agent check failed: {}", error.getClass().getSimpleName());
+        }
+        return result;
     }
 
     public synchronized void refreshPacks() {
@@ -136,7 +219,7 @@ public class ModScannerService {
         for (File file : files) {
             if (isXrayPack(file)) {
                 packs.put(file.getName(), Reason.XRAY_PACK);
-                CompactLogger.warn("X-ray resource pack: {}", file.getName());
+                CompactLogger.warn("[ModScanner] X-ray pack: {}", file.getName());
             }
         }
     }
@@ -170,7 +253,7 @@ public class ModScannerService {
                 }
             }
         } catch (Exception error) {
-            CompactLogger.warn("Pack scan error {}: {}", file.getName(), error.getMessage());
+            CompactLogger.warn("[ModScanner] Pack scan failed for {}: {}", file.getName(), error.getMessage());
         }
         return false;
     }

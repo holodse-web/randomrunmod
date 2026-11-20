@@ -22,9 +22,17 @@ export function password(value) {
   if (typeof value !== 'string' || value.length < 8 || encoder.encode(value).length > 128) fail(400, 'INVALID_PASSWORD');
   return value;
 }
+const NATIVE = 'n1$';
+const hex = bytes => Array.from(new Uint8Array(bytes), b => b.toString(16).padStart(2, '0')).join('');
 export async function passwordHash(value, salt = randomToken(16)) {
+  const key = await crypto.subtle.importKey('raw', encoder.encode(value), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: encoder.encode(salt), iterations: 100000 }, key, 256);
+  return { salt, hash: NATIVE + hex(bits) };
+}
+export async function verifyPassword(value, salt, hash) {
+  if (typeof hash !== 'string' || hash.startsWith(NATIVE)) return { ok: constantEqual((await passwordHash(value, salt)).hash, hash ?? ''), upgrade: false };
   const bytes = await pbkdf2Async(sha256, value, salt, { c: 600000, dkLen: 32, asyncTick: 20 });
-  return { salt, hash: Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('') };
+  return { ok: constantEqual(hex(bytes), hash), upgrade: true };
 }
 export function json(value, status = 200) {
   return new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });

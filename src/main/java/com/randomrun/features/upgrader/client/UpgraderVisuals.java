@@ -1,12 +1,15 @@
 package com.randomrun.features.upgrader.client;
 
+import com.randomrun.ui.util.InterfaceStyle;
+
+import com.randomrun.features.upgrader.UpgraderMath;
+import com.randomrun.features.upgrader.UpgraderTransaction;
+import com.randomrun.ui.util.Theme;
+import com.randomrun.ui.util.Ui;
+
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.renderpearl.api.pipeline.RenderPipeline;
-import com.randomrun.features.upgrader.UpgraderMath;
-import com.randomrun.features.upgrader.UpgraderTransaction;
-import com.randomrun.ui.theme.Theme;
-import com.randomrun.ui.util.Ui;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -26,12 +29,12 @@ public final class UpgraderVisuals {
     private UpgraderVisuals() {
     }
 
-    public static record UpgraderWheelGeometry(int guiRadius, int guiScale) {
+    public record UpgraderWheelGeometry(int guiRadius, int guiScale) {
         public UpgraderWheelGeometry {
             if (guiRadius < 1 || guiScale < 1) throw new IllegalArgumentException("Invalid wheel geometry");
         }
 
-        public int physicalPixelStep() { return Math.max(1, (int) Math.ceil(guiScale / 1.5)); }
+        public int physicalPixelStep() { return InterfaceStyle.isClassic() ? guiScale : Math.max(1, (int) Math.ceil(guiScale / 1.5)); }
         public float detailScale() { return guiScale / (float) physicalPixelStep(); }
         public float rasterToGui() { return physicalPixelStep() / (float) guiScale; }
         public int units(double guiUnits) { return (int) Math.round(guiUnits * detailScale()); }
@@ -124,7 +127,7 @@ public final class UpgraderVisuals {
         }
     }
 
-    public static record UpgraderScreenLayout(int windowX, int windowY, int windowWidth, int windowHeight,
+    public record UpgraderScreenLayout(int windowX, int windowY, int windowWidth, int windowHeight,
                                        int contentX, int contentWidth, int contentTop, int slotSize,
                                        int leftWidth, int rightWidth, int lowerY, int lowerHeight,
                                        int heroHeight) {
@@ -340,7 +343,7 @@ public final class UpgraderVisuals {
     }
 
     public final static class UpgraderPalette {
-        private static final int YELLOW = 0xFFFFD45C;
+        private static int YELLOW = 0xFFFFD45C;
         private static final int WHITE = 0xFFFFFFFF;
         private static final int BLACK = 0xFF000000;
 
@@ -350,8 +353,8 @@ public final class UpgraderVisuals {
         public static int BUTTON, BUTTON_EDGE, BUTTON_DISABLED, BUTTON_DISABLED_EDGE;
         public static int PRIMARY, PRIMARY_DISABLED, PRIMARY_DISABLED_EDGE;
         public static int HEADER, DISC, SUCCESS_FILL, FAILURE_FILL, RING_TRACK, RING_EDGE, BACKDROP;
-        public static final int GREEN = 0xFF86EFAC;
-        public static final int RED = 0xFFF87171;
+        public static int GREEN = 0xFF86EFAC;
+        public static int RED = 0xFFF87171;
 
         private static Theme applied;
 
@@ -369,40 +372,80 @@ public final class UpgraderVisuals {
             Theme theme = Theme.current();
             if (theme == applied) return;
             applied = theme;
+            YELLOW = InterfaceStyle.isClassic() ? Ui.GOLD : 0xFFFFD45C;
+            GREEN = InterfaceStyle.isClassic() ? Ui.SUCCESS : 0xFF86EFAC;
+            RED = InterfaceStyle.isClassic() ? Ui.DANGER : 0xFFF87171;
             int panel = opaque(theme.panel), base = opaque(theme.buttonBase), hover = opaque(theme.buttonHover);
             int accent = opaque(theme.accent), border = opaque(theme.border);
-            WINDOW = Ui.lerp(panel, BLACK, .35f);
-            WINDOW_EDGE = Ui.lerp(hover, accent, .35f);
-            PANEL = Ui.lerp(panel, base, .35f);
-            EDGE = Ui.lerp(border, panel, .35f);
-            STAKE = Ui.lerp(panel, base, .55f);
-            STAKE_EDGE = accent;
-            TARGET = Ui.lerp(panel, hover, .22f);
-            TARGET_EDGE = Ui.lerp(hover, WHITE, .25f);
-            GOLD = accent;
-            TEAL = Ui.lerp(accent, WHITE, .55f);
-            TEXT = WHITE;
-            MUTED = Ui.lerp(Ui.lerp(accent, WHITE, .5f), 0xFF8A8A93, .6f);
-            INK = Ui.lerp(panel, BLACK, .7f);
-            SLOT = Ui.lerp(base, BLACK, .25f);
-            SLOT_EDGE = Ui.lerp(border, BLACK, .3f);
-            SLOT_HOVER = Ui.lerp(hover, BLACK, .2f);
-            SELECTED = Ui.lerp(accent, BLACK, .55f);
-            TARGET_SELECTED = Ui.lerp(hover, BLACK, .35f);
+            if (InterfaceStyle.isClassic()) {
+                WINDOW = panel;
+                WINDOW_EDGE = 0xFFB0AEA0;
+                PANEL = 0xFF41413A;
+                EDGE = 0xFF8B8B7C;
+                STAKE = 0xFF41413A;
+                STAKE_EDGE = Ui.GOLD;
+                TARGET = 0xFF41413A;
+                TARGET_EDGE = Ui.INFO;
+                GOLD = Ui.GOLD;
+                TEAL = Ui.INFO;
+                TEXT = Ui.TEXT;
+                MUTED = Ui.TEXT_MUTED;
+                INK = 0xFF20201B;
+                SLOT = 0xFF55554D;
+                SLOT_EDGE = 0xFF24241F;
+                SLOT_HOVER = 0xFF77776B;
+                SELECTED = 0xFF66603D;
+                TARGET_SELECTED = 0xFF415E60;
+            } else {
+                WINDOW = Ui.lerp(panel, BLACK, .35f);
+                WINDOW_EDGE = Ui.lerp(hover, accent, .35f);
+                PANEL = Ui.lerp(panel, base, .35f);
+                EDGE = Ui.lerp(border, panel, .35f);
+                STAKE = Ui.lerp(panel, base, .55f);
+                STAKE_EDGE = accent;
+                TARGET = Ui.lerp(panel, hover, .22f);
+                TARGET_EDGE = Ui.lerp(hover, WHITE, .25f);
+                GOLD = accent;
+                TEAL = Ui.lerp(accent, WHITE, .55f);
+                TEXT = WHITE;
+                MUTED = Ui.lerp(Ui.lerp(accent, WHITE, .5f), 0xFF8A8A93, .6f);
+                INK = Ui.lerp(panel, BLACK, .7f);
+                SLOT = Ui.lerp(base, BLACK, .25f);
+                SLOT_EDGE = Ui.lerp(border, BLACK, .3f);
+                SLOT_HOVER = Ui.lerp(hover, BLACK, .2f);
+                SELECTED = Ui.lerp(accent, BLACK, .55f);
+                TARGET_SELECTED = Ui.lerp(hover, BLACK, .35f);
+            }
             BUTTON = base;
-            BUTTON_EDGE = Ui.lerp(hover, WHITE, .2f);
-            BUTTON_DISABLED = Ui.lerp(base, BLACK, .45f);
-            BUTTON_DISABLED_EDGE = Ui.lerp(border, BLACK, .45f);
-            PRIMARY = hover;
-            PRIMARY_DISABLED = Ui.lerp(hover, BLACK, .55f);
-            PRIMARY_DISABLED_EDGE = Ui.lerp(hover, BLACK, .3f);
-            HEADER = Ui.lerp(panel, base, .7f);
-            DISC = Ui.lerp(panel, BLACK, .5f);
-            SUCCESS_FILL = 0xFF14532D;
-            FAILURE_FILL = 0xFF5F1D1D;
-            RING_TRACK = Ui.lerp(base, BLACK, .2f);
-            RING_EDGE = Ui.lerp(accent, WHITE, .3f);
-            BACKDROP = Ui.argb(theme.bgBottom, 0.55f);
+            if (InterfaceStyle.isClassic()) {
+                BUTTON_EDGE = 0xFFB0AEA0;
+                BUTTON_DISABLED = 0xFF41413A;
+                BUTTON_DISABLED_EDGE = 0xFF606056;
+                PRIMARY = 0xFF66784B;
+                PRIMARY_DISABLED = 0xFF41413A;
+                PRIMARY_DISABLED_EDGE = 0xFF606056;
+                HEADER = base;
+                DISC = 0xFF2A2A24;
+                SUCCESS_FILL = 0xFF344A2B;
+                FAILURE_FILL = 0xFF54332B;
+                RING_TRACK = 0xFF636359;
+                RING_EDGE = 0xFFB7B7A6;
+                BACKDROP = Ui.argb(0x171712, 0.68f);
+            } else {
+                BUTTON_EDGE = Ui.lerp(hover, WHITE, .2f);
+                BUTTON_DISABLED = Ui.lerp(base, BLACK, .45f);
+                BUTTON_DISABLED_EDGE = Ui.lerp(border, BLACK, .45f);
+                PRIMARY = hover;
+                PRIMARY_DISABLED = Ui.lerp(hover, BLACK, .55f);
+                PRIMARY_DISABLED_EDGE = Ui.lerp(hover, BLACK, .3f);
+                HEADER = Ui.lerp(panel, base, .7f);
+                DISC = Ui.lerp(panel, BLACK, .5f);
+                SUCCESS_FILL = 0xFF14532D;
+                FAILURE_FILL = 0xFF5F1D1D;
+                RING_TRACK = Ui.lerp(base, BLACK, .2f);
+                RING_EDGE = Ui.lerp(accent, WHITE, .3f);
+                BACKDROP = Ui.argb(theme.bgBottom, 0.55f);
+            }
         }
 
         public static int chanceColor(double chance) {

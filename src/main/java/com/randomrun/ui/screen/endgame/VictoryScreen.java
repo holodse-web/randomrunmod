@@ -1,16 +1,17 @@
 package com.randomrun.ui.screen.endgame;
 
-import com.randomrun.core.history.Run;
-import com.randomrun.core.history.RunResult;
-import com.randomrun.core.profile.PlayerProfile;
+import com.randomrun.core.data.PlayerProfile;
+import com.randomrun.core.run.Run;
+import com.randomrun.core.run.Run.RunResult;
+import com.randomrun.core.run.RunDataManager;
 import com.randomrun.features.battle.manager.BattleManager;
-import com.randomrun.features.challenges.classic.world.WorldCreator;
 import com.randomrun.features.leaderboard.LeaderboardService;
+import com.randomrun.features.speedrun.WorldCreator;
 import com.randomrun.infrastructure.RandomRunMod;
-import com.randomrun.infrastructure.data.RunDataManager;
 import com.randomrun.infrastructure.security.ModScannerService;
 import com.randomrun.infrastructure.util.LanguageManager;
 import com.randomrun.network.BackendSession;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -69,12 +70,12 @@ public class VictoryScreen extends EndgameScreen {
     @Override
     protected Component subtitle() {
         if (wasBattle && winnerName != null) return LanguageManager.text("randomrun.endgame.winner", winnerName);
-        return upgrader ? Component.literal("RRM Upgrader") : null;
+        return upgrader ? Component.literal(com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.mode.upgrader.name")) : null;
     }
 
     @Override
     protected void onOpened() {
-        if (minecraft.player != null) minecraft.player.playSound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
+        if (minecraft.player != null) minecraft.player.playSound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 0.4f, 1.0f);
     }
 
     @Override
@@ -110,25 +111,53 @@ public class VictoryScreen extends EndgameScreen {
             setNotes(false, reason);
             return;
         }
-        setNotes(true, null);
-        LeaderboardService.getInstance().getTopRecords(currentRun.getTargetId(), 10).orTimeout(5, TimeUnit.SECONDS).thenAccept(top -> {
-            if (top.size() >= 10 && currentRun.getDuration() >= top.get(9).getCompletionTime()) {
-                String text = LanguageManager.translate("randomrun.endgame.reason.not_top10",
-                    RunDataManager.formatTime(currentRun.getDuration()), RunDataManager.formatTime(top.get(9).getCompletionTime()));
-                Minecraft.getInstance().execute(() -> setNotes(false, text));
+        setNotes(true, LanguageManager.translate("randomrun.endgame.checking"));
+        com.randomrun.core.run.RunCompletionService.lastVictory().orTimeout(40, TimeUnit.SECONDS).whenComplete((record, error) -> {
+            Boolean counted = record != null ? record.getServerCounted() : null;
+            if (counted == null) {
+                Minecraft.getInstance().execute(() -> setNotes(false, LanguageManager.translate("randomrun.endgame.reason.pending")));
+                return;
             }
-        }).exceptionally(error -> null);
+            if (!counted) {
+                String text = serverReason(record.getServerReason());
+                Minecraft.getInstance().execute(() -> setNotes(false, text));
+                return;
+            }
+            Minecraft.getInstance().execute(() -> setNotes(true, null));
+            LeaderboardService.getInstance().getTopRecords(currentRun.getTargetId(), 10).orTimeout(5, TimeUnit.SECONDS).thenAccept(top -> {
+                if (top.size() >= 10 && currentRun.getDuration() >= top.get(9).getCompletionTime()) {
+                    String text = LanguageManager.translate("randomrun.endgame.reason.not_top10",
+                        RunDataManager.formatTime(currentRun.getDuration()), RunDataManager.formatTime(top.get(9).getCompletionTime()));
+                    Minecraft.getInstance().execute(() -> setNotes(false, text));
+                }
+            }).exceptionally(failure -> null);
+        });
+    }
+
+    private static String serverReason(String code) {
+        String key = code == null ? "randomrun.endgame.reason.unverified" : switch (code) {
+            case "custom_seed" -> "randomrun.endgame.reason.custom_seed";
+            case "random_drop" -> "randomrun.endgame.reason.random_drop";
+            case "upgrader" -> "randomrun.endgame.reason.upgrader";
+            case "survivor" -> "randomrun.endgame.reason.survivor";
+            case "time" -> "randomrun.endgame.reason.time_mismatch";
+            case "low_trust" -> "randomrun.endgame.reason.low_trust_server";
+            default -> "randomrun.endgame.reason.unverified";
+        };
+        return LanguageManager.translate(key);
     }
 
     private void setNotes(boolean submitted, String reason) {
         List<Component> lines = new ArrayList<>();
         lines.add(LanguageManager.text(submitted ? "randomrun.endgame.submitted" : "randomrun.endgame.not_submitted")
-            .withStyle(style -> style.withColor(submitted ? 0x4ADE80 : 0xF87171)));
+            .withStyle(style -> style.withColor(submitted ? 0x86EFAC : 0xFCA5A5)));
+        notesAccent = submitted ? 0x4ADE80 : 0xF87171;
         if (reason != null) lines.add(Component.literal(reason).withStyle(style -> style.withColor(0xA1A1AA)));
         notes = List.copyOf(lines);
     }
 
     private String staticReason(PlayerProfile profile, boolean trusted) {
+        if (com.randomrun.features.voice.control.VoiceController.recentVoiceRun()) return LanguageManager.translate("randomrun.endgame.reason.voice");
         if (upgrader) return LanguageManager.translate("randomrun.endgame.reason.upgrader");
         if (!trusted) return LanguageManager.translate("randomrun.endgame.reason.untrusted");
         if (!profile.canSubmitToLeaderboard()) {
@@ -137,7 +166,6 @@ public class VictoryScreen extends EndgameScreen {
         if (!currentRun.isEligibleForLeaderboard()) {
             if (currentRun.isSurvivor()) return LanguageManager.translate("randomrun.endgame.reason.survivor");
             if (currentRun.isRandomDrop()) return LanguageManager.translate("randomrun.endgame.reason.random_drop");
-            if (!currentRun.isHardcore()) return LanguageManager.translate("randomrun.endgame.reason.not_hardcore");
             if (!currentRun.isBattle() && currentRun.getCustomSeed() != null) return LanguageManager.translate("randomrun.endgame.reason.custom_seed");
         }
         return null;

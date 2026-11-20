@@ -1,11 +1,12 @@
 package com.randomrun.network;
 
+import com.randomrun.network.HttpClient.BackendConfig;
+
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.net.http.WebSocket;
 import java.nio.ByteBuffer;
 import java.time.Duration;
-import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -16,6 +17,7 @@ public final class RealtimeClient {
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> { Thread t = new Thread(r, "RandomRun-Realtime"); t.setDaemon(true); return t; });
     private final CopyOnWriteArrayList<Consumer<JsonObject>> roomListeners = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<Consumer<JsonObject>> signalListeners = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Consumer<JsonObject>> sayListeners = new CopyOnWriteArrayList<>();
     private volatile String presence = "{\"type\":\"presence\",\"activity\":\"menu\"}";
     private final AtomicLong generation = new AtomicLong();
     private volatile WebSocket socket;
@@ -54,6 +56,9 @@ public final class RealtimeClient {
         for (int i = 0; i < 4; i++) scheduler.schedule(() -> { if (generation.get() == expected && socket != null) ping(); }, i * 400L, TimeUnit.MILLISECONDS);
     }
     public int onlineCount() { return online; }
+    private volatile long openedConnection = -1;
+    public long connectionId() { return socket != null ? openedConnection : -1; }
+    public CompletableFuture<WebSocket> send(JsonObject message) { return sendText(message); }
     public Subscription subscribeRooms(Consumer<JsonObject> listener) {
         roomListeners.add(listener);
         if (rooms != null) listener.accept(rooms.deepCopy());
@@ -61,21 +66,24 @@ public final class RealtimeClient {
         return () -> roomListeners.remove(listener);
     }
     public Subscription subscribeSignals(Consumer<JsonObject> listener) { signalListeners.add(listener); connect(); return () -> signalListeners.remove(listener); }
+
+    public void addSayListener(Consumer<JsonObject> listener) { sayListeners.add(listener); }
     public synchronized void connect() {
         if (socket != null || connecting || !BackendSession.isAuthenticated()) return;
+        if (!com.randomrun.infrastructure.RandomRunMod.getInstance().getConfig().isOnlineMode()) return;
         connecting = true;
         if (retryTask != null) retryTask.cancel(false);
         long attempt = generation.incrementAndGet();
         BackendSession.Session session = BackendSession.current();
         java.net.http.HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build().newWebSocketBuilder()
-            .connectTimeout(Duration.ofSeconds(15)).header("Authorization", "Bearer " + session.token())
+            .connectTimeout(Duration.ofSeconds(15)).header("Authorization", "Bearer " + session.token()).header("X-RRM-Protocol", HttpClient.PROTOCOL)
             .buildAsync(BackendConfig.events(), new WebSocket.Listener() {
                 private final StringBuilder text = new StringBuilder();
                 private boolean current() { return generation.get() == attempt && BackendSession.current() == session; }
                 @Override public void onOpen(WebSocket connection) {
                     synchronized (RealtimeClient.this) {
                         if (!current()) { connection.abort(); return; }
-                        connecting = false; socket = connection; lastActivity = System.currentTimeMillis(); retry = 0;
+                        connecting = false; socket = connection; lastActivity = System.currentTimeMillis(); retry = 0; openedConnection = attempt;
                         sendText(JsonParser.parseString(presence).getAsJsonObject());
                         if (pingTask != null) pingTask.cancel(false);
                         pingTask = scheduler.scheduleAtFixedRate(() -> {
@@ -101,6 +109,7 @@ public final class RealtimeClient {
                             String type = message.get("type").getAsString();
                             if (type.equals("pong") && message.has("sentAt")) {
                                 observeServerTime(message.get("serverTime").getAsLong(), message.get("sentAt").getAsLong(), System.currentTimeMillis());
+                                if (message.has("expires")) BackendSession.extend(session, message.get("expires").getAsLong());
                             } else if (bestRtt == Long.MAX_VALUE && message.has("serverTime")) serverOffset = message.get("serverTime").getAsLong() - System.currentTimeMillis();
                             if (type.equals("snapshot")) {
                                 JsonObject snapshot = null;
@@ -114,8 +123,12 @@ public final class RealtimeClient {
                                 }
                                 if (message.has("social") && message.get("social").isJsonObject()) SocialService.getInstance().accept(message.getAsJsonObject("social"));
                                 if (snapshot != null) for (var listener : roomListeners) { try { listener.accept(snapshot.deepCopy()); } catch (Exception ignored) {} }
+                            } else if (type.startsWith("chat")) {
+                                ChatService.getInstance().accept(message);
                             } else if (type.equals("signal")) {
                                 for (var listener : signalListeners) { try { listener.accept(message.deepCopy()); } catch (Exception ignored) {} }
+                            } else if (type.equals("say")) {
+                                for (var listener : sayListeners) { try { listener.accept(message.deepCopy()); } catch (Exception ignored) {} }
                             }
                         } catch (Exception ignored) { connection.abort(); failed(attempt); }
                         text.setLength(0);
@@ -151,10 +164,27 @@ public final class RealtimeClient {
     }
     public CompletableFuture<WebSocket> sendSignal(String peer, String connection, String kind, JsonObject data) {
         WebSocket current = socket;
-        if (current == null) return CompletableFuture.failedFuture(new IllegalStateException("Сервис комнат недоступен"));
+        if (current == null) return CompletableFuture.failedFuture(new IllegalStateException("Room service unavailable"));
         JsonObject message = new JsonObject();
         message.addProperty("type", "signal"); message.addProperty("peer", peer); message.addProperty("connection", connection); message.addProperty("kind", kind); message.add("data", data);
         return sendText(message);
+    }
+
+    public boolean sendSay(String id, String text) {
+        if (socket == null || id == null || id.isEmpty()) return false;
+        JsonObject message = new JsonObject();
+        message.addProperty("type", "say"); message.addProperty("id", id); message.addProperty("sound", id); message.addProperty("text", text);
+        sendText(message);
+        return true;
+    }
+
+    public void sendTrace(double x, double z, String dimension, boolean item, boolean respawned) {
+        if (socket == null) return;
+        JsonObject message = new JsonObject();
+        message.addProperty("type", "trace"); message.addProperty("x", Math.round(x * 10) / 10.0); message.addProperty("z", Math.round(z * 10) / 10.0); message.addProperty("dim", dimension);
+        if (item) message.addProperty("item", true);
+        if (respawned) message.addProperty("rs", true);
+        sendText(message);
     }
     private synchronized CompletableFuture<WebSocket> sendText(JsonObject message) {
         WebSocket expected = socket;
@@ -166,9 +196,9 @@ public final class RealtimeClient {
         return pendingSend;
     }
     public synchronized void acceptRoom(JsonObject room) {
-        if (!room.has("roomCode") || !room.has("revision") || room.get("revision").getAsLong() < revision) return;
+        if (socket == null || rooms == null || !room.has("roomCode") || !room.has("revision") || room.get("revision").getAsLong() < revision) return;
         revision = room.get("revision").getAsLong();
-        JsonObject updated = rooms == null ? new JsonObject() : rooms.deepCopy();
+        JsonObject updated = rooms.deepCopy();
         updated.add(room.get("roomCode").getAsString(), room.deepCopy());
         rooms = updated;
     }
@@ -176,7 +206,12 @@ public final class RealtimeClient {
         generation.incrementAndGet();
         if (retryTask != null) retryTask.cancel(false);
         if (pingTask != null) pingTask.cancel(false);
-        if (socket != null) socket.abort();
+        if (socket != null) {
+            WebSocket closing = socket;
+            try { closing.sendClose(WebSocket.NORMAL_CLOSURE, "").get(600, TimeUnit.MILLISECONDS); } catch (Exception ignored) {}
+            closing.abort();
+        }
         connecting = false; socket = null; rooms = null; pendingSend = CompletableFuture.completedFuture(null); online = 0; revision = -1; bestRtt = Long.MAX_VALUE; serverOffset = 0;
+        ChatService.getInstance().reset();
     }
 }

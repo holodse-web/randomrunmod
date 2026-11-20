@@ -1,13 +1,15 @@
 package com.randomrun.ui.screen.main;
 
+import com.randomrun.ui.util.InterfaceStyle;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.util.LanguageManager;
-import com.randomrun.infrastructure.version.VersionChecker;
-import com.randomrun.ui.theme.Theme;
+import com.randomrun.network.VersionChecker;
 import com.randomrun.ui.util.GuiText;
+import com.randomrun.ui.util.Theme;
 import com.randomrun.ui.util.Ui;
-import com.randomrun.ui.widget.overlay.OverlayWidgets.LanguageDropdownWidget;
+import com.randomrun.ui.widget.OverlayWidgets.LanguageDropdownWidget;
 import com.randomrun.ui.widget.styled.Buttons.ButtonMenu;
+
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.TitleScreen;
@@ -20,8 +22,8 @@ public class UpdateRequiredScreen extends AbstractRandomRunScreen {
     private static final int OLD = 0xF87171;
     private static final int NEW = 0x4ADE80;
 
-    private String currentVersion = "?";
-    private String latestVersion = "?";
+    private String currentVersion = "—";
+    private String latestVersion = "—";
     private long openTime;
 
     public UpdateRequiredScreen() {
@@ -73,14 +75,18 @@ public class UpdateRequiredScreen extends AbstractRandomRunScreen {
         int top = top(), bottom = top + panelHeight();
         int cx = width / 2;
         Ui.panel(context, left, top, right, bottom, theme.panel, accent, fade);
-        Ui.glowBorder(context, left, top, right, bottom, 2, accent);
 
-        float pulse = 0.5f + 0.5f * (float) Math.sin(System.currentTimeMillis() / 300.0);
-        int ring = 12 + Math.round(pulse * 2);
-        context.fill(cx - ring, top + 24 - ring, cx + ring, top + 24 + ring, Ui.argb(accent, 0.12f * fade));
-        context.fill(cx - 11, top + 13, cx + 11, top + 35, Ui.argb(Ui.lerp(0xFF000000 | accent, 0xFF000000, 0.65f), fade));
-        Ui.border(context, cx - 11, top + 13, cx + 11, top + 35, 1, Ui.argb(accent, fade));
-        drawArrow(context, cx, top + 17 - Math.round((float) Math.sin(System.currentTimeMillis() / 250.0) * 1.5f), fade);
+        if (InterfaceStyle.isClassic()) {
+            Ui.bevel(context, cx - 12, top + 12, cx + 12, top + 36, theme.buttonBase, fade, true);
+            drawArrow(context, cx, top + 17, fade);
+        } else {
+            float pulse = 0.5f + 0.5f * (float) Math.sin(System.currentTimeMillis() / 300.0);
+            int ring = 12 + Math.round(pulse * 2);
+            context.fill(cx - ring, top + 24 - ring, cx + ring, top + 24 + ring, Ui.argb(accent, 0.12f * fade));
+            context.fill(cx - 11, top + 13, cx + 11, top + 35, Ui.argb(Ui.lerp(0xFF000000 | accent, 0xFF000000, 0.65f), fade));
+            Ui.border(context, cx - 11, top + 13, cx + 11, top + 35, 1, Ui.argb(accent, fade));
+            drawArrow(context, cx, top + 17 - Math.round((float) Math.sin(System.currentTimeMillis() / 250.0) * 1.5f), fade);
+        }
 
         GuiText.centeredText(context, font, LanguageManager.text("randomrun.screen.update.header"), cx, top + 43, Ui.argb(accent, fade));
         Ui.divider(context, left + 14, right - 14, top + 56, accent, fade);
@@ -103,11 +109,17 @@ public class UpdateRequiredScreen extends AbstractRandomRunScreen {
     }
 
     private void versionCard(GuiGraphicsExtractor context, int x, int y, int w, Component label, String version, int color, float fade) {
-        context.fill(x, y, x + w, y + 36, Ui.argb(0x000000, 0.35f * fade));
-        Ui.border(context, x, y, x + w, y + 36, 1, Ui.argb(color, 0.6f * fade));
-        context.fill(x + 1, y + 1, x + w - 1, y + 2, Ui.argb(color, 0.8f * fade));
-        GuiText.centeredText(context, font, label, x + w / 2, y + 6, Ui.argb(0xA1A1AA, fade));
-        Ui.centeredScaled(context, font, Component.literal(version), x + w / 2f, y + 18, 1.4f, Ui.argb(color, fade));
+        if (InterfaceStyle.isClassic()) {
+            Ui.card(context, x, y, x + w, y + 36, color, fade);
+            GuiText.centeredText(context, font, label, x + w / 2, y + 6, Ui.argb(0xC0BDB2, fade));
+            Ui.centeredScaled(context, font, Component.literal(version), x + w / 2f, y + 20, 1f, Ui.argb(color, fade));
+        } else {
+            context.fill(x, y, x + w, y + 36, Ui.argb(0x000000, 0.35f * fade));
+            Ui.border(context, x, y, x + w, y + 36, 1, Ui.argb(color, 0.6f * fade));
+            context.fill(x + 1, y + 1, x + w - 1, y + 2, Ui.argb(color, 0.8f * fade));
+            GuiText.centeredText(context, font, label, x + w / 2, y + 6, Ui.argb(0xA1A1AA, fade));
+            Ui.centeredScaled(context, font, Component.literal(version), x + w / 2f, y + 18, 1.4f, Ui.argb(color, fade));
+        }
     }
 
     private void drawArrow(GuiGraphicsExtractor context, int cx, int y, float fade) {

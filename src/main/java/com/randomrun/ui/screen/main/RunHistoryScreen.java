@@ -1,12 +1,13 @@
 package com.randomrun.ui.screen.main;
 
-
-import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
-import com.randomrun.infrastructure.data.RunDataManager;
+import com.randomrun.ui.util.InterfaceStyle;
+import com.randomrun.core.run.Run;
+import com.randomrun.core.run.Run.RunResult;
+import com.randomrun.core.run.RunDataManager;
+import com.randomrun.core.run.RunHistory;
 import com.randomrun.infrastructure.util.LanguageManager;
-import com.randomrun.core.history.RunHistory;
-import com.randomrun.core.history.Run;
-import com.randomrun.core.history.RunResult;
+import com.randomrun.ui.widget.styled.Buttons.ButtonDefault;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -36,9 +37,9 @@ public class RunHistoryScreen extends AbstractRandomRunScreen {
     private static final int COLOR_BG_LIST = 0x60000000;
     private static final int COLOR_BG_CARD = 0x60101018;
     private static final int COLOR_BG_CARD_HOVER = 0x70181828;
-    private static int COLOR_BORDER() { return 0xFF000000 | com.randomrun.ui.theme.Theme.current().buttonBase; }
-    private static int COLOR_BORDER_HOVER() { return 0xFF000000 | com.randomrun.ui.theme.Theme.current().buttonHover; }
-    private static int COLOR_ACCENT() { return 0xFF000000 | com.randomrun.ui.theme.Theme.current().buttonHover; }
+    private static int COLOR_BORDER() { return 0xFF000000 | com.randomrun.ui.util.Theme.current().buttonBase; }
+    private static int COLOR_BORDER_HOVER() { return 0xFF000000 | com.randomrun.ui.util.Theme.current().buttonHover; }
+    private static int COLOR_ACCENT() { return 0xFF000000 | com.randomrun.ui.util.Theme.current().buttonHover; }
     private static final int COLOR_SCROLLBAR_BG = 0x30000000;
     private static final int COLOR_TEXT_WHITE = 0xFFFFFF;
     private static final int COLOR_TEXT_GRAY = 0x888888;
@@ -234,15 +235,19 @@ public class RunHistoryScreen extends AbstractRandomRunScreen {
 
     private void renderStatsHeader(GuiGraphicsExtractor context) {
         int headerW = width - 60;
-        context.fill(HEADER_X, HEADER_Y, HEADER_X + headerW, HEADER_Y + HEADER_HEIGHT, COLOR_BG_HEADER);
+        if (InterfaceStyle.isClassic()) {
+            com.randomrun.ui.util.Ui.panel(context, HEADER_X, HEADER_Y, HEADER_X + headerW, HEADER_Y + HEADER_HEIGHT, 1f);
+        } else {
+            context.fill(HEADER_X, HEADER_Y, HEADER_X + headerW, HEADER_Y + HEADER_HEIGHT, COLOR_BG_HEADER);
+        }
         context.fill(HEADER_X, HEADER_Y + HEADER_HEIGHT, HEADER_X + headerW, HEADER_Y + HEADER_HEIGHT + 1, COLOR_ACCENT());
         if (headerStats.targetStack != null && !headerStats.targetStack.isEmpty()) {
-            com.randomrun.ui.util.Previews.ItemPreviewRenderer.extractLargeGui(context, headerStats.targetStack, HEADER_X + 8 + 16, HEADER_Y + 8 + 16, 32);
+            com.randomrun.ui.util.Previews.ItemPreviewRenderer.extractInSlot(context, headerStats.targetStack, HEADER_X + 5, HEADER_Y + 5, HEADER_X + 44, HEADER_Y + HEADER_HEIGHT - 5, 4);
         }
         int textX = HEADER_X + 50;
         com.randomrun.ui.util.GuiText.text(context, font, headerStats.itemName, textX, HEADER_Y + 9, COLOR_TEXT_WHITE);
         int tagX = textX + font.width(headerStats.itemName) + 6;
-        if (upgrader) tagX += com.randomrun.ui.util.Ui.chip(context, font, net.minecraft.network.chat.Component.literal("RRM Upgrader"),
+        if (upgrader) tagX += com.randomrun.ui.util.Ui.chip(context, font, net.minecraft.network.chat.Component.literal(com.randomrun.infrastructure.util.LanguageManager.translate("randomrun.mode.upgrader.name")),
             tagX, HEADER_Y + 6, 0xCC713F12, 0xFFFDE68A) + 4;
         String count = (filteredHistory != null ? filteredHistory.size() : 0) + " " + LanguageManager.translate("randomrun.stats.records");
         com.randomrun.ui.util.GuiText.text(context, font, count, HEADER_X + headerW - 8 - font.width(count), HEADER_Y + 9, COLOR_TEXT_GRAY);
@@ -275,7 +280,11 @@ public class RunHistoryScreen extends AbstractRandomRunScreen {
         int listY = HEADER_HEIGHT + 32;
         int listWidth = width - 60;
 
-        context.fill(LIST_X, listY, LIST_X + listWidth, listY + ITEMS_PER_PAGE * ITEM_HEIGHT, COLOR_BG_LIST);
+        if (InterfaceStyle.isClassic()) {
+            com.randomrun.ui.util.Ui.slot(context, LIST_X, listY, LIST_X + listWidth, listY + ITEMS_PER_PAGE * ITEM_HEIGHT, 1f);
+        } else {
+            context.fill(LIST_X, listY, LIST_X + listWidth, listY + ITEMS_PER_PAGE * ITEM_HEIGHT, COLOR_BG_LIST);
+        }
 
         List<Run> history = filteredHistory;
         if (history == null) {
@@ -317,13 +326,21 @@ public class RunHistoryScreen extends AbstractRandomRunScreen {
         int numberWidth = font.width(runNumber);
         int numberX = LIST_X + (RUN_NUMBER_WIDTH - numberWidth) / 2;
         int numberY = y + (ITEM_HEIGHT - 2) / 2 - 4;
-        context.fill(LIST_X, y, LIST_X + RUN_NUMBER_WIDTH, y + ITEM_HEIGHT - 2, 0x40000000);
+        if (InterfaceStyle.isClassic()) {
+            com.randomrun.ui.util.Ui.bevel(context, LIST_X, y, LIST_X + RUN_NUMBER_WIDTH, y + ITEM_HEIGHT - 2, 0x252525, 1f, true);
+        } else {
+            context.fill(LIST_X, y, LIST_X + RUN_NUMBER_WIDTH, y + ITEM_HEIGHT - 2, 0x40000000);
+        }
         com.randomrun.ui.util.GuiText.text(context, font, runNumber, numberX, numberY, COLOR_TEXT_GRAY);
 
         int entryX = LIST_X + RUN_NUMBER_WIDTH;
-        context.fill(entryX, y, LIST_X + listWidth, y + ITEM_HEIGHT - 2, bgColor);
-        context.fill(entryX, y, LIST_X + listWidth, y + 1, borderColor);
-        context.fill(entryX, y + ITEM_HEIGHT - 3, LIST_X + listWidth, y + ITEM_HEIGHT - 2, 0x30FFFFFF);
+        if (InterfaceStyle.isClassic()) {
+            com.randomrun.ui.util.Ui.bevel(context, entryX, y, LIST_X + listWidth, y + ITEM_HEIGHT - 2, hovered ? 0x505050 : 0x333333, 1f, true);
+        } else {
+            context.fill(entryX, y, LIST_X + listWidth, y + ITEM_HEIGHT - 2, bgColor);
+            context.fill(entryX, y, LIST_X + listWidth, y + 1, borderColor);
+            context.fill(entryX, y + ITEM_HEIGHT - 3, LIST_X + listWidth, y + ITEM_HEIGHT - 2, 0x30FFFFFF);
+        }
 
         int barColor = getStatusColor(record.getResult());
         context.fill(entryX, y, entryX + 3, y + ITEM_HEIGHT - 2, (0xFF << 24) | barColor);
@@ -395,7 +412,11 @@ public class RunHistoryScreen extends AbstractRandomRunScreen {
     private int renderBadge(GuiGraphicsExtractor context, String text, int rightX, int y, int bgColor) {
         int width = font.width(text) + 6;
         int x = rightX - width - 4;
-        context.fill(x, y + 20, x + width, y + 32, bgColor);
+        if (InterfaceStyle.isClassic()) {
+            com.randomrun.ui.util.Ui.bevel(context, x, y + 20, x + width, y + 32, bgColor, 1f, false);
+        } else {
+            context.fill(x, y + 20, x + width, y + 32, bgColor);
+        }
         com.randomrun.ui.util.GuiText.text(context, font, text, x + 3, y + 22, COLOR_TEXT_WHITE);
         return x;
     }
@@ -412,7 +433,11 @@ public class RunHistoryScreen extends AbstractRandomRunScreen {
         int thumbY = listY + (int) ((scrollBarHeight - thumbHeight) * scrollRatio);
 
         context.fill(scrollBarX, listY, scrollBarX + 4, listY + scrollBarHeight, COLOR_SCROLLBAR_BG);
-        context.fill(scrollBarX, thumbY, scrollBarX + 4, thumbY + thumbHeight, COLOR_ACCENT());
+        if (InterfaceStyle.isClassic()) {
+            com.randomrun.ui.util.Ui.bevel(context, scrollBarX, thumbY, scrollBarX + 4, thumbY + thumbHeight, 0x9A978D, 1f, false);
+        } else {
+            context.fill(scrollBarX, thumbY, scrollBarX + 4, thumbY + thumbHeight, COLOR_ACCENT());
+        }
     }
 
     private void drawFilterUnderline(GuiGraphicsExtractor context) {
@@ -435,23 +460,25 @@ public class RunHistoryScreen extends AbstractRandomRunScreen {
     }
 
     private String getStatusIcon(RunResult result) {
-        if (result == null) return "?";
+        if (result == null) return "—";
         return switch (result) {
             case VICTORY -> "§a✔ " + LanguageManager.translate("randomrun.screen.history.victory");
             case DEATH -> "§c☠ " + LanguageManager.translate("randomrun.screen.history.death");
             case GAVE_UP -> "§e✖ " + LanguageManager.translate("randomrun.screen.history.gave_up");
             case TIMEOUT -> "§6⏰ " + LanguageManager.translate("randomrun.screen.history.timeout");
             case FAILED -> "§4✘ " + LanguageManager.translate("randomrun.screen.history.failed");
+            case LOST -> "§c⚔ " + LanguageManager.translate("randomrun.screen.history.lost");
         };
     }
 
     private String getStatusLabel(RunResult result) {
-        if (result == null) return "?";
+        if (result == null) return "—";
         return switch (result) {
             case DEATH -> LanguageManager.translate("randomrun.screen.history.death");
             case GAVE_UP -> LanguageManager.translate("randomrun.screen.history.gave_up");
             case TIMEOUT -> LanguageManager.translate("randomrun.screen.defeat.title");
             case FAILED -> LanguageManager.translate("randomrun.screen.history.failed");
+            case LOST -> LanguageManager.translate("randomrun.screen.history.lost");
             default -> "—";
         };
     }
@@ -460,7 +487,7 @@ public class RunHistoryScreen extends AbstractRandomRunScreen {
         if (result == null) return COLOR_TEXT_WHITE;
         return switch (result) {
             case VICTORY -> COLOR_SUCCESS;
-            case DEATH -> COLOR_DANGER;
+            case DEATH, LOST -> COLOR_DANGER;
             case GAVE_UP -> COLOR_WARNING;
             case TIMEOUT -> COLOR_TIMEOUT;
             default -> COLOR_TEXT_LIGHT_GRAY;
@@ -497,7 +524,7 @@ public class RunHistoryScreen extends AbstractRandomRunScreen {
                 Minecraft.getInstance().getSoundManager().play(
                     net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
                         net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 1.2f, 0.3f));
-                com.randomrun.ui.widget.overlay.CustomNotification.show(
+                com.randomrun.ui.overlay.CustomNotification.show(
                     LanguageManager.translate("randomrun.screen.history.seed_copied"), seedStr, "minecraft:paper");
                 return true;
             }

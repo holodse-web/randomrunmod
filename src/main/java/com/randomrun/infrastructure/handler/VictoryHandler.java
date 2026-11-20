@@ -1,13 +1,14 @@
 package com.randomrun.infrastructure.handler;
 
+import com.randomrun.core.run.Run;
+import com.randomrun.core.run.RunCompletionService;
+import com.randomrun.core.run.RunSessionManager;
+import com.randomrun.features.battle.manager.BattleManager;
+import com.randomrun.infrastructure.ModConfig;
 import com.randomrun.infrastructure.RandomRunMod;
 import com.randomrun.infrastructure.util.CompactLogger;
-import com.randomrun.features.battle.manager.BattleManager;
-import com.randomrun.infrastructure.config.ModConfig;
-import com.randomrun.core.service.RunCompletionService;
-import com.randomrun.core.session.RunSessionManager;
-import com.randomrun.core.history.Run;
 import com.randomrun.ui.screen.endgame.VictoryScreen;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.particles.ParticleTypes;
@@ -43,12 +44,21 @@ public class VictoryHandler {
             return;
         }
 
+        if (!isLegitimateWorld(SESSION_MANAGER.getCurrentSession())) {
+            CompactLogger.warn("[Victory] Rejected: run world mismatch");
+            SESSION_MANAGER.cancelRun();
+            RandomRunMod.getInstance().getRunDataManager().cancelRun();
+            victoryInProgress.set(false);
+            return;
+        }
+
         long elapsedTime = SESSION_MANAGER.getElapsedTime();
 
         CLIENT.execute(() -> showVictoryEffectsImmediate(elapsedTime));
 
-        com.randomrun.core.session.RunSession currentSession = SESSION_MANAGER.getCurrentSession();
+        com.randomrun.core.run.RunSession currentSession = SESSION_MANAGER.getCurrentSession();
         if (currentSession != null && currentSession.isBattle()) {
+            com.randomrun.features.battle.manager.BattleTrace.sendItemFound();
             BattleManager.getInstance().reportVictory(elapsedTime);
         }
 
@@ -62,6 +72,19 @@ public class VictoryHandler {
             });
     }
 
+    private static boolean isLegitimateWorld(com.randomrun.core.run.RunSession session) {
+        if (session == null || CLIENT.player == null || CLIENT.gameMode == null) return false;
+        var mode = CLIENT.gameMode.getPlayerMode();
+        if (mode != net.minecraft.world.level.GameType.SURVIVAL && mode != net.minecraft.world.level.GameType.ADVENTURE) return false;
+        var server = CLIENT.getSingleplayerServer();
+        if (server == null) return session.isBattle();
+        var data = server.getWorldData();
+        if (!session.isBattle() && !data.getLevelName().equals(session.getWorldName())) return false;
+        if (data.isAllowCommands() && !BattleManager.getInstance().isSharedWorld()) return false;
+        String seed = session.getWorldSeed();
+        return session.isBattle() || seed == null || seed.equals(String.valueOf(server.overworld().getSeed()));
+    }
+
     private static void showVictoryEffectsImmediate(long elapsedTime) {
         ModConfig config = getCachedConfig();
 
@@ -71,10 +94,6 @@ public class VictoryHandler {
 
         if (mode != ModConfig.VictoryScreenMode.SHOW_AFTER_10_SECONDS) {
             showVictoryTitle(elapsedTime);
-        }
-
-        if (!config.isHardcoreModeEnabled() && CLIENT.player != null) {
-            com.randomrun.infrastructure.util.ClientMessages.send(CLIENT.player, com.randomrun.infrastructure.util.LanguageManager.text("randomrun.victory.not_hardcore"), false);
         }
 
         spawnVictoryParticles();
@@ -94,13 +113,13 @@ public class VictoryHandler {
 
     private static Run createTempRecord(long elapsedTime) {
         try {
-            com.randomrun.core.session.RunSession session = SESSION_MANAGER.getCurrentSession();
+            com.randomrun.core.run.RunSession session = SESSION_MANAGER.getCurrentSession();
             if (session != null) {
                 return new Run.Builder()
                     .targetId(session.getTargetId())
                     .timestamp(System.currentTimeMillis())
                     .duration(elapsedTime)
-                    .result(com.randomrun.core.history.RunResult.VICTORY)
+                    .result(com.randomrun.core.run.Run.RunResult.VICTORY)
                     .worldSeed(session.getWorldSeed())
                     .customSeed(session.getCustomSeed())
                     .isBattle(session.isBattle())
@@ -122,7 +141,8 @@ public class VictoryHandler {
     private static void playVictorySound(ModConfig config) {
         try {
             if (CLIENT.player != null && config.isSoundEffectsEnabled()) {
-                float volume = config.getSoundVolume() / 100f;
+
+                float volume = config.getSoundVolume() / 100f * 0.35f;
                 CLIENT.player.playSound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, volume, 1.0f);
             }
         } catch (Exception e) {

@@ -1,30 +1,41 @@
 package com.randomrun.features.upgrader;
 
-import com.randomrun.core.session.RunSession;
-import com.randomrun.core.session.RunSessionManager;
-import com.randomrun.core.session.RunStatus;
+import com.randomrun.core.run.RunSession;
+import com.randomrun.core.run.RunSession.RunStatus;
+import com.randomrun.core.run.RunSessionManager;
 import com.randomrun.features.battle.manager.BattleManager;
 import com.randomrun.features.battle.manager.BattleRoom;
+import com.randomrun.features.upgrader.UpgraderMath.UpgraderCompensation;
 import com.randomrun.features.upgrader.client.UpgraderClient;
 import com.randomrun.infrastructure.RandomRunMod;
+
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.WeakHashMap;
+import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Prediction;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.function.Consumer;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 public final class UpgraderServer {
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final Map<UUID, Pending> PENDING = new HashMap<>();
+    private static final Map<ServerPlayer, List<ItemStack>> RECOVERED = Collections.synchronizedMap(new WeakHashMap<>());
+    private static final String REWARD_KEY = "randomrun_upgrader_reward";
 
     private record Pending(MinecraftServer server, ServerPlayer player, long id, RunSession session,
                            UpgraderPendingReward reward, long acceptedNanos, Consumer<Boolean> completion) {}
@@ -35,7 +46,7 @@ public final class UpgraderServer {
         if (server == null || roomId == null || server != Minecraft.getInstance().getSingleplayerServer() || player == null
                 || !player.isAlive() || player.isCreative() || player.isSpectator()) return false;
         RunSession session = RunSessionManager.getInstance().getCurrentSession();
-        if (session == null || !session.isUpgrader() || session.getStatus() != RunStatus.RUNNING || session.isPaused()) return false;
+        if (session == null || !session.isUpgrader() || session.getStatus() != RunStatus.RUNNING) return false;
         var localPlayer = Minecraft.getInstance().player;
         boolean local = localPlayer != null && player.getUUID().equals(localPlayer.getUUID());
         if (!session.isBattle()) return local && !server.isPublished() && roomId.isEmpty();
@@ -49,7 +60,7 @@ public final class UpgraderServer {
     }
 
     public static void request(MinecraftServer server, ServerPlayer player, long id, String roomId,
-                               Map<Integer, Integer> amounts, Map<Integer, ItemStack> expected, Item target, int targetCount,
+                               Map<Integer, Integer> amounts, Map<Integer, ItemStack> expected, Item target, int targetCount, boolean fast,
                                Consumer<UpgraderClient.RollResult> result, Consumer<Boolean> completed) {
         if (id <= 0 || !authorized(server, player, roomId) || PENDING.containsKey(player.getUUID())
                 || player.containerMenu != player.inventoryMenu || !player.inventoryMenu.getCarried().isEmpty()
@@ -71,26 +82,33 @@ public final class UpgraderServer {
             boolean bonusHit = UpgraderMath.inBonus(roll, chance, bonus);
             boolean success = bonusHit || UpgraderMath.wins(roll, chance);
             int streak = 0, flips = 0;
+            List<ItemStack> ladder = new ArrayList<>(List.of(new ItemStack(target, targetCount)));
             if (bonusHit) {
-                int stackLimit = Math.max(1, target.getDefaultMaxStackSize()) * 16;
-                while (streak < UpgraderMath.MAX_STREAK && ((long) targetCount << (streak + 1)) <= stackLimit) {
+                Set<Item> used = Collections.newSetFromMap(new IdentityHashMap<>());
+                used.add(target);
+                while (streak < UpgraderMath.MAX_STREAK) {
+                    ItemStack next = UpgraderMath.doubled(ladder.getLast(), session.getTargetItem(), used, RANDOM);
+                    if (next.isEmpty()) break;
                     flips++;
-                    if (RANDOM.nextBoolean()) streak++;
-                    else break;
+                    if (RANDOM.nextDouble() >= UpgraderMath.STREAK_WIN_CHANCE) break;
+                    streak++;
+                    ladder.add(next);
+                    used.add(next.getItem());
                 }
             }
             ItemStack reward = success ? new ItemStack(target, targetCount) : compensation;
             List<ItemStack> delivery = new ArrayList<>();
             if (success) {
-                int total = targetCount << streak, max = Math.max(1, target.getDefaultMaxStackSize());
+                ItemStack prize = ladder.get(streak);
+                int total = prize.getCount(), max = Math.max(1, prize.getMaxStackSize());
                 while (total > 0) {
                     int part = Math.min(max, total);
-                    delivery.add(new ItemStack(target, part));
+                    delivery.add(prize.copyWithCount(part));
                     total -= part;
                 }
             } else if (!compensation.isEmpty()) delivery.add(compensation);
             Pending pending = new Pending(server, player, id, session,
-                new UpgraderPendingReward(delivery, UpgraderMath.totalMillis(flips)), System.nanoTime(), completed);
+                new UpgraderPendingReward(delivery, UpgraderMath.totalMillis(flips, fast)), System.nanoTime(), completed);
             for (int slot = 0; slot < UpgraderTransaction.INVENTORY_SLOTS; slot++) {
                 player.getInventory().setItem(slot, plan.inventory().get(slot));
             }
@@ -98,7 +116,7 @@ public final class UpgraderServer {
             player.getInventory().setChanged();
             player.inventoryMenu.broadcastChanges();
             accepted = new UpgraderClient.RollResult(true, success, chance, roll,
-                success ? "success" : "lost", reward.copy(), bonus, bonusHit, streak, flips);
+                success ? "success" : "lost", reward.copy(), bonus, bonusHit, streak, flips, List.copyOf(ladder));
         } catch (IllegalArgumentException error) {
             result.accept(rejected(error.getMessage()));
             return;
@@ -108,6 +126,26 @@ public final class UpgraderServer {
             return;
         }
         result.accept(accepted);
+    }
+
+    public static void writeReward(ServerPlayer player, ValueOutput output) {
+        Pending pending = PENDING.get(player.getUUID());
+        List<ItemStack> stacks = pending != null && pending.player() == player
+            ? pending.reward().rewards : RECOVERED.get(player);
+        if (stacks != null && !stacks.isEmpty()) output.store(REWARD_KEY, ItemStack.CODEC.listOf(), stacks);
+    }
+
+    public static void readReward(ServerPlayer player, ValueInput input) {
+        input.read(REWARD_KEY, ItemStack.CODEC.listOf()).filter(stacks -> !stacks.isEmpty())
+            .ifPresentOrElse(stacks -> RECOVERED.put(player, stacks), () -> RECOVERED.remove(player));
+    }
+
+    public static void recoverReward(ServerPlayer player) {
+        List<ItemStack> rewards = RECOVERED.remove(player);
+        if (rewards == null) return;
+        UpgraderPendingReward reward = new UpgraderPendingReward(rewards, 0);
+        reward.skip();
+        reward.settle(inventory(player, false), System.nanoTime()).ifPresent(delivery -> deliver(player, delivery, false));
     }
 
     public static int maxTargetCount(Item target) {
@@ -125,7 +163,7 @@ public final class UpgraderServer {
     public static void tick(MinecraftServer server) {
         for (Pending pending : List.copyOf(PENDING.values())) {
             if (pending.server() != server) continue;
-            boolean abandoned = System.nanoTime() - pending.acceptedNanos() > 30_000_000_000L;
+            boolean abandoned = System.nanoTime() - pending.acceptedNanos() > 60_000_000_000L;
             boolean ended = pending.session() != RunSessionManager.getInstance().getCurrentSession()
                 || pending.session().getStatus() != RunStatus.RUNNING;
             settle(pending, abandoned || ended || !pending.player().isAlive(), false);
@@ -133,6 +171,7 @@ public final class UpgraderServer {
     }
 
     public static void closePlayer(ServerPlayer player) {
+        recoverReward(player);
         Pending pending = PENDING.get(player.getUUID());
         if (pending != null && pending.player() == player) settle(pending, true, true);
     }
@@ -152,21 +191,24 @@ public final class UpgraderServer {
         var delivery = pending.reward().settle(inventory(player, dropAtDeath), System.nanoTime());
         if (delivery.isEmpty()) return;
         PENDING.remove(player.getUUID());
+        deliver(player, delivery.get(), dropAtDeath);
+        try { pending.completion().accept(true); } catch (RuntimeException ignored) {}
+    }
+
+    private static void deliver(ServerPlayer player, UpgraderPendingReward.Delivery delivery, boolean dropAtDeath) {
         if (dropAtDeath) {
-            for (ItemStack stack : delivery.get().inventory()) if (!stack.isEmpty()) player.drop(stack, false, Prediction.SERVER_ONLY);
+            for (ItemStack stack : delivery.inventory()) {
+                if (!stack.isEmpty()) player.drop(stack, false, Prediction.SERVER_ONLY);
+            }
         } else {
             for (int slot = 0; slot < UpgraderTransaction.INVENTORY_SLOTS; slot++) {
-                player.getInventory().setItem(slot, delivery.get().inventory().get(slot));
+                player.getInventory().setItem(slot, delivery.inventory().get(slot));
             }
             player.getInventory().setChanged();
             player.inventoryMenu.broadcastChanges();
             if (player.containerMenu != player.inventoryMenu) player.containerMenu.broadcastChanges();
         }
-        for (ItemStack overflow : delivery.get().overflow()) player.drop(overflow, false, Prediction.SERVER_ONLY);
-        try { pending.completion().accept(true); }
-        catch (Exception error) {
-            RandomRunMod.LOGGER.warn("[Upgrader] Reward delivered, completion notification unavailable", error);
-        }
+        for (ItemStack overflow : delivery.overflow()) player.drop(overflow, false, Prediction.SERVER_ONLY);
     }
 
     private static List<ItemStack> inventory(ServerPlayer player, boolean empty) {
@@ -179,5 +221,75 @@ public final class UpgraderServer {
 
     private static UpgraderClient.RollResult rejected(String reason) {
         return new UpgraderClient.RollResult(false, false, 0, 0, reason, ItemStack.EMPTY);
+    }
+
+    public static final class UpgraderPendingReward {
+        private final long durationNanos;
+        private final List<ItemStack> rewards;
+        private boolean started;
+        private long startedNanos;
+        private boolean skipped;
+        private boolean settled;
+
+        public UpgraderPendingReward(ItemStack reward) {
+            this(Objects.requireNonNull(reward, "reward").isEmpty() ? List.of() : List.of(reward), UpgraderMath.SPIN_MILLIS);
+        }
+
+        public UpgraderPendingReward(List<ItemStack> rewards, long durationMillis) {
+            List<ItemStack> copies = new ArrayList<>();
+            for (ItemStack stack : Objects.requireNonNull(rewards, "rewards")) if (!stack.isEmpty()) copies.add(stack.copy());
+            this.rewards = List.copyOf(copies);
+            this.durationNanos = Math.max(0, durationMillis) * 1_000_000L;
+        }
+
+        public synchronized void start(long startedNanos) {
+            if (!started && !settled) {
+                this.startedNanos = startedNanos;
+                started = true;
+            }
+        }
+
+        public synchronized void skip() {
+            skipped = true;
+        }
+
+        public synchronized boolean ready(long nowNanos) {
+            return !settled && (skipped || started && nowNanos - startedNanos >= durationNanos);
+        }
+
+        public synchronized Optional<Delivery> settle(List<ItemStack> currentInventory, long nowNanos) {
+            if (!ready(nowNanos)) return Optional.empty();
+            if (currentInventory == null || currentInventory.size() != UpgraderTransaction.INVENTORY_SLOTS) {
+                throw new IllegalArgumentException("invalid_inventory");
+            }
+            List<ItemStack> inventory = new ArrayList<>(UpgraderTransaction.INVENTORY_SLOTS);
+            for (ItemStack stack : currentInventory) {
+                if (stack == null) throw new IllegalArgumentException("invalid_inventory");
+                inventory.add(stack.copy());
+            }
+            List<ItemStack> overflow = new ArrayList<>();
+            for (ItemStack reward : rewards) {
+                ItemStack remaining = reward.copy();
+                for (ItemStack stack : inventory) {
+                    if (remaining.isEmpty()) break;
+                    if (stack.isEmpty() || !ItemStack.isSameItemSameComponents(stack, remaining)) continue;
+                    int moved = Math.min(remaining.getCount(), Math.max(0, stack.getMaxStackSize() - stack.getCount()));
+                    stack.grow(moved);
+                    remaining.shrink(moved);
+                }
+                for (int slot = 0; slot < inventory.size() && !remaining.isEmpty(); slot++) {
+                    if (!inventory.get(slot).isEmpty()) continue;
+                    int moved = Math.min(remaining.getCount(), remaining.getMaxStackSize());
+                    inventory.set(slot, remaining.copyWithCount(moved));
+                    remaining.shrink(moved);
+                }
+                if (!remaining.isEmpty()) overflow.add(remaining);
+            }
+            Delivery delivery = new Delivery(List.copyOf(inventory), List.copyOf(overflow));
+            settled = true;
+            return Optional.of(delivery);
+        }
+
+        public record Delivery(List<ItemStack> inventory, List<ItemStack> overflow) {}
     }
 }

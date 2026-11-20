@@ -13,33 +13,8 @@ public class BattleRoomSerializer implements JsonSerializer<BattleRoom> {
         removeIfFalse(json, "pr");
         removeIfFalse(json, "ug");
         
-        if (json.has("dd") && json.get("dd").isJsonObject()) {
-            JsonObject dd = json.getAsJsonObject("dd");
-            java.util.List<String> toRemove = new java.util.ArrayList<>();
-            for (String key : dd.keySet()) {
-                if (dd.get(key).isJsonPrimitive() && !dd.get(key).getAsBoolean()) {
-                    toRemove.add(key);
-                }
-            }
-            toRemove.forEach(dd::remove);
-            if (dd.size() == 0) {
-                json.remove("dd");
-            }
-        }
-        
-        if (json.has("ep") && json.get("ep").isJsonObject()) {
-            JsonObject ep = json.getAsJsonObject("ep");
-            java.util.List<String> toRemove = new java.util.ArrayList<>();
-            for (String key : ep.keySet()) {
-                if (ep.get(key).isJsonPrimitive() && !ep.get(key).getAsBoolean()) {
-                    toRemove.add(key);
-                }
-            }
-            toRemove.forEach(ep::remove);
-            if (ep.size() == 0) {
-                json.remove("ep");
-            }
-        }
+        removeFalseFlags(json, "dd");
+        removeFalseFlags(json, "ep");
         
         if (json.has("st") && "WAITING".equals(json.get("st").getAsString())) {
             json.remove("w");
@@ -58,6 +33,13 @@ public class BattleRoomSerializer implements JsonSerializer<BattleRoom> {
         return json;
     }
     
+    private static void removeFalseFlags(JsonObject json, String key) {
+        if (json.get(key) instanceof JsonObject flags) {
+            flags.entrySet().removeIf(entry -> entry.getValue().isJsonPrimitive() && !entry.getValue().getAsBoolean());
+            if (flags.size() == 0) json.remove(key);
+        }
+    }
+
     private void removeIfFalse(JsonObject json, String key) {
         if (json.has(key) && json.get(key).isJsonPrimitive()) {
             if (!json.get(key).getAsBoolean()) {
