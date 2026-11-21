@@ -1,4 +1,4 @@
-<p align="center"><img src="logos/modern/graphite.png" alt="RandomRun" width="384"></p>
+<p align="center"><img src="logos/graphite.png" alt="RandomRun" width="384"></p>
 
 <p align="center"><a href="README.md">English version</a> · <a href="https://t.me/rrmnetwork">Telegram</a> · <a href="CHANGELOG.md">Список изменений</a></p>
 

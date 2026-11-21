@@ -19,9 +19,11 @@ mapping.txt
 /cloudflare-check.bat
 /deploy-server.bat
 /run-client.bat
+/server/
+/logos/generate.py
 /logos/classic/
-/logos/modern/*
-!/logos/modern/graphite.png
+/logos/modern/
+/tools/upgrader/generate_values.py
 __pycache__/
 
 # Local dependencies, credentials, and editor settings
